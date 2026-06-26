@@ -1,0 +1,13 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+  </defs>
+  <rect width="400" height="400" rx="16" fill="#0d1117"/>
+  <rect x="1" y="1" width="398" height="398" rx="15" fill="none" stroke="#1e293b" stroke-width="2"/>
+  <ellipse cx="325" cy="235" rx="55" ry="50" fill="#3b82f6" opacity="0.22" filter="url(#blur)"/>
+  <rect x="90" y="260" width="210" height="18" rx="4" fill="none" stroke="#94a3b8" stroke-width="6" opacity="0.5"/><path d="M150,240 L285,260" fill="none" stroke="#94a3b8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M285,260 L325,260 L345,205" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M155,238 L165,280 L180,295" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="125" cy="222" r="20" fill="none" stroke="#94a3b8" stroke-width="9"/><line x1="330" y1="215" x2="360" y2="215" stroke="#3b82f6" stroke-width="6" />
+  <g transform="translate(344,344)" stroke="#3b82f6" stroke-width="3" fill="none"><rect x="4" y="4" width="20" height="28" rx="2"/><circle cx="30" cy="30" r="6"/></g>
+  <text x="20" y="378" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="600" fill="#64748b">Lying Leg Curl</text>
+</svg>

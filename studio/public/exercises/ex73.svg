@@ -1,0 +1,13 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+  </defs>
+  <rect width="400" height="400" rx="16" fill="#0d1117"/>
+  <rect x="1" y="1" width="398" height="398" rx="15" fill="none" stroke="#1e293b" stroke-width="2"/>
+  <ellipse cx="200" cy="300" rx="60" ry="45" fill="#3b82f6" opacity="0.22" filter="url(#blur)"/>
+  <line x1="100" y1="365" x2="300" y2="365" stroke="#94a3b8" stroke-width="4" /><path d="M170,280 L220,305" fill="none" stroke="#94a3b8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M220,305 L240,330 L240,365" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M220,305 L245,330 L248,365" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M170,280 L155,270 L150,280" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="140" cy="260" r="20" fill="none" stroke="#94a3b8" stroke-width="9"/>
+  <g transform="translate(344,344)" stroke="#3b82f6" stroke-width="3" fill="none"><rect x="4" y="4" width="20" height="28" rx="2"/><circle cx="30" cy="30" r="6"/></g>
+  <text x="20" y="378" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="600" fill="#64748b">Glute-Ham Raise</text>
+</svg>

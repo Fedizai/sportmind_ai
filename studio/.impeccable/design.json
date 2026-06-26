@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-14T00:00:00Z",
+  "title": "Design System: SportMind AI",
+  "extensions": {
+    "colorMeta": {
+      "background-void": {
+        "role": "neutral",
+        "displayName": "Void",
+        "canonical": "hsl(228 46% 4%)",
+        "tonalRamp": ["#020305", "#04050a", "#060810", "#0d1117", "#1a1d28", "#2a2e3e", "#454b63", "#8b94a7"]
+      },
+      "surface-panel": {
+        "role": "neutral",
+        "displayName": "Panel",
+        "canonical": "hsl(222 28% 7%)",
+        "tonalRamp": ["#04050a", "#080a10", "#0d1117", "#161a23", "#22273350", "#343a4b", "#525a73", "#8b94a7"]
+      },
+      "surface-raised": {
+        "role": "neutral",
+        "displayName": "Raised Panel",
+        "canonical": "hsl(228 22% 13%)",
+        "tonalRamp": ["#0c0e14", "#13161f", "#1a1d28", "#252a38", "#363c4f", "#4d5470", "#6e7793", "#a3aac0"]
+      },
+      "charge-blue": {
+        "role": "primary",
+        "displayName": "Charge Blue",
+        "canonical": "hsl(217 91% 62%)",
+        "tonalRamp": ["#0e2858", "#163d80", "#1f54aa", "#2e6ed6", "#468af6", "#6ea3f8", "#9bc1fb", "#cfe2fe"]
+      },
+      "charge-blue-glow": {
+        "role": "primary-glow",
+        "displayName": "Charge Blue Glow",
+        "canonical": "#3b82f6",
+        "tonalRamp": ["#0c2557", "#15407f", "#1f5cac", "#2e74d9", "#3b82f6", "#6ea0f8", "#9cc0fb", "#cfe2fe"]
+      },
+      "glow-violet": {
+        "role": "secondary-accent",
+        "displayName": "Glow Violet",
+        "canonical": "#a78bfa",
+        "tonalRamp": ["#2c1f57", "#412f7d", "#5a3fa8", "#7a5dd1", "#a78bfa", "#c2adfc", "#dcd0fe", "#f1ebff"]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Foreground",
+        "canonical": "hsl(210 40% 96%)",
+        "tonalRamp": ["#1a1d24", "#363b45", "#565d6b", "#7d8593", "#a8aebb", "#c9ced8", "#e4e7ed", "#f1f5f9"]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Muted Foreground",
+        "canonical": "hsl(220 14% 60%)",
+        "tonalRamp": ["#1c1e24", "#363a45", "#52586a", "#6f7790", "#8b94a7", "#a8b0c0", "#c5cbd8", "#e3e7ee"]
+      },
+      "border-hairline": {
+        "role": "neutral",
+        "displayName": "Hairline Border",
+        "canonical": "hsl(228 20% 15%)",
+        "tonalRamp": ["#0a0b0f", "#13141c", "#1f222e", "#2c2f40", "#3c4055", "#52576f", "#717798", "#9da3c0"]
+      },
+      "destructive": {
+        "role": "destructive",
+        "displayName": "Destructive Red",
+        "canonical": "hsl(0 62% 38%)",
+        "tonalRamp": ["#2a0d0d", "#4a1717", "#6d2121", "#9d2525", "#c43a3a", "#e0625e", "#f29d9a", "#fbd4d2"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page titles and section headers, e.g. 'Welcome, {name}!' on dashboard root." },
+      "title": { "displayName": "Title", "purpose": "Card titles, modal headers, desktop nav tab labels." },
+      "body": { "displayName": "Body", "purpose": "Standard UI text, descriptions, AI explanations (cap 65-75ch)." },
+      "label": { "displayName": "Label", "purpose": "Bottom-nav tab labels and micro-captions, always paired with an icon." }
+    },
+    "shadows": [
+      { "name": "shadow-card", "value": "inset 0 1px 0 rgba(255,255,255,0.055), 0 1px 2px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.35), 0 16px 40px rgba(0,0,0,0.22)", "purpose": "Default resting elevation for cards and panels." },
+      { "name": "shadow-float", "value": "inset 0 1px 0 rgba(255,255,255,0.055), 0 2px 8px rgba(0,0,0,0.5), 0 12px 32px rgba(0,0,0,0.4), 0 32px 64px rgba(0,0,0,0.25)", "purpose": "Floating/overlay elements above page content (modals, nav pill container)." },
+      { "name": "shadow-btn", "value": "inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.25), 0 1px 3px rgba(59,130,246,0.25), 0 4px 14px rgba(59,130,246,0.22)", "purpose": "Primary button resting state — Charge Blue glow + pressed-edge highlight." },
+      { "name": "shadow-btn-hover", "value": "inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.25), 0 2px 6px rgba(59,130,246,0.35), 0 8px 28px rgba(59,130,246,0.32), 0 20px 48px rgba(59,130,246,0.15)", "purpose": "Primary button hover — glow intensifies, 'powering up'." },
+      { "name": "glow-primary", "value": "0 0 16px rgba(59,130,246,0.35), 0 0 48px rgba(59,130,246,0.12)", "purpose": "Ambient halo for active states (active nav bubble, focused/AI-powered elements)." }
+    ],
+    "motion": [
+      { "name": "spring-snap", "value": "cubic-bezier(0.34, 1.56, 0.64, 1)", "purpose": "Bouncy snap for the bottom-nav active bubble (left/width transitions, 0.35s)." },
+      { "name": "tab-indicator-ease", "value": "ease-out", "purpose": "Desktop tab indicator slide (300ms)." },
+      { "name": "press-scale", "value": "active:scale-[0.97] active:translate-y-px", "purpose": "Tactile button press feedback." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default call-to-action button — Charge Blue fill with 3D pressed-edge shadow and glow.",
+      "html": "<button class=\"ds-btn-primary\">Start Session</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 8px 16px; border-radius: 12px; border: none; font-family: 'Public Sans', sans-serif; font-size: 14px; font-weight: 500; color: #f1f5f9; background: #468af6; box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.25), 0 1px 3px rgba(59,130,246,0.25), 0 4px 14px rgba(59,130,246,0.22); transition: box-shadow 0.2s ease, transform 0.1s ease, background 0.2s; cursor: pointer; } .ds-btn-primary:hover { background: rgba(70,138,246,0.95); box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.25), 0 2px 6px rgba(59,130,246,0.35), 0 8px 28px rgba(59,130,246,0.32), 0 20px 48px rgba(59,130,246,0.15); } .ds-btn-primary:active { box-shadow: inset 0 2px 6px rgba(0,0,0,0.3); transform: translateY(1px) scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid #468af6; outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Tertiary/toolbar action over glass or panel surfaces.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.03); backdrop-filter: blur(4px); font-family: 'Public Sans', sans-serif; font-size: 14px; font-weight: 500; color: #f1f5f9; transition: background 0.2s, border-color 0.2s; cursor: pointer; } .ds-btn-ghost:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.20); } .ds-btn-ghost:focus-visible { outline: 2px solid #468af6; outline-offset: 2px; }"
+    },
+    {
+      "name": "Stat Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Panel surface with lit top edge and inner glow corner — base container for dashboard content.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-edge\"></div><div class=\"ds-card-glow\"></div><div class=\"ds-card-body\"><div class=\"ds-card-title\">Total Volume</div><div class=\"ds-card-value\">12,480 kg</div></div></div>",
+      "css": ".ds-card { position: relative; border-radius: 16px; background: #0d1117; border: 1px solid rgba(255,255,255,0.07); box-shadow: inset 0 1px 0 rgba(255,255,255,0.055), 0 1px 2px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.35), 0 16px 40px rgba(0,0,0,0.22); overflow: hidden; font-family: 'Public Sans', sans-serif; } .ds-card-edge { position: absolute; inset: 0 0 auto 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent); } .ds-card-glow { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent 60%); pointer-events: none; } .ds-card-body { position: relative; padding: 24px; } .ds-card-title { font-size: 14px; color: #8b94a7; margin-bottom: 8px; } .ds-card-value { font-size: 30px; font-weight: 700; color: #f1f5f9; letter-spacing: -0.02em; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard form field with Charge Blue focus glow.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Enter weight (kg)\" />",
+      "css": ".ds-input { display: block; width: 100%; height: 40px; padding: 8px 16px; border-radius: 12px; border: 1px solid #1f222e; background: rgba(255,255,255,0.04); backdrop-filter: blur(4px); color: #f1f5f9; font-family: 'Public Sans', sans-serif; font-size: 14px; transition: border-color 0.2s, background 0.2s, box-shadow 0.2s; } .ds-input::placeholder { color: rgba(139,148,167,0.7); } .ds-input:focus-visible { outline: none; border-color: rgba(70,138,246,0.6); background: rgba(255,255,255,0.07); box-shadow: 0 0 0 3px rgba(59,130,246,0.15), 0 0 12px rgba(59,130,246,0.1); }"
+    },
+    {
+      "name": "Liquid Glass Bottom Nav",
+      "kind": "nav",
+      "refersTo": "bottom-nav-pill",
+      "description": "Signature floating mobile nav: heavy-blur glass pill with a spring-animated active bubble that hugs the active label.",
+      "html": "<nav class=\"ds-nav\"><div class=\"ds-nav-sheen\"></div><div class=\"ds-nav-bubble\"></div><a class=\"ds-nav-item ds-nav-item--active\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#468af6\" stroke-width=\"2\"><path d=\"M6.5 6.5h11v11h-11z\"/><path d=\"M9 9l6 6M15 9l-6 6\"/></svg><span class=\"ds-nav-label ds-nav-label--active\">Sports</span></a><a class=\"ds-nav-item\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"rgba(241,245,249,0.35)\" stroke-width=\"2\"><path d=\"M4 19V9M10 19V5M16 19v-7M22 19V3\"/></svg><span class=\"ds-nav-label\">Insights</span></a><a class=\"ds-nav-item\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"rgba(241,245,249,0.35)\" stroke-width=\"2\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c0-4 4-6 8-6s8 2 8 6\"/></svg><span class=\"ds-nav-label\">Profile</span></a></nav>",
+      "css": ".ds-nav { position: relative; display: flex; align-items: center; height: 62px; width: 100%; max-width: 360px; border-radius: 9999px; overflow: hidden; backdrop-filter: blur(40px) saturate(180%) brightness(1.02); background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.11); box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.28), 0 2px 6px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.07); font-family: 'Public Sans', sans-serif; } .ds-nav-sheen { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(155deg, rgba(255,255,255,0.06) 0%, transparent 55%); pointer-events: none; } .ds-nav-bubble { position: absolute; top: 50%; left: 4px; width: 110px; height: 46px; transform: translateY(-50%); border-radius: 9999px; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.26); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 0 20px rgba(255,255,255,0.06); transition: left 0.35s cubic-bezier(0.34,1.56,0.64,1), width 0.35s cubic-bezier(0.34,1.56,0.64,1); } .ds-nav-item { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: 62px; text-decoration: none; } .ds-nav-icon { width: 20px; height: 20px; } .ds-nav-label { font-size: 9px; font-weight: 500; letter-spacing: 0.02em; color: rgba(241,245,249,0.30); } .ds-nav-label--active { color: rgba(241,245,249,0.90); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Performance Cockpit",
+    "overview": "SportMind AI is the athlete's instrument panel: a near-black surface lit only by the glow of its own readouts. Every screen behaves like a heads-up display — dense, precise, built for a quick glance mid-session, but rendered with the polish of a premium device, not a spreadsheet. Charge Blue is the system's primary indicator light: training status, active tabs, primary actions, and AI insight all pulse in the same electric blue. Glass surfaces — the floating bottom nav, overlays — sit like a HUD visor over the cockpit, frosted and responsive to touch.\n\nThis system explicitly rejects the generic SaaS dashboard (flat gray-on-gray cards, default admin-template chrome, sterile enterprise tone) and cheap fitness app clutter (loud gamification badges, mismatched ad-style gradients, busy 'free app' energy). Nothing here should look like an internal ops tool, and nothing should look like it's trying to sell you a supplement.",
+    "keyCharacteristics": [
+      "Dark-first (#060810 void background), light theme is a secondary, fully-supported mode, not the design target.",
+      "One accent color (Charge Blue) carries all interactive/active meaning; Glow Violet is reserved for rare gradient accents only.",
+      "Cards and panels read as physically lifted instrument panels: top-edge shine, soft 3D shadow, subtle inner gradient.",
+      "Floating navigation is true liquid glass (heavy blur + saturation), distinct from the flatter panel surfaces.",
+      "Motion is tactile (press, glow-pulse, spring-snap), never decorative-only."
+    ],
+    "rules": [
+      { "name": "The One Signal Rule", "body": "Charge Blue is the only color that means 'active / primary / pay attention.' If a second accent color appears anywhere outside the Charge Blue → Glow Violet text gradient, it's a mistake — destructive red is the sole sanctioned exception, and only for destructive actions.", "section": "colors" },
+      { "name": "The Lit-Edge Rule", "body": "Every dark panel, card, and glass surface gets a 1px top-edge highlight (rgba(255,255,255,0.05-0.25), full-width or via inset 0 1px 0). This is what separates 'premium dark UI' from 'just a dark div' — never ship a dark surface without it.", "section": "colors" },
+      { "name": "The One-Face Rule", "body": "Don't introduce a second font family for 'emphasis' or 'AI' features. Weight (400/500/600/700) and the Charge Blue→Glow Violet gradient are the system's emphasis tools — a second typeface reads as an unfinished design system, not a deliberate one.", "section": "typography" },
+      { "name": "The Glow-Is-Status Rule", "body": "Box-shadow elevation (shadow-card/shadow-float) communicates physical depth; Charge Blue glow communicates state (active, focused, AI-powered). Never use a Charge Blue glow on a resting/inactive element — it must mean something is on.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep Charge Blue (#468af6 / glow #3b82f6) as the only color that signals 'active, primary, or AI-powered' — including focus rings, active nav states, and primary buttons.",
+      "Do give every dark panel/card a 1px lit top edge (rgba(255,255,255,0.05-0.25)) — this is the line between 'premium dark UI' and 'a gray div' (the Lit-Edge Rule).",
+      "Do use .liquid-glass-pill only for floating/overlay elements (bottom nav, future floating toolbars); resting page content stays on Panel (#0d1117) surfaces.",
+      "Do make primary buttons feel pressed: active:scale-[0.97] active:translate-y-px plus an inset shadow on press, glow intensifying on hover.",
+      "Do respect prefers-reduced-motion: spring/slide/glow-pulse animations need an instant or crossfade fallback (per PRODUCT.md accessibility commitment).",
+      "Do keep touch targets ≥44px on mobile, especially the bottom nav and any primary action — athletes use this one-handed mid-workout."
+    ],
+    "donts": [
+      "Don't introduce a second accent color outside the Charge Blue → Glow Violet text gradient. Destructive red is the only sanctioned exception, for destructive actions only.",
+      "Don't build 'generic SaaS dashboard' surfaces — flat gray-on-gray cards, default admin-template chrome, sterile enterprise tone (PRODUCT.md anti-reference).",
+      "Don't add 'cheap fitness app clutter' — loud gamification badges, mismatched ad-style gradients, busy 'free app' energy (PRODUCT.md anti-reference).",
+      "Don't use a Charge Blue glow on a resting/inactive element — glow means 'on,' not 'decorative' (the Glow-Is-Status Rule).",
+      "Don't introduce a second font family for 'emphasis.' Public Sans at different weights/sizes, plus the text gradient, are the system's only emphasis tools (the One-Face Rule).",
+      "Don't use border-left/border-right accent stripes on cards or list items — not part of this system's vocabulary."
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+  </defs>
+  <rect width="400" height="400" rx="16" fill="#0d1117"/>
+  <rect x="1" y="1" width="398" height="398" rx="15" fill="none" stroke="#1e293b" stroke-width="2"/>
+  <ellipse cx="200" cy="105" rx="55" ry="30" fill="#3b82f6" opacity="0.22" filter="url(#blur)"/>
+  <path d="M200,100 L200,230" fill="none" stroke="#94a3b8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M200,230 L180,300 L160,370" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M200,230 L220,300 L250,360" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M180,120 L177,230" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M220,120 L223,230" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="200" cy="70" r="20" fill="none" stroke="#94a3b8" stroke-width="9"/><g transform="translate(159,222)" stroke="#3b82f6" stroke-width="3" fill="none"><polygon points="20,4 34,12 34,28 20,36 6,28 6,12"/></g>
+  <g transform="translate(344,344)" stroke="#3b82f6" stroke-width="3" fill="none"><polygon points="20,4 34,12 34,28 20,36 6,28 6,12"/></g>
+  <text x="20" y="378" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="600" fill="#64748b">Farmer&apos;s Carry</text>
+</svg>

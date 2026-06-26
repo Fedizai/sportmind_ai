@@ -1,0 +1,13 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+  </defs>
+  <rect width="400" height="400" rx="16" fill="#0d1117"/>
+  <rect x="1" y="1" width="398" height="398" rx="15" fill="none" stroke="#1e293b" stroke-width="2"/>
+  <ellipse cx="205" cy="230" rx="65" ry="55" fill="#3b82f6" opacity="0.22" filter="url(#blur)"/>
+  <rect x="170" y="300" width="60" height="15" rx="4" fill="none" stroke="#94a3b8" stroke-width="6" opacity="0.5"/><path d="M200,200 L200,300" fill="none" stroke="#94a3b8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M200,300 L180,340 L160,360" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M200,300 L185,350 L165,370" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M182,212 L152,250 L160,290" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M218,212 L248,250 L240,290" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="200" cy="175" r="20" fill="none" stroke="#94a3b8" stroke-width="9"/><line x1="200" y1="290" x2="200" y2="245" stroke="#3b82f6" stroke-width="3" stroke-dasharray="6,6"/><rect x="188" y="230" width="24" height="12" rx="4" fill="none" stroke="#3b82f6" stroke-width="3" opacity="1"/><line x1="140" y1="290" x2="260" y2="290" stroke="#3b82f6" stroke-width="5" />
+  <g transform="translate(344,344)" stroke="#3b82f6" stroke-width="3" fill="none"><rect x="14" y="2" width="12" height="6" rx="1"/><line x1="20" y1="8" x2="20" y2="34"/></g>
+  <text x="20" y="378" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="600" fill="#64748b">Seated Cable Row</text>
+</svg>

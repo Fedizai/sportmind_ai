@@ -1,0 +1,13 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+  </defs>
+  <rect width="400" height="400" rx="16" fill="#0d1117"/>
+  <rect x="1" y="1" width="398" height="398" rx="15" fill="none" stroke="#1e293b" stroke-width="2"/>
+  <ellipse cx="215" cy="235" rx="60" ry="50" fill="#3b82f6" opacity="0.22" filter="url(#blur)"/>
+  <path d="M190,110 L205,210" fill="none" stroke="#94a3b8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M205,210 L200,290 L195,370" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M205,210 L245,255 L285,285" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M195,140 L175,175 L160,195" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M215,140 L230,165 L240,185" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="180" cy="80" r="20" fill="none" stroke="#94a3b8" stroke-width="9"/><line x1="285" y1="285" x2="320" y2="370" stroke="#3b82f6" stroke-width="3" stroke-dasharray="6,6"/>
+  <g transform="translate(344,344)" stroke="#3b82f6" stroke-width="3" fill="none"><rect x="14" y="2" width="12" height="6" rx="1"/><line x1="20" y1="8" x2="20" y2="34"/></g>
+  <text x="20" y="378" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="600" fill="#64748b">Cable Kickbacks</text>
+</svg>

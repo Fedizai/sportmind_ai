@@ -1,0 +1,313 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 220 14% 94%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Status ramp — match results, completion, attention. Charge Blue stays the sole active/primary signal. */
+    --success: 152 60% 30%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 35%;
+    --warning-foreground: 0 0% 100%;
+    --danger: 0 70% 50%;
+    --danger-foreground: 0 0% 100%;
+
+    --border: 214 32% 88%;
+    --input: 214 32% 88%;
+    --ring: 221 83% 53%;
+
+    --radius: 1.25rem;
+
+    /* 3D shadow system */
+    --shadow-card:
+      inset 0 1px 0 rgba(255,255,255,0.95),
+      0 1px 2px rgba(0,0,0,0.04),
+      0 4px 8px rgba(0,0,0,0.05),
+      0 12px 24px rgba(0,0,0,0.04);
+
+    --shadow-float:
+      inset 0 1px 0 rgba(255,255,255,0.95),
+      0 2px 8px rgba(0,0,0,0.06),
+      0 8px 24px rgba(0,0,0,0.08),
+      0 24px 48px rgba(0,0,0,0.06);
+
+    --shadow-btn:
+      inset 0 1px 0 rgba(255,255,255,0.25),
+      inset 0 -1px 0 rgba(0,0,0,0.12),
+      0 1px 2px rgba(59,130,246,0.2),
+      0 4px 12px rgba(59,130,246,0.18);
+
+    --shadow-btn-hover:
+      inset 0 1px 0 rgba(255,255,255,0.25),
+      inset 0 -1px 0 rgba(0,0,0,0.12),
+      0 2px 6px rgba(59,130,246,0.3),
+      0 8px 24px rgba(59,130,246,0.28),
+      0 16px 40px rgba(59,130,246,0.12);
+  }
+
+  .dark {
+    --background: 228 46% 4%;   /* #060810 */
+    --foreground: 210 40% 96%;
+
+    --card: 222 28% 7%;         /* #0d1117 */
+    --card-foreground: 210 40% 96%;
+
+    --popover: 228 40% 5%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 217 91% 62%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 228 22% 13%;
+    --secondary-foreground: 210 40% 96%;
+
+    --muted: 228 18% 13%;
+    --muted-foreground: 220 14% 60%;
+
+    --accent: 228 22% 13%;
+    --accent-foreground: 210 40% 96%;
+
+    --destructive: 0 62% 38%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Status ramp — match results, completion, attention. Charge Blue stays the sole active/primary signal. */
+    --success: 152 60% 45%;
+    --success-foreground: 152 50% 12%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 60% 10%;
+    --danger: 0 72% 55%;
+    --danger-foreground: 0 0% 100%;
+
+    --border: 228 20% 15%;
+    --input: 228 22% 13%;
+    --ring: 217 91% 62%;
+
+    /* 3D shadow system – dark */
+    --shadow-card:
+      inset 0 1px 0 rgba(255,255,255,0.055),
+      0 1px 2px rgba(0,0,0,0.4),
+      0 4px 12px rgba(0,0,0,0.35),
+      0 16px 40px rgba(0,0,0,0.22);
+
+    --shadow-float:
+      inset 0 1px 0 rgba(255,255,255,0.055),
+      0 2px 8px rgba(0,0,0,0.5),
+      0 12px 32px rgba(0,0,0,0.4),
+      0 32px 64px rgba(0,0,0,0.25);
+
+    --shadow-btn:
+      inset 0 1px 0 rgba(255,255,255,0.18),
+      inset 0 -1px 0 rgba(0,0,0,0.25),
+      0 1px 3px rgba(59,130,246,0.25),
+      0 4px 14px rgba(59,130,246,0.22);
+
+    --shadow-btn-hover:
+      inset 0 1px 0 rgba(255,255,255,0.18),
+      inset 0 -1px 0 rgba(0,0,0,0.25),
+      0 2px 6px rgba(59,130,246,0.35),
+      0 8px 28px rgba(59,130,246,0.32),
+      0 20px 48px rgba(59,130,246,0.15);
+  }
+}
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Public Sans', sans-serif;
+  }
+
+  /* Subtle mesh gradient on dark background */
+  .dark body {
+    background:
+      radial-gradient(ellipse 90% 40% at 50% -10%, rgba(59,130,246,0.07) 0%, transparent 65%),
+      radial-gradient(ellipse 50% 30% at 90% 60%, rgba(139,92,246,0.04) 0%, transparent 60%),
+      hsl(var(--background));
+  }
+
+  /* Selection color */
+  ::selection {
+    background: rgba(59,130,246,0.25);
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer utilities {
+  /* iOS safe-area – use on fixed bottom bars to clear the home indicator */
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  /* ── Liquid Glass (iOS 26 / WhatsApp style) ──────────────────────── */
+  .liquid-glass-pill {
+    backdrop-filter: blur(40px) saturate(180%) brightness(1.02);
+    -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.02);
+    background: rgba(255, 255, 255, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow:
+      0 16px 48px rgba(0,0,0,0.08),
+      0 4px 12px rgba(0,0,0,0.05),
+      inset 0 1px 0 rgba(255,255,255,0.8);
+  }
+  .dark .liquid-glass-pill {
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    box-shadow:
+      0 20px 60px rgba(0,0,0,0.5),
+      0 8px 24px rgba(0,0,0,0.28),
+      0 2px 6px rgba(0,0,0,0.15),
+      inset 0 1px 0 rgba(255,255,255,0.07);
+  }
+
+  .liquid-glass-bubble {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.09);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .dark .liquid-glass-bubble {
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 0 20px rgba(255,255,255,0.06);
+  }
+
+  /* 3D depth shadows */
+  .shadow-card  { box-shadow: var(--shadow-card); }
+  .shadow-float { box-shadow: var(--shadow-float); }
+  .shadow-btn   { box-shadow: var(--shadow-btn); }
+  .shadow-btn-hover { box-shadow: var(--shadow-btn-hover); }
+
+  /* Glow utilities */
+  .glow-primary {
+    box-shadow: 0 0 16px rgba(59,130,246,0.35), 0 0 48px rgba(59,130,246,0.12);
+  }
+  .glow-primary-sm {
+    box-shadow: 0 0 8px rgba(59,130,246,0.28), 0 0 24px rgba(59,130,246,0.1);
+  }
+
+  /* Hide scrollbar on horizontally-scrolling tab bars while keeping scroll */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Cockpit telemetry grid — faint readout texture, used sparingly */
+  .hud-grid {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.7) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.7) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(270 80% 65%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-blue {
+    background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glass morphism */
+  .glass {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .glass-light {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    border: 1px solid rgba(255,255,255,0.5);
+  }
+
+  /* Gradient border using pseudo-element */
+  .border-gradient {
+    position: relative;
+    background-clip: padding-box;
+  }
+  .border-gradient::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg,
+      rgba(59,130,246,0.45) 0%,
+      rgba(139,92,246,0.3) 40%,
+      rgba(255,255,255,0.04) 60%,
+      rgba(59,130,246,0.2) 100%
+    );
+    z-index: -1;
+  }
+
+  /* Top shine line for 3D card effect */
+  .shine-top::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+}
+
+@layer components {
+  .radio-label {
+    @apply flex h-full w-full cursor-pointer items-center justify-center rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary;
+  }
+
+  /* Primary button 3D */
+  .btn-primary-3d {
+    box-shadow: var(--shadow-btn);
+    transition: box-shadow 0.2s ease, transform 0.1s ease;
+  }
+  .btn-primary-3d:hover {
+    box-shadow: var(--shadow-btn-hover);
+  }
+  .btn-primary-3d:active {
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+    transform: translateY(1px);
+  }
+}

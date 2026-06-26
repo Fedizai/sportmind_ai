@@ -1,0 +1,13 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+  </defs>
+  <rect width="400" height="400" rx="16" fill="#0d1117"/>
+  <rect x="1" y="1" width="398" height="398" rx="15" fill="none" stroke="#1e293b" stroke-width="2"/>
+  <ellipse cx="200" cy="180" rx="58" ry="60" fill="#3b82f6" opacity="0.22" filter="url(#blur)"/>
+  <line x1="130" y1="40" x2="270" y2="40" stroke="#94a3b8" stroke-width="6" /><path d="M200,195 L200,290" fill="none" stroke="#94a3b8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M200,290 L195,335 L190,380" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M200,290 L205,335 L210,380" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M165,40 L150,110 L180,150" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M235,40 L250,110 L220,150" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="200" cy="170" r="20" fill="none" stroke="#94a3b8" stroke-width="9"/>
+  <g transform="translate(344,344)" stroke="#3b82f6" stroke-width="3" fill="none"><circle cx="20" cy="8" r="5"/><line x1="20" y1="13" x2="20" y2="26"/><line x1="20" y1="17" x2="12" y2="24"/><line x1="20" y1="17" x2="28" y2="24"/><line x1="20" y1="26" x2="13" y2="36"/><line x1="20" y1="26" x2="27" y2="36"/></g>
+  <text x="20" y="378" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="600" fill="#64748b">Towel Pull-Ups</text>
+</svg>
