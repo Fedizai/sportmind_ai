@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sportmind-dev",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "export PATH=/Users/fedizayen/Downloads/clothing-ecommerce/node-v20.11.1-darwin-x64/bin:$PATH && cd '/Users/fedizayen/Desktop/untitled folder/sportmind/studio' && node node_modules/next/dist/bin/next dev"],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}
