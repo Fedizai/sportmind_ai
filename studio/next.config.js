@@ -1,16 +1,10 @@
-/** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "export",
   images: {
-    dangerouslyAllowSVG: true,
-    contentDispositionType: "inline",
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "placehold.co",
-      },
-    ],
+    unoptimized: true,
   },
+  basePath: "/sportmind_ai",
+  assetPrefix: "/sportmind_ai/",
 };
 
 module.exports = nextConfig;

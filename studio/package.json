@@ -3,11 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
+  "dev": "next dev",
+  "build": "next build",
+  "deploy": "npm run build && gh-pages -d out"
+},
   "dependencies": {
     "@genkit-ai/googleai": "latest",
     "@google-cloud/functions-framework": "^3.0.0",

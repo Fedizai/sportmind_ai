@@ -2,5 +2,8 @@
   "dependencies": {
     "firebase-admin": "12.7.0",
     "firebase-functions": "4.9.0"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }
