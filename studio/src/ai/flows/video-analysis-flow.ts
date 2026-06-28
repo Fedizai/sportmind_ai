@@ -10,14 +10,13 @@
 
 import { ai } from '@/ai/genkit-instance';
 import {
-    VideoAnalysisInputSchema,
-    VideoAnalysisOutputSchema,
-    type VideoAnalysisInput,
-    type VideoAnalysisOutput,
+  VideoAnalysisInputSchema,
+  VideoAnalysisOutputSchema,
+  type VideoAnalysisInput,
+  type VideoAnalysisOutput,
 } from '@/ai/schemas';
 import { z } from 'zod';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 
 // This flow simulates video analysis.
 const videoAnalysisFlow = ai.defineFlow(
@@ -28,15 +27,14 @@ const videoAnalysisFlow = ai.defineFlow(
   },
   async (input) => {
     // Check user's plan
-    const userDocRef = doc(db, 'users', input.userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists() || userDoc.data()?.plan !== 'pro') {
+    const userDoc = await adminDb.collection('users').doc(input.userId).get();
+    if (!userDoc.exists || userDoc.data()?.plan !== 'pro') {
       throw new Error('Access denied: This feature is only available for Pro plan users.');
     }
 
     const { output } = await ai.generate({
-        model: 'googleai/gemini-1.5-flash',
-        prompt: `You are a world-class football coach. Analyze the provided video of a player and give specific, actionable feedback based on the user's prompt.
+      model: 'googleai/gemini-1.5-flash',
+      prompt: `You are a world-class football coach. Analyze the provided video of a player and give specific, actionable feedback based on the user's prompt.
 
         User's Focus: "${input.prompt}"
 
@@ -49,17 +47,17 @@ const videoAnalysisFlow = ai.defineFlow(
         3.  For each point, explain WHY it's important (e.g., for creating space, defensive stability, etc.).
         4.  Keep the language clear, encouraging, and easy to understand.
         5.  Structure the feedback as a concise bulleted or numbered list.`,
-        output: {
-            schema: VideoAnalysisOutputSchema,
-        }
+      output: {
+        schema: VideoAnalysisOutputSchema,
+      }
     });
 
     if (!output?.feedback) {
-        throw new Error("The AI failed to provide any feedback for the video.");
+      throw new Error("The AI failed to provide any feedback for the video.");
     }
-    
+
     return {
-        feedback: output.feedback,
+      feedback: output.feedback,
     };
   }
 );
@@ -69,4 +67,3 @@ export async function analyzeFootballVideo(input: VideoAnalysisInput): Promise<V
   return videoAnalysisFlow(input);
 }
 
-    

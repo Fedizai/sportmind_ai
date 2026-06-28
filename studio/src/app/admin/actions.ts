@@ -1,7 +1,7 @@
 
 'use server';
 
-import { admin } from "@/lib/firebase-admin";
+import { admin, adminDb } from "@/lib/firebase-admin";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { UserRole, UserPlan } from "@/hooks/use-all-users";
@@ -38,7 +38,7 @@ export async function createUser(data: z.infer<typeof createUserSchema>) {
         });
 
         // 2. Create user document in Firestore
-        const userDocRef = admin.firestore().collection('users').doc(userRecord.uid);
+        const userDocRef = adminDb.collection('users').doc(userRecord.uid);
         await userDocRef.set({
             uid: userRecord.uid,
             email: email,
@@ -66,7 +66,7 @@ export async function deleteUser(uid: string) {
     if (!uid) {
         throw new Error("User ID is required for deletion.");
     }
-    
+
     if (!admin.apps.length) {
         console.error("Firebase Admin SDK is not initialized. Make sure the FIREBASE_SERVICE_ACCOUNT_KEY is set in your environment variables.");
         throw new Error("The server is not configured to perform administrative actions. Please contact support.");
@@ -87,7 +87,7 @@ export async function deleteUser(uid: string) {
 
     try {
         // Second, delete from Firestore. This will run even if the user was not in Auth.
-        const userDocRef = admin.firestore().collection('users').doc(uid);
+        const userDocRef = adminDb.collection('users').doc(uid);
         await userDocRef.delete();
         console.log(`Successfully deleted user ${uid} from Firestore.`);
     } catch (error: any) {

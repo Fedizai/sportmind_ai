@@ -34,11 +34,11 @@ try {
     console.log("Firebase Admin SDK already initialized.");
   }
 } catch (error) {
-    console.error("🔥 Error initializing Firebase Admin SDK:", error);
-    throw new Error("Failed to initialize Firebase Admin SDK.");
+  console.error("🔥 Error initializing Firebase Admin SDK:", error);
+  throw new Error("Failed to initialize Firebase Admin SDK.");
 }
 
 
 const adminDb = admin.firestore();
 
-export { adminDb };
+export { admin, adminDb };

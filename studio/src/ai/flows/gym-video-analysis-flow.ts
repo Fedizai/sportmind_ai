@@ -11,8 +11,7 @@
 
 import { ai } from '@/ai/genkit-instance';
 import { z } from 'zod';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 
 // Define Zod schemas for the flow's input and output
 export const GymVideoAnalysisInputSchema = z.object({
@@ -23,7 +22,7 @@ export const GymVideoAnalysisInputSchema = z.object({
 export type GymVideoAnalysisInput = z.infer<typeof GymVideoAnalysisInputSchema>;
 
 export const GymVideoAnalysisOutputSchema = z.object({
-    feedback: z.string().describe("The AI's detailed, point-by-point feedback on the exercise form in the video clip."),
+  feedback: z.string().describe("The AI's detailed, point-by-point feedback on the exercise form in the video clip."),
 });
 export type GymVideoAnalysisOutput = z.infer<typeof GymVideoAnalysisOutputSchema>;
 
@@ -59,20 +58,19 @@ const analyzeGymVideoFlow = ai.defineFlow(
   },
   async (input) => {
     // Check user's plan
-    const userDocRef = doc(db, 'users', input.userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists() || userDoc.data()?.plan !== 'pro') {
+    const userDoc = await adminDb.collection('users').doc(input.userId).get();
+    if (!userDoc.exists || userDoc.data()?.plan !== 'pro') {
       throw new Error('Access denied: This feature is only available for Pro plan users.');
     }
-      
+
     const { output } = await videoAnalysisPrompt({ videoDataUri: input.videoDataUri, prompt: input.prompt });
-    
+
     if (!output?.feedback) {
-        throw new Error("The AI failed to provide any feedback for the video.");
+      throw new Error("The AI failed to provide any feedback for the video.");
     }
-    
+
     return {
-        feedback: output.feedback,
+      feedback: output.feedback,
     };
   }
 );
@@ -82,4 +80,3 @@ export async function analyzeGymVideo(input: GymVideoAnalysisInput): Promise<Gym
   return analyzeGymVideoFlow(input);
 }
 
-    

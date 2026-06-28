@@ -9,14 +9,13 @@
  */
 
 import { ai } from '@/ai/genkit-instance';
-import { 
-    TacticalAdviceInputSchema, 
-    TacticalAdviceOutputSchema, 
-    type TacticalAdviceInput, 
-    type TacticalAdviceOutput 
+import {
+    TacticalAdviceInputSchema,
+    TacticalAdviceOutputSchema,
+    type TacticalAdviceInput,
+    type TacticalAdviceOutput
 } from '@/ai/schemas';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 
 const getTacticalAdviceFlow = ai.defineFlow(
     {
@@ -26,10 +25,9 @@ const getTacticalAdviceFlow = ai.defineFlow(
     },
     async ({ sport, question, userId }) => {
         // Check user's plan
-        const userDocRef = doc(db, 'users', userId);
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists() || userDoc.data()?.plan !== 'pro') {
-          throw new Error('Access denied: This feature is only available for Pro plan users.');
+        const userDoc = await adminDb.collection('users').doc(userId).get();
+        if (!userDoc.exists || userDoc.data()?.plan !== 'pro') {
+            throw new Error('Access denied: This feature is only available for Pro plan users.');
         }
 
         const { output } = await ai.generate({
@@ -44,7 +42,7 @@ const getTacticalAdviceFlow = ai.defineFlow(
                 schema: TacticalAdviceOutputSchema,
             }
         });
-        
+
         if (!output) {
             throw new Error('Failed to generate tactical advice.');
         }

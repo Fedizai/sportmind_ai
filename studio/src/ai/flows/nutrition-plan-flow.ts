@@ -16,17 +16,16 @@ import {
     type NutritionPlanInput,
     type NutritionPlanOutput,
 } from '@/ai/schemas';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 
 const nutritionPlanPrompt = ai.definePrompt(
-  {
-    name: 'generateNutritionPlanPrompt',
-    input: { schema: NutritionPlanInputSchema.omit({ userId: true }) },
-    output: { schema: NutritionPlanOutputSchema },
-    model: 'googleai/gemini-1.5-flash',
-  },
-  `You are an expert nutritionist. A user wants a 1-day meal plan.
+    {
+        name: 'generateNutritionPlanPrompt',
+        input: { schema: NutritionPlanInputSchema.omit({ userId: true }) },
+        output: { schema: NutritionPlanOutputSchema },
+        model: 'googleai/gemini-1.5-flash',
+    },
+    `You are an expert nutritionist. A user wants a 1-day meal plan.
 
     User's Goal: {{goal}}
     Target Calories: {{calories}}
@@ -50,13 +49,12 @@ const generateNutritionPlanFlow = ai.defineFlow(
     },
     async (input) => {
         // Check user's plan
-        const userDocRef = doc(db, 'users', input.userId);
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists() || userDoc.data()?.plan !== 'pro') {
-          throw new Error('Access denied: This feature is only available for Pro plan users.');
+        const userDoc = await adminDb.collection('users').doc(input.userId).get();
+        if (!userDoc.exists || userDoc.data()?.plan !== 'pro') {
+            throw new Error('Access denied: This feature is only available for Pro plan users.');
         }
 
-        const { output } = await nutritionPlanPrompt({calories: input.calories, dietaryNeeds: input.dietaryNeeds, goal: input.goal});
+        const { output } = await nutritionPlanPrompt({ calories: input.calories, dietaryNeeds: input.dietaryNeeds, goal: input.goal });
         if (!output) {
             throw new Error('The AI failed to generate a nutrition plan.');
         }

@@ -69,20 +69,20 @@ import { useTranslation } from "@/hooks/use-translation";
 import { TranslationKey } from "@/lib/i18n";
 
 const sports = [
-  { name: "Gym", icon: Dumbbell, path: "/dashboard/gym" },
-  { name: "Football", icon: Trophy, path: "/dashboard/football" },
-  { name: "Tennis", icon: TennisBallIcon, path: "/dashboard/tennis" },
-  { name: "Basketball", icon: Dribbble, path: "/dashboard/basketball" },
-  { name: "Boxing", icon: Shield, path: "/dashboard/boxing" },
-  { name: "Swimming", icon: Waves, path: "/dashboard/swimming" },
+    { name: "Gym", icon: Dumbbell, path: "/dashboard/gym" },
+    { name: "Football", icon: Trophy, path: "/dashboard/football" },
+    { name: "Tennis", icon: TennisBallIcon, path: "/dashboard/tennis" },
+    { name: "Basketball", icon: Dribbble, path: "/dashboard/basketball" },
+    { name: "Boxing", icon: Shield, path: "/dashboard/boxing" },
+    { name: "Swimming", icon: Waves, path: "/dashboard/swimming" },
 ];
 
 const moreLinks = [
-  { titleKey: 'teamHubCardTitle', subtitleKey: 'teamHubCardSubtitle', icon: ClipboardList, path: '/dashboard/sports-assistant' },
-  { titleKey: 'myReportsCardTitle', subtitleKey: 'myReportsCardSubtitle', icon: BarChart2, path: '/dashboard/progress' },
-  { titleKey: 'mentalCoachCardTitle', subtitleKey: 'mentalCoachCardSubtitle', icon: BrainCircuit, path: '/dashboard/mental-coach' },
-  { titleKey: 'myGoalsCardTitle', subtitleKey: 'myGoalsCardSubtitle', icon: Target, path: '/dashboard/goals' },
-  { titleKey: 'bodyScanCardTitle', subtitleKey: 'bodyScanCardSubtitle', icon: ScanLine, path: '/dashboard/body-scan' },
+    { titleKey: 'teamHubCardTitle', subtitleKey: 'teamHubCardSubtitle', icon: ClipboardList, path: '/dashboard/sports-assistant' },
+    { titleKey: 'myReportsCardTitle', subtitleKey: 'myReportsCardSubtitle', icon: BarChart2, path: '/dashboard/progress' },
+    { titleKey: 'mentalCoachCardTitle', subtitleKey: 'mentalCoachCardSubtitle', icon: BrainCircuit, path: '/dashboard/mental-coach' },
+    { titleKey: 'myGoalsCardTitle', subtitleKey: 'myGoalsCardSubtitle', icon: Target, path: '/dashboard/goals' },
+    { titleKey: 'bodyScanCardTitle', subtitleKey: 'bodyScanCardSubtitle', icon: ScanLine, path: '/dashboard/body-scan' },
 ] as const;
 
 
@@ -100,18 +100,18 @@ const cardVariants = {
 }
 
 const sectionVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
     }
-  }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
 };
 
 
@@ -193,7 +193,7 @@ const StreakCard = () => {
     const { streak } = useStreakStore();
     const { t } = useTranslation();
     const [message, setMessage] = useState(t('streakMessage1'));
-    
+
     useEffect(() => {
         const randomKey = motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)];
         setMessage(t(randomKey));
@@ -238,10 +238,10 @@ const NutritionChart = () => {
             </div>
         );
     }
-    
+
     const { calories, protein, carbs, fat } = dailyTotals;
     const targetCalories = user?.nutritionTarget?.calories || 2500;
-    
+
     // 40% Carbs, 30% Protein, 30% Fat
     const targetCarbs = (targetCalories * 0.4) / 4;
     const targetProtein = (targetCalories * 0.3) / 4;
@@ -317,29 +317,29 @@ const NutritionChart = () => {
             {totalLogs > 0 && <Separator />}
             <CardFooter className="p-0">
                 <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="item-1" className="border-b-0">
-                    <AccordionTrigger className="px-6 text-sm">
-                        {t('viewLoggedMeals', { count: totalLogs })}
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <ScrollArea className="h-32 px-6">
-                        <div className="space-y-3">
-                        {Object.entries(dailyLogs).map(([mealType, logs]) => (
-                            logs.length > 0 && (
-                                <div key={mealType}>
-                                    <h4 className="font-semibold text-xs capitalize mb-1">{t(mealType as TranslationKey)}</h4>
-                                    {logs.map(log => (
-                                        <div key={log.id} className="text-xs text-muted-foreground">
-                                            {log.items.map(item => item.name).join(', ')}
-                                        </div>
+                    <AccordionItem value="item-1" className="border-b-0">
+                        <AccordionTrigger className="px-6 text-sm">
+                            {t('viewLoggedMeals', { count: totalLogs })}
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <ScrollArea className="h-32 px-6">
+                                <div className="space-y-3">
+                                    {Object.entries(dailyLogs).map(([mealType, logs]) => (
+                                        logs.length > 0 && (
+                                            <div key={mealType}>
+                                                <h4 className="font-semibold text-xs capitalize mb-1">{t(mealType as TranslationKey)}</h4>
+                                                {logs.map((log: any) => (
+                                                    <div key={log.id} className="text-xs text-muted-foreground">
+                                                        {log.items.map((item: any) => item.name)}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )
                                     ))}
                                 </div>
-                            )
-                        ))}
-                        </div>
-                        </ScrollArea>
-                    </AccordionContent>
-                </AccordionItem>
+                            </ScrollArea>
+                        </AccordionContent>
+                    </AccordionItem>
                 </Accordion>
             </CardFooter>
         </Card>
@@ -356,25 +356,25 @@ const MealPlanCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
     if (user?.plan !== 'pro') {
         return <ProInsightCard title={t('todaysMealPlan')} icon={ClipboardList} onUpgrade={onUpgrade} />;
     }
-    
+
     return (
         <motion.div variants={itemVariants} whileHover="hover" onClick={() => router.push('/dashboard/nutrition?tab=generator')}>
-           <Card className="h-full group cursor-pointer flex flex-col">
-               <CardHeader>
-                   <CardTitle className="flex items-center gap-2"><ClipboardList className="text-primary" /> {t('todaysMealPlan')}</CardTitle>
-               </CardHeader>
-               <CardContent className="flex-grow flex flex-col justify-center items-center text-center">
+            <Card className="h-full group cursor-pointer flex flex-col">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><ClipboardList className="text-primary" /> {t('todaysMealPlan')}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow flex flex-col justify-center items-center text-center">
                     {!generatedPlan ? (
                         <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4 border-2 border-dashed border-muted rounded-lg group-hover:border-primary/50 transition-colors">
-                           <PlusCircle className="h-8 w-8 mb-2 text-muted-foreground/50" />
-                           <p className="text-sm font-semibold">{t('noMealPlan')}</p>
-                           <p className="text-xs">{t('generateMealPlanPrompt')}</p>
-                       </div>
+                            <PlusCircle className="h-8 w-8 mb-2 text-muted-foreground/50" />
+                            <p className="text-sm font-semibold">{t('noMealPlan')}</p>
+                            <p className="text-xs">{t('generateMealPlanPrompt')}</p>
+                        </div>
                     ) : (
                         <div className="w-full space-y-4">
                             {generatedPlan.meals.map((meal, index) => (
-                                 <div key={index} className="flex items-start space-x-3 p-2 bg-muted/50 rounded-md">
-                                    <Checkbox 
+                                <div key={index} className="flex items-start space-x-3 p-2 bg-muted/50 rounded-md">
+                                    <Checkbox
                                         id={`meal-${index}`}
                                         checked={meal.completed}
                                         onCheckedChange={() => toggleMealCompleted(index)}
@@ -395,10 +395,10 @@ const MealPlanCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
                             ))}
                         </div>
                     )}
-               </CardContent>
-           </Card>
-       </motion.div>
-   )
+                </CardContent>
+            </Card>
+        </motion.div>
+    )
 }
 
 const ShoppingListCard = () => {
@@ -416,17 +416,17 @@ const ShoppingListCard = () => {
                     <CardDescription>{allItemsComplete ? t('shoppingComplete') : t('itemsToBuy', { count: uncheckedItems.length })}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                     {allItemsComplete ? (
-                         <div className="flex flex-col items-center justify-center h-full text-center text-primary p-4 border-2 border-dashed border-primary/40 rounded-lg">
+                    {allItemsComplete ? (
+                        <div className="flex flex-col items-center justify-center h-full text-center text-primary p-4 border-2 border-dashed border-primary/40 rounded-lg">
                             <CheckCircle className="h-12 w-12 mb-2 glow-primary-sm rounded-full" />
                             <p className="text-sm font-semibold">{t('shoppingComplete')}</p>
                         </div>
-                     ) : items.length > 0 ? (
+                    ) : items.length > 0 ? (
                         <ScrollArea className="h-48">
                             <div className="space-y-3 pr-4">
                                 {items.map(item => (
-                                     <div key={item.id} className="flex items-start space-x-3">
-                                        <Checkbox 
+                                    <div key={item.id} className="flex items-start space-x-3">
+                                        <Checkbox
                                             id={`shopping-item-${item.id}`}
                                             checked={item.checked}
                                             onCheckedChange={() => toggleItemChecked(item.id)}
@@ -475,12 +475,12 @@ const GymPlanInsightCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
 
     const todayWorkout = plan.days[currentDayIndex];
     const allExercisesCompleted = todayWorkout.exercises.every(ex => ex.completed);
-    
+
     return (
         <motion.div variants={itemVariants} whileHover="hover" className="md:col-span-1" onClick={handleCardClick}>
             <Card className="h-full group md:aspect-square flex flex-col cursor-pointer">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Dumbbell className="h-5 w-5"/>{t('todaysGymPlan')}</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Dumbbell className="h-5 w-5" />{t('todaysGymPlan')}</CardTitle>
                     <CardDescription>{t('day')} {todayWorkout.day} / {plan.days.length} - {todayWorkout.focus}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col justify-center items-center text-center space-y-4">
@@ -492,21 +492,21 @@ const GymPlanInsightCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
                     ) : (
                         <ScrollArea className="h-full w-full">
                             <div className="space-y-3 pr-4">
-                            {todayWorkout.exercises.map((ex, index) => (
-                                <div key={index} className="flex items-center space-x-2 text-left p-2 rounded-md bg-muted/50">
-                                    <Checkbox 
-                                        id={`ex-${index}`}
-                                        checked={ex.completed}
-                                        onCheckedChange={() => toggleExerciseCompleted(currentDayIndex, index)}
-                                    />
-                                    <label
-                                        htmlFor={`ex-${index}`}
-                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                    >
-                                        {ex.name} <span className="text-xs text-muted-foreground">({ex.sets}x{ex.reps})</span>
-                                    </label>
-                                </div>
-                            ))}
+                                {todayWorkout.exercises.map((ex, index) => (
+                                    <div key={index} className="flex items-center space-x-2 text-left p-2 rounded-md bg-muted/50">
+                                        <Checkbox
+                                            id={`ex-${index}`}
+                                            checked={ex.completed}
+                                            onCheckedChange={() => toggleExerciseCompleted(currentDayIndex, index)}
+                                        />
+                                        <label
+                                            htmlFor={`ex-${index}`}
+                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                        >
+                                            {ex.name} <span className="text-xs text-muted-foreground">({ex.sets}x{ex.reps})</span>
+                                        </label>
+                                    </div>
+                                ))}
                             </div>
                         </ScrollArea>
                     )}
@@ -547,10 +547,10 @@ const VolumeLiftedCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
     const totalVolume = volumeData.reduce((sum, d) => sum + d.volume, 0);
 
     return (
-         <motion.div variants={itemVariants} whileHover="hover" className="md:col-span-1" onClick={handleCardClick}>
+        <motion.div variants={itemVariants} whileHover="hover" className="md:col-span-1" onClick={handleCardClick}>
             <Card className="md:aspect-square flex flex-col group cursor-pointer">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><BarChart2 className="h-5 w-5"/>{t('totalVolumeLifted')}</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><BarChart2 className="h-5 w-5" />{t('totalVolumeLifted')}</CardTitle>
                     <CardDescription>{t('thisWeek')}: <span className="font-semibold text-foreground">{totalVolume.toLocaleString()} kg</span></CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col justify-center items-center text-center">
@@ -559,8 +559,8 @@ const VolumeLiftedCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
                             <AreaChart data={volumeData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                                 <ChartTooltip
                                     cursor={false}
-                                    content={<ChartTooltipContent 
-                                        indicator="dot" 
+                                    content={<ChartTooltipContent
+                                        indicator="dot"
                                         labelKey="week"
                                         formatter={(value, name, item) => (
                                             <div className="flex flex-col gap-1">
@@ -613,7 +613,7 @@ const WorkoutConsistencyCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
     }
 
     if (!isHydrated || !plan) {
-         return <EmptyInsightCard title={t('weeklyConsistency')} description={t('generatePlanToTrackConsistency')} link="/dashboard/gym?tab=schedule" icon={CheckCircle} className="md:col-span-1" />
+        return <EmptyInsightCard title={t('weeklyConsistency')} description={t('generatePlanToTrackConsistency')} link="/dashboard/gym?tab=schedule" icon={CheckCircle} className="md:col-span-1" />
     }
 
     const completedCount = plan.days.filter(d => d.completed).length;
@@ -627,7 +627,7 @@ const WorkoutConsistencyCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
         <motion.div variants={itemVariants} whileHover="hover" className="md:col-span-1" onClick={handleCardClick}>
             <Card className="md:aspect-square flex flex-col group cursor-pointer">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><CheckCircle className="h-5 w-5"/>{t('weeklyConsistency')}</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><CheckCircle className="h-5 w-5" />{t('weeklyConsistency')}</CardTitle>
                     <CardDescription>{t('sessionsCompleted', { completed: completedCount, total: totalCount })}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col justify-center items-center text-center">
@@ -635,7 +635,7 @@ const WorkoutConsistencyCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
                         <PieChart>
                             <ChartTooltip content={<ChartTooltipContent hideLabel />} />
                             <Pie data={consistencyData} dataKey="sessions" nameKey="name" innerRadius={60} strokeWidth={5}>
-                                 <text
+                                <text
                                     x="50%"
                                     y="50%"
                                     textAnchor="middle"
@@ -666,7 +666,7 @@ const TennisLastMatchCard = ({ match }: { match: TennisMatch | null }) => {
             <Card className="h-full group cursor-pointer flex flex-col">
                 <CardHeader>
                     <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary"/>{t('lastMatch')}</CardTitle>
+                        <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" />{t('lastMatch')}</CardTitle>
                         <span className={cn(
                             "px-2.5 py-1 rounded-full text-xs font-bold tracking-wide",
                             match.result === 'W' ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
@@ -701,16 +701,16 @@ const ServeConsistencyCard = ({ matches }: { matches: TennisMatch[] }) => {
         <motion.div variants={itemVariants} whileHover="hover" onClick={() => router.push('/dashboard/tennis')}>
             <Card className="flex flex-col group cursor-pointer h-full">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5"/>{t('serveConsistency')}</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" />{t('serveConsistency')}</CardTitle>
                     <CardDescription>{t('serveConsistencyDescription', { count: data.length })}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex items-center justify-center -mb-4">
                     <ChartContainer config={{ '1st Serve %': { label: '1st Serve %', color: "hsl(var(--primary))" } }} className="w-full h-full">
                         <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <CartesianGrid vertical={false} strokeDasharray="3 3"/>
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" />
                             <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
                             <YAxis domain={[0, 100]} />
-                            <ChartTooltip content={<ChartTooltipContent />} cursor={false}/>
+                            <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
                             <Bar dataKey="1st Serve %" fill="var(--color-1st Serve %)" radius={4} />
                         </BarChart>
                     </ChartContainer>
@@ -724,11 +724,11 @@ const ShotAccuracyCard = ({ matches }: { matches: TennisMatch[] }) => {
     const router = useRouter();
     const { t } = useTranslation();
     const accuracyChartConfig: ChartConfig = {
-      value: { label: "Accuracy" },
-      forehand: { label: "Forehand", color: "#468af6" }, // charge blue
-      backhand: { label: "Backhand", color: "#6e9ff8" },
-      volley: { label: "Volley", color: "#94b3fa" },
-      overhead: { label: "Overhead", color: "#a78bfa" }, // glow violet
+        value: { label: "Accuracy" },
+        forehand: { label: "Forehand", color: "#468af6" }, // charge blue
+        backhand: { label: "Backhand", color: "#6e9ff8" },
+        volley: { label: "Volley", color: "#94b3fa" },
+        overhead: { label: "Overhead", color: "#a78bfa" }, // glow violet
     };
     const data = [
         { name: "forehand", value: 85, fill: "var(--color-forehand)" },
@@ -736,29 +736,29 @@ const ShotAccuracyCard = ({ matches }: { matches: TennisMatch[] }) => {
         { name: "volley", value: 72, fill: "var(--color-volley)" },
         { name: "overhead", value: 90, fill: "var(--color-overhead)" },
     ];
-    
+
     if (matches.length === 0) {
         return <EmptyInsightCard title={t('shotAccuracy')} description={t('logMatchesForAccuracy')} link="/dashboard/tennis" icon={Target} />;
     }
-    
+
     return (
         <motion.div variants={itemVariants} whileHover="hover" onClick={() => router.push('/dashboard/tennis')}>
             <Card className="h-full flex flex-col group cursor-pointer">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5"/>{t('shotAccuracy')}</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5" />{t('shotAccuracy')}</CardTitle>
                     <CardDescription>{t('shotAccuracyDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex items-center justify-center">
-                     <ChartContainer config={accuracyChartConfig} className="mx-auto aspect-square h-full">
+                    <ChartContainer config={accuracyChartConfig} className="mx-auto aspect-square h-full">
                         <PieChart>
-                             <ChartTooltip
+                            <ChartTooltip
                                 cursor={false}
                                 content={<ChartTooltipContent
                                     indicator="dot"
                                     nameKey="name"
                                     formatter={(value, name) => (
                                         <div className="flex items-center gap-2">
-                                            <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: `var(--color-${name})`}}></div>
+                                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: `var(--color-${name})` }}></div>
                                             <div className="flex flex-1 justify-between">
                                                 <span className="capitalize">{name}</span>
                                                 <span className="font-bold ml-4">{value}</span>
@@ -767,11 +767,11 @@ const ShotAccuracyCard = ({ matches }: { matches: TennisMatch[] }) => {
                                     )}
                                 />}
                             />
-                            <Pie 
-                                data={data} 
-                                dataKey="value" 
-                                nameKey="name" 
-                                innerRadius={60} 
+                            <Pie
+                                data={data}
+                                dataKey="value"
+                                nameKey="name"
+                                innerRadius={60}
                                 strokeWidth={5}
                                 label={false}
                                 labelLine={false}
@@ -793,11 +793,11 @@ const NextEventCard = ({ event, sportName, link, eventType = 'match' }: { event:
         const descriptionKey = isTraining ? 'scheduleTrainingPrompt' : 'scheduleMatchPrompt';
         const titleKey = isTraining ? 'nextTraining' : 'nextMatch';
         return (
-            <EmptyInsightCard 
-                title={t(titleKey as any)} 
+            <EmptyInsightCard
+                title={t(titleKey as any)}
                 description={t(descriptionKey as any, { sport: t(sportName.toLowerCase() as TranslationKey) })}
-                link={link} 
-                icon={CalendarDays} 
+                link={link}
+                icon={CalendarDays}
                 isRectangle={!isTraining}
                 className={isTraining ? "" : "md:col-span-2"}
             />
@@ -815,7 +815,7 @@ const NextEventCard = ({ event, sportName, link, eventType = 'match' }: { event:
                         <h3 className="text-xl font-bold">{isMatch ? `vs. ${event.opponent}` : event.title}</h3>
                         <p className="text-muted-foreground">{format(event.date, "eeee, MMM d 'at' p")}</p>
                     </div>
-                    <Button className="mt-4 md:mt-0">{t('viewDetails')}</Button>
+                    <Button className="mt-4 md:mt-0">View details</Button>
                 </CardContent>
             </Card>
         </motion.div>
@@ -831,13 +831,13 @@ export function InsightsGrid() {
     const [tennisMatches, setTennisMatches] = useState<TennisMatch[]>([]);
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const { t } = useTranslation();
-    
+
     useEffect(() => {
         if (user && !isHydrated) {
             initializePlanStore(user.uid, user.gymPlan || null);
         }
     }, [user, isHydrated, initializePlanStore]);
-    
+
     useEffect(() => {
         if (!user) return;
 
@@ -848,7 +848,7 @@ export function InsightsGrid() {
             const matchesData: FootballMatch[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate() } as FootballMatch));
             setFootballMatches(matchesData);
         });
-        
+
         const unsubTennis = onSnapshot(tennisQuery, (snapshot) => {
             const matchesData: TennisMatch[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate() } as TennisMatch));
             setTennisMatches(matchesData);
@@ -882,7 +882,7 @@ export function InsightsGrid() {
             { subject: "Passing", A: passingSkill },
             { subject: "Shooting", A: shootingSkill },
             { subject: "Defense", A: 65 },
-        ].map(item => ({...item, fullMark: 100}));
+        ].map(item => ({ ...item, fullMark: 100 }));
     }, [footballMatches]);
 
     const footballStaminaData = useMemo(() => {
@@ -892,187 +892,187 @@ export function InsightsGrid() {
             stamina: m.stamina
         })).reverse();
     }, [footballMatches]);
-    
+
     const nextTennisMatch = useMemo(() => {
-        return tennisMatches.filter(m => m.status === 'upcoming' && m.date >= new Date()).sort((a,b) => a.date.getTime() - b.date.getTime())[0];
+        return tennisMatches.filter(m => m.status === 'upcoming' && m.date >= new Date()).sort((a, b) => a.date.getTime() - b.date.getTime())[0];
     }, [tennisMatches]);
 
-     return (
+    return (
         <>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-                <motion.div 
-                    variants={sectionVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="space-y-6"
-                >
-                    <SectionHeader 
-                        icon={<Activity className="h-6 w-6" />}
-                        title={t('generalInsightsTitle')}
-                        subtitle={t('generalInsightsSubtitle')}
-                    >
-                         <Button variant="outline" asChild>
-                            <Link href="/dashboard/insights/history">
-                                <Clock className="mr-2 h-4 w-4" />
-                                {t('insightsHistory')}
-                            </Link>
-                        </Button>
-                    </SectionHeader>
-                    <motion.div 
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                    <motion.div
                         variants={sectionVariants}
-                        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                        initial="hidden"
+                        animate="visible"
+                        className="space-y-6"
                     >
-                        <StreakCard />
-                        <motion.div variants={itemVariants} className="md:col-span-1">
-                            <NutritionChart />
-                        </motion.div>
-                        <div className="grid grid-cols-1 gap-6 md:col-span-2 md:grid-cols-2">
-                            <MealPlanCard onUpgrade={() => setIsUpgradeModalOpen(true)} />
-                            <ShoppingListCard />
-                        </div>
-                    </motion.div>
-                </motion.div>
-                
-                <motion.div variants={sectionVariants} initial="hidden" animate="visible" className="space-y-6">
-                    <motion.div variants={itemVariants}>
-                        <SectionHeader 
-                            icon={<Dumbbell className="h-6 w-6" />}
-                            title={t('gymInsightsTitle')}
-                            subtitle={t('gymInsightsSubtitle')}
-                        />
-                        <motion.div variants={sectionVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <GymPlanInsightCard onUpgrade={() => setIsUpgradeModalOpen(true)} />
-                            <WorkoutConsistencyCard onUpgrade={() => setIsUpgradeModalOpen(true)} />
-                            <VolumeLiftedCard onUpgrade={() => setIsUpgradeModalOpen(true)} />
-                            <NextEventCard sportName={t('gym')} eventType="training" link="/dashboard/gym?tab=schedule" event={null} />
-                        </motion.div>
-                    </motion.div>
-
-                    <motion.div variants={itemVariants}>
-                        <SectionHeader 
-                            icon={<TennisBallIcon className="h-6 w-6" />}
-                            title={t('tennisInsightsTitle')}
-                            subtitle={t('tennisInsightsSubtitle')}
-                        />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <NextEventCard sportName={t('tennis')} eventType="match" link="/dashboard/tennis" event={nextTennisMatch} />
-                            <div className="grid grid-cols-1 gap-6 auto-rows-fr">
-                                <TennisLastMatchCard match={tennisMatches.filter(m => m.status === 'completed').length > 0 ? tennisMatches[0] : null} />
-                                <ShotAccuracyCard matches={tennisMatches} />
-                            </div>
-                            <div className="grid grid-cols-1 gap-6 auto-rows-fr">
-                                <ServeConsistencyCard matches={tennisMatches} />
-                                <NextEventCard sportName={t('tennis')} eventType="training" link="/dashboard/tennis?tab=training" event={null} />
-                            </div>
-                        </div>
-                    </motion.div>
-
-                    <motion.div variants={itemVariants}>
-                        <SectionHeader 
-                            icon={<Trophy className="h-6 w-6" />}
-                            title={t('footballInsightsTitle')}
-                            subtitle={t('footballInsightsSubtitle')}
-                        />
-                        <motion.div variants={sectionVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <NextEventCard sportName={t('football')} eventType="match" link="/dashboard/football" event={footballMatches.find(m => m.date >= new Date())} />
-                            <NextEventCard sportName={t('football')} eventType="training" link="/dashboard/football?tab=training" event={null} />
-                            <FootballInsightCard match={footballMatches.length > 0 ? footballMatches[0] : null} />
-                            <motion.div variants={itemVariants} whileHover="hover" className="md:col-span-1" onClick={() => router.push('/dashboard/football')}>
-                                <Card className="md:aspect-square flex flex-col group cursor-pointer">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2"><BarChart2 className="h-5 w-5"/>{t('progressRadar')}</CardTitle>
-                                        <CardDescription>{t('progressRadarDescription')}</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="flex-1 flex items-center justify-center p-0">
-                                        {footballMatches.length > 0 ? (
-                                            <ChartContainer config={{value: { label: "Value", color: "hsl(var(--primary))"}}} className="mx-auto aspect-square h-full max-h-[250px] w-full">
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={footballRadarData}>
-                                                        <PolarGrid />
-                                                        <PolarAngleAxis dataKey="subject" tick={{fontSize: 12}}/>
-                                                        <Radar name={user?.displayName || 'Player'} dataKey="A" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.6} />
-                                                    </RadarChart>
-                                                </ResponsiveContainer>
-                                            </ChartContainer>
-                                        ) : (
-                                            <div className="text-center text-muted-foreground p-4">
-                                                <p>{t('logMatchToSeeRadar')}</p>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                        <SectionHeader
+                            icon={<Activity className="h-6 w-6" />}
+                            title={t('generalInsightsTitle')}
+                            subtitle={t('generalInsightsSubtitle')}
+                        >
+                            <Button variant="outline" asChild>
+                                <Link href="/dashboard/insights/history">
+                                    <Clock className="mr-2 h-4 w-4" />
+                                    {t('insightsHistory')}
+                                </Link>
+                            </Button>
+                        </SectionHeader>
+                        <motion.div
+                            variants={sectionVariants}
+                            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                        >
+                            <StreakCard />
+                            <motion.div variants={itemVariants} className="md:col-span-1">
+                                <NutritionChart />
                             </motion.div>
+                            <div className="grid grid-cols-1 gap-6 md:col-span-2 md:grid-cols-2">
+                                <MealPlanCard onUpgrade={() => setIsUpgradeModalOpen(true)} />
+                                <ShoppingListCard />
+                            </div>
+                        </motion.div>
+                    </motion.div>
+
+                    <motion.div variants={sectionVariants} initial="hidden" animate="visible" className="space-y-6">
+                        <motion.div variants={itemVariants}>
+                            <SectionHeader
+                                icon={<Dumbbell className="h-6 w-6" />}
+                                title={t('gymInsightsTitle')}
+                                subtitle={t('gymInsightsSubtitle')}
+                            />
+                            <motion.div variants={sectionVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <GymPlanInsightCard onUpgrade={() => setIsUpgradeModalOpen(true)} />
+                                <WorkoutConsistencyCard onUpgrade={() => setIsUpgradeModalOpen(true)} />
+                                <VolumeLiftedCard onUpgrade={() => setIsUpgradeModalOpen(true)} />
+                                <NextEventCard sportName={t('gym')} eventType="training" link="/dashboard/gym?tab=schedule" event={null} />
+                            </motion.div>
+                        </motion.div>
+
+                        <motion.div variants={itemVariants}>
+                            <SectionHeader
+                                icon={<TennisBallIcon className="h-6 w-6" />}
+                                title={t('tennisInsightsTitle')}
+                                subtitle={t('tennisInsightsSubtitle')}
+                            />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <NextEventCard sportName={t('tennis')} eventType="match" link="/dashboard/tennis" event={nextTennisMatch} />
+                                <div className="grid grid-cols-1 gap-6 auto-rows-fr">
+                                    <TennisLastMatchCard match={tennisMatches.filter(m => m.status === 'completed').length > 0 ? tennisMatches[0] : null} />
+                                    <ShotAccuracyCard matches={tennisMatches} />
+                                </div>
+                                <div className="grid grid-cols-1 gap-6 auto-rows-fr">
+                                    <ServeConsistencyCard matches={tennisMatches} />
+                                    <NextEventCard sportName={t('tennis')} eventType="training" link="/dashboard/tennis?tab=training" event={null} />
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <motion.div variants={itemVariants}>
+                            <SectionHeader
+                                icon={<Trophy className="h-6 w-6" />}
+                                title={t('footballInsightsTitle')}
+                                subtitle={t('footballInsightsSubtitle')}
+                            />
+                            <motion.div variants={sectionVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <NextEventCard sportName={t('football')} eventType="match" link="/dashboard/football" event={footballMatches.find(m => m.date >= new Date())} />
+                                <NextEventCard sportName={t('football')} eventType="training" link="/dashboard/football?tab=training" event={null} />
+                                <FootballInsightCard match={footballMatches.length > 0 ? footballMatches[0] : null} />
                                 <motion.div variants={itemVariants} whileHover="hover" className="md:col-span-1" onClick={() => router.push('/dashboard/football')}>
-                                <Card className="md:aspect-square flex flex-col group cursor-pointer">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2"><HeartPulse className="h-5 w-5"/>{t('staminaOverTime')}</CardTitle>
-                                        <CardDescription>{t('staminaOverTimeDescription')}</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="flex-grow flex flex-col justify-center items-center text-center">
-                                        {footballStaminaData.length > 0 ? (
-                                            <div className="w-full h-full -mb-4">
-                                                <ChartContainer config={{stamina: {label: "Stamina", color: "hsl(var(--primary))"}}} className="w-full h-full">
-                                                    <BarChart data={footballStaminaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                                        <CartesianGrid vertical={false} strokeDasharray="3 3"/>
-                                                        <XAxis dataKey="match" fontSize={10} tickLine={false} axisLine={false} />
-                                                        <YAxis domain={[0, 10]} />
-                                                        <ChartTooltip content={<ChartTooltipContent />} cursor={false}/>
-                                                        <Bar dataKey="stamina" fill="var(--color-stamina)" radius={4} />
-                                                    </BarChart>
+                                    <Card className="md:aspect-square flex flex-col group cursor-pointer">
+                                        <CardHeader>
+                                            <CardTitle className="flex items-center gap-2"><BarChart2 className="h-5 w-5" />{t('progressRadar')}</CardTitle>
+                                            <CardDescription>{t('progressRadarDescription')}</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="flex-1 flex items-center justify-center p-0">
+                                            {footballMatches.length > 0 ? (
+                                                <ChartContainer config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} className="mx-auto aspect-square h-full max-h-[250px] w-full">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={footballRadarData}>
+                                                            <PolarGrid />
+                                                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12 }} />
+                                                            <Radar name={user?.displayName || 'Player'} dataKey="A" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.6} />
+                                                        </RadarChart>
+                                                    </ResponsiveContainer>
                                                 </ChartContainer>
-                                            </div>
-                                        ) : (
+                                            ) : (
                                                 <div className="text-center text-muted-foreground p-4">
-                                                <p>{t('logMatchToSeeStamina')}</p>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                                                    <p>{t('logMatchToSeeRadar')}</p>
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </motion.div>
+                                <motion.div variants={itemVariants} whileHover="hover" className="md:col-span-1" onClick={() => router.push('/dashboard/football')}>
+                                    <Card className="md:aspect-square flex flex-col group cursor-pointer">
+                                        <CardHeader>
+                                            <CardTitle className="flex items-center gap-2"><HeartPulse className="h-5 w-5" />{t('staminaOverTime')}</CardTitle>
+                                            <CardDescription>{t('staminaOverTimeDescription')}</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="flex-grow flex flex-col justify-center items-center text-center">
+                                            {footballStaminaData.length > 0 ? (
+                                                <div className="w-full h-full -mb-4">
+                                                    <ChartContainer config={{ stamina: { label: "Stamina", color: "hsl(var(--primary))" } }} className="w-full h-full">
+                                                        <BarChart data={footballStaminaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                                                            <XAxis dataKey="match" fontSize={10} tickLine={false} axisLine={false} />
+                                                            <YAxis domain={[0, 10]} />
+                                                            <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
+                                                            <Bar dataKey="stamina" fill="var(--color-stamina)" radius={4} />
+                                                        </BarChart>
+                                                    </ChartContainer>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center text-muted-foreground p-4">
+                                                    <p>{t('logMatchToSeeStamina')}</p>
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </motion.div>
                             </motion.div>
                         </motion.div>
                     </motion.div>
-                </motion.div>
+                </div>
+
+                <div className="hidden lg:block lg:sticky lg:top-20 h-[calc(100vh-6rem)]">
+                    <Suspense fallback={<div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+                        <FitnessAssistantChat />
+                    </Suspense>
+                </div>
             </div>
-            
-            <div className="hidden lg:block lg:sticky lg:top-20 h-[calc(100vh-6rem)]">
-                 <Suspense fallback={<div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
-                    <FitnessAssistantChat />
-                </Suspense>
-            </div>
-        </div>
-        <UpgradeProModal open={isUpgradeModalOpen} onOpenChange={setIsUpgradeModalOpen} />
+            <UpgradeProModal open={isUpgradeModalOpen} onOpenChange={setIsUpgradeModalOpen} />
         </>
     )
 }
 
-export function DashboardClient({initialView}: {initialView?: 'sports' | 'insights'}) {
+export function DashboardClient({ initialView }: { initialView?: 'sports' | 'insights' }) {
     const router = useRouter();
     const { user } = useUser();
     const { t } = useTranslation();
     const [isNavVisible, setIsNavVisible] = useState(true);
     const lastScrollY = useRef(0);
     const prefersReducedMotion = useReducedMotion();
-    
+
     const handleCardClick = (path: string) => {
         router.push(path);
     };
 
     useEffect(() => {
         const handleScroll = () => {
-          const currentScrollY = window.scrollY;
-          if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
-            setIsNavVisible(false);
-          } else {
-            setIsNavVisible(true);
-          }
-          lastScrollY.current = currentScrollY;
+            const currentScrollY = window.scrollY;
+            if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+                setIsNavVisible(false);
+            } else {
+                setIsNavVisible(true);
+            }
+            lastScrollY.current = currentScrollY;
         };
-    
+
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
-      }, []);
-    
+    }, []);
+
     if (initialView === 'insights') {
         return (
             <div>
@@ -1087,7 +1087,7 @@ export function DashboardClient({initialView}: {initialView?: 'sports' | 'insigh
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="h-[90vh] w-[90vw] max-w-none p-0">
-                         <Suspense fallback={<div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+                        <Suspense fallback={<div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
                             <FitnessAssistantChat />
                         </Suspense>
                     </DialogContent>
@@ -1095,7 +1095,7 @@ export function DashboardClient({initialView}: {initialView?: 'sports' | 'insigh
             </div>
         );
     }
-    
+
     return (
         <div className="space-y-10">
             {/* ── Tools & Features ── */}
@@ -1182,7 +1182,7 @@ export function DashboardClient({initialView}: {initialView?: 'sports' | 'insigh
     );
 }
 
-    
 
-    
+
+
 

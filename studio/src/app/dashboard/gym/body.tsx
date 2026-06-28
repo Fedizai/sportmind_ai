@@ -44,17 +44,17 @@ export default function MuscleBodySelector({ selectedId, onSelect }: MuscleBodyS
       if (group) {
         // Store original fill color if not already stored
         if (!group.hasAttribute("data-original-fill")) {
-            const path = group.querySelector("path, circle, rect, ellipse");
-            group.setAttribute("data-original-fill", path?.getAttribute("fill") || "#cbd5e1");
+          const path = group.querySelector("path, circle, rect, ellipse");
+          group.setAttribute("data-original-fill", path?.getAttribute("fill") || "#cbd5e1");
         }
-        
+
         const originalFill = group.getAttribute("data-original-fill")!;
         const isSelected = selectedId === id;
 
         // Set initial color
         group.querySelectorAll("path, circle, rect, ellipse").forEach((el) => {
-            el.setAttribute("fill", isSelected ? "#ef4444" : originalFill);
-            el.style.transition = 'fill 0.2s ease';
+          el.setAttribute("fill", isSelected ? "#ef4444" : originalFill);
+          (el as HTMLElement).style.transition = 'fill 0.2s ease';
         });
 
         // Use a clean clone for event listeners to avoid stacking them
@@ -64,7 +64,7 @@ export default function MuscleBodySelector({ selectedId, onSelect }: MuscleBodyS
         clonedGroup.addEventListener("click", () => {
           onSelect(id);
         });
-        
+
         clonedGroup.addEventListener("mouseenter", () => {
           if (selectedId !== id) {
             clonedGroup.querySelectorAll("path, circle, rect, ellipse").forEach((el) => el.setAttribute("fill", "#f87171"));

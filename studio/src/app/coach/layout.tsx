@@ -22,7 +22,7 @@ import { Header } from "@/components/header";
 
 function CoachLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router   = useRouter();
+  const router = useRouter();
   const { user, isLoading } = useUser();
   const { t } = useTranslation();
   const allowedRoles = ['coach', 'admin'];
@@ -34,10 +34,10 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
   ];
 
   const bottomNavItems = [
-      { href: "/coach/dashboard", label: t('coachNavDashboard'), icon: Home },
-      { href: "/coach/sports", label: t('sports'), icon: Dumbbell },
-      { href: "/coach/chat", label: t('messages'), icon: MessageSquare },
-      { href: "/coach/settings", label: t('profile'), icon: UserIcon },
+    { href: "/coach/dashboard", label: t('coachNavDashboard'), icon: Home },
+    { href: "/coach/sports", label: t('sports'), icon: Dumbbell },
+    { href: "/coach/chat", label: t('messages'), icon: MessageSquare },
+    { href: "/coach/settings", label: t('profile'), icon: UserIcon },
   ];
 
   const isAdminPage = pathname === '/admin';
@@ -80,11 +80,11 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
     const activeTabEl = tabs[activeTabIndex];
 
     if (activeTabEl && indicator) {
-        const containerRect = container.getBoundingClientRect();
-        const tabRect = activeTabEl.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const tabRect = activeTabEl.getBoundingClientRect();
 
-        indicator.style.width = `${tabRect.width}px`;
-        indicator.style.transform = `translateX(${tabRect.left - containerRect.left}px)`;
+      indicator.style.width = `${tabRect.width}px`;
+      indicator.style.transform = `translateX(${tabRect.left - containerRect.left}px)`;
     }
   }, [pathname, isNavVisible]);
 
@@ -96,13 +96,13 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
   const activeBottomIndex = getActiveBottomIndex();
 
   // ── Settled bubble position (React-controlled) ────────────────────────────
-  const bottomNavRef      = useRef<HTMLDivElement>(null);
+  const bottomNavRef = useRef<HTMLDivElement>(null);
   const bottomNavItemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [bubbleStyle, setBubbleStyle] = useState<{ left: number; width: number } | null>(null);
 
   useEffect(() => {
     const container = bottomNavRef.current;
-    const activeEl  = bottomNavItemRefs.current[activeBottomIndex];
+    const activeEl = bottomNavItemRefs.current[activeBottomIndex];
     if (!container || !activeEl || activeBottomIndex === -1) { setBubbleStyle(null); return; }
     const pr = container.getBoundingClientRect();
     const ir = activeEl.getBoundingClientRect();
@@ -111,10 +111,10 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
 
   // ── Drag / swipe state ────────────────────────────────────────────────────
   // Refs keep drag state synchronous so handlers run at 60fps without re-renders.
-  const isDraggingRef  = useRef(false);
-  const hasDraggedRef  = useRef(false);   // true once finger moves past dead zone
-  const dragStartXRef  = useRef(0);
-  const dragBubbleRef  = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const hasDraggedRef = useRef(false);   // true once finger moves past dead zone
+  const dragStartXRef = useRef(0);
+  const dragBubbleRef = useRef<HTMLDivElement>(null);
   // dragIndex = which slot looks active while the finger is in motion
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const effectiveIndex = dragIndex ?? activeBottomIndex;
@@ -149,7 +149,7 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
     b.style.transition = animated
       ? 'left 0.35s cubic-bezier(0.34,1.56,0.64,1), width 0.35s cubic-bezier(0.34,1.56,0.64,1)'
       : 'none';
-    b.style.left  = `${left}px`;
+    b.style.left = `${left}px`;
     b.style.width = `${width}px`;
   };
 
@@ -170,11 +170,11 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
       hasDraggedRef.current = true;
       isDraggingRef.current = true;
     }
-    const rects  = getItemRects();
+    const rects = getItemRects();
     const origin = rects[activeBottomIndex];
     if (!origin) return;
     const nearest = findNearestIndex(rects, origin.center + deltaX);
-    const target  = rects[nearest];
+    const target = rects[nearest];
     if (target) applyBubbleDirect(target.left, target.width, false); // instant follow
     if (nearest !== effectiveIndex) setDragIndex(nearest);           // update icon colors
   };
@@ -183,12 +183,12 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
 
-    const rects      = getItemRects();
-    const origin     = rects[activeBottomIndex];
-    const deltaX     = e.clientX - dragStartXRef.current;
+    const rects = getItemRects();
+    const origin = rects[activeBottomIndex];
+    const deltaX = e.clientX - dragStartXRef.current;
     if (!origin) { setDragIndex(null); return; }
 
-    const nearest    = findNearestIndex(rects, origin.center + deltaX);
+    const nearest = findNearestIndex(rects, origin.center + deltaX);
     const targetRect = rects[nearest];
 
     if (targetRect) {
@@ -204,7 +204,7 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
   };
 
   if (isLoading || !user || !allowedRoles.includes(user.role || '')) {
-     return (
+    return (
       <div className="flex h-screen items-center justify-center">
         <Logo className="h-16 animate-spin-slow" />
       </div>
@@ -217,119 +217,121 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
 
       <main className="flex flex-1 flex-col p-4 md:p-8 pb-20 md:pb-8 overflow-hidden h-full">
         {!isAdminPage && (
-             <div className="hidden md:flex justify-center md:justify-end mb-6 flex-shrink-0">
-                 <nav
-                    ref={tabsContainerRef}
-                    className="relative inline-flex items-center rounded-full p-1.5 ring-1 ring-white/[0.08] bg-white/[0.04] dark:bg-white/[0.03] backdrop-blur-xl shadow-card"
-                >
-                    <span
-                        id="tab-indicator-coach"
-                        className="pointer-events-none absolute left-0 h-9 rounded-full bg-background/90 dark:bg-white/[0.09] shadow-card border border-white/[0.08] transition-all duration-300 ease-out"
-                    />
-                    {navItems.map((item, index) => {
-                        const activeIndex = navItems.findIndex(i => pathname.startsWith(i.href));
-                        const isActive = activeIndex === index;
+          <div className="hidden md:flex justify-center md:justify-end mb-6 flex-shrink-0">
+            <nav
+              ref={tabsContainerRef}
+              className="relative inline-flex items-center rounded-full p-1.5 ring-1 ring-white/[0.08] bg-white/[0.04] dark:bg-white/[0.03] backdrop-blur-xl shadow-card"
+            >
+              <span
+                id="tab-indicator-coach"
+                className="pointer-events-none absolute left-0 h-9 rounded-full bg-background/90 dark:bg-white/[0.09] shadow-card border border-white/[0.08] transition-all duration-300 ease-out"
+              />
+              {navItems.map((item, index) => {
+                const activeIndex = navItems.findIndex(i => pathname.startsWith(i.href));
+                const isActive = activeIndex === index;
 
-                        return (
-                            <Link key={item.label} href={item.href} legacyBehavior>
-                                <a
-                                    ref={(el) => (tabsRef.current[index] = el)}
-                                    aria-selected={isActive}
-                                    className={cn(
-                                        "relative z-10 flex-1 flex items-center justify-center px-6 py-2 transition-colors",
-                                        isActive ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"
-                                    )}
-                                >
-                                    {item.label}
-                                </a>
-                            </Link>
-                        )
-                    })}
-                </nav>
-            </div>
+                return (
+                  <Link key={item.label} href={item.href} legacyBehavior>
+                    <a
+                      ref={(el) => {
+                        tabsRef.current[index] = el;
+                      }}
+                      aria-selected={isActive}
+                      className={cn(
+                        "relative z-10 flex-1 flex items-center justify-center px-6 py-2 transition-colors",
+                        isActive ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {item.label}
+                    </a>
+                  </Link>
+                )
+              })}
+            </nav>
+          </div>
         )}
         <PageTransition>{children}</PageTransition>
       </main>
 
-        {/* Bottom Navigation — Liquid Glass (iOS 26 style) */}
-        <nav
-            className={cn(
-                "md:hidden fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pt-3 pb-safe transition-transform duration-300 ease-in-out",
-                isNavVisible ? "translate-y-0" : "translate-y-full"
-            )}
+      {/* Bottom Navigation — Liquid Glass (iOS 26 style) */}
+      <nav
+        className={cn(
+          "md:hidden fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pt-3 pb-safe transition-transform duration-300 ease-in-out",
+          isNavVisible ? "translate-y-0" : "translate-y-full"
+        )}
+      >
+        {/* touchAction:none lets us capture horizontal swipes before the browser does */}
+        <div
+          ref={bottomNavRef}
+          className="liquid-glass-pill relative flex h-[62px] w-full max-w-sm items-center overflow-hidden rounded-full"
+          style={{ touchAction: 'none', userSelect: 'none' }}
+          onPointerDown={handleNavPointerDown}
+          onPointerMove={handleNavPointerMove}
+          onPointerUp={handleNavPointerUp}
+          onPointerCancel={handleNavPointerUp}
+          // Block link clicks that are the tail-end of a drag gesture
+          onClickCapture={(e) => { if (hasDraggedRef.current) e.stopPropagation(); }}
         >
-            {/* touchAction:none lets us capture horizontal swipes before the browser does */}
-            <div
-                ref={bottomNavRef}
-                className="liquid-glass-pill relative flex h-[62px] w-full max-w-sm items-center overflow-hidden rounded-full"
-                style={{ touchAction: 'none', userSelect: 'none' }}
-                onPointerDown={handleNavPointerDown}
-                onPointerMove={handleNavPointerMove}
-                onPointerUp={handleNavPointerUp}
-                onPointerCancel={handleNavPointerUp}
-                // Block link clicks that are the tail-end of a drag gesture
-                onClickCapture={(e) => { if (hasDraggedRef.current) e.stopPropagation(); }}
-            >
-                {/* Inner glass gradient */}
-                <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 rounded-full"
-                    style={{ background: 'linear-gradient(155deg, rgba(255,255,255,0.06) 0%, transparent 55%)' }}
-                />
+          {/* Inner glass gradient */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-full"
+            style={{ background: 'linear-gradient(155deg, rgba(255,255,255,0.06) 0%, transparent 55%)' }}
+          />
 
-                {/* Bubble — always in DOM so dragBubbleRef is always valid */}
-                <div
-                    ref={dragBubbleRef}
-                    className="liquid-glass-bubble absolute rounded-full"
-                    style={{
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        height: '46px',
-                        left: `${bubbleStyle?.left ?? -100}px`,
-                        width: `${bubbleStyle?.width ?? 0}px`,
-                        visibility: bubbleStyle ? 'visible' : 'hidden',
-                        transition: 'left 0.35s cubic-bezier(0.34,1.56,0.64,1), width 0.35s cubic-bezier(0.34,1.56,0.64,1)',
-                    }}
-                />
+          {/* Bubble — always in DOM so dragBubbleRef is always valid */}
+          <div
+            ref={dragBubbleRef}
+            className="liquid-glass-bubble absolute rounded-full"
+            style={{
+              top: '50%',
+              transform: 'translateY(-50%)',
+              height: '46px',
+              left: `${bubbleStyle?.left ?? -100}px`,
+              width: `${bubbleStyle?.width ?? 0}px`,
+              visibility: bubbleStyle ? 'visible' : 'hidden',
+              transition: 'left 0.35s cubic-bezier(0.34,1.56,0.64,1), width 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+            }}
+          />
 
-                {/* Nav items — effectiveIndex drives visual active state during drag */}
-                {bottomNavItems.map((item, index) => {
-                    const isActive = effectiveIndex === index;
-                    return (
-                        <div
-                            key={item.href}
-                            ref={(el) => { bottomNavItemRefs.current[index] = el; }}
-                            className="relative z-10"
-                            style={{ flex: 1 }}
-                        >
-                            <Link
-                                href={item.href}
-                                className="flex flex-col items-center justify-center gap-[3px] h-[62px] w-full"
-                            >
-                                <item.icon className={cn(
-                                    "h-5 w-5 transition-colors duration-200",
-                                    isActive ? "text-primary dark:text-white" : "text-foreground/35 dark:text-white/35"
-                                )} />
-                                <span className={cn(
-                                    "text-[9px] leading-none font-medium tracking-wide transition-colors duration-200",
-                                    isActive ? "text-foreground dark:text-white/90" : "text-foreground/30 dark:text-white/30"
-                                )}>
-                                    {item.label}
-                                </span>
-                            </Link>
-                        </div>
-                    );
-                })}
-            </div>
-        </nav>
+          {/* Nav items — effectiveIndex drives visual active state during drag */}
+          {bottomNavItems.map((item, index) => {
+            const isActive = effectiveIndex === index;
+            return (
+              <div
+                key={item.href}
+                ref={(el) => { bottomNavItemRefs.current[index] = el; }}
+                className="relative z-10"
+                style={{ flex: 1 }}
+              >
+                <Link
+                  href={item.href}
+                  className="flex flex-col items-center justify-center gap-[3px] h-[62px] w-full"
+                >
+                  <item.icon className={cn(
+                    "h-5 w-5 transition-colors duration-200",
+                    isActive ? "text-primary dark:text-white" : "text-foreground/35 dark:text-white/35"
+                  )} />
+                  <span className={cn(
+                    "text-[9px] leading-none font-medium tracking-wide transition-colors duration-200",
+                    isActive ? "text-foreground dark:text-white/90" : "text-foreground/30 dark:text-white/30"
+                  )}>
+                    {item.label}
+                  </span>
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
 
 export default function CoachDashboardLayout({ children }: { children: React.ReactNode }) {
-    return (
-        <UserProvider>
-            <CoachLayoutContent>{children}</CoachLayoutContent>
-        </UserProvider>
-    )
+  return (
+    <UserProvider>
+      <CoachLayoutContent>{children}</CoachLayoutContent>
+    </UserProvider>
+  )
 }
