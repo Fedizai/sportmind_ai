@@ -236,10 +236,18 @@ function FitnessAssistantChat() {
 
         } catch (error) {
             console.error("Error getting assistant response:", error);
-            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            const rawMessage = error instanceof Error ? error.message : String(error);
+            // Next.js redacts real Server Action errors in production down to this
+            // generic sentence — showing it verbatim to the athlete is just noise,
+            // so fall back to the translated label instead. The real cause (and its
+            // `digest`, useful for looking it up in server logs) is still logged above.
+            const isRedactedServerError = /Server Components render|omitted in production/i.test(rawMessage);
+            const description = isRedactedServerError
+                ? t('aiFitnessCoachError')
+                : `${t('aiFitnessCoachError')}: ${rawMessage}`;
             toast({
                 title: t('aiError'),
-                description: `${t('tacticalCoachError')}: ${errorMessage}`,
+                description,
                 variant: "destructive",
             });
              addMessage(CHAT_ID, {role: 'ai', content: t('aiErrorResponse')});
