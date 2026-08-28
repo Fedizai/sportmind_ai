@@ -40,9 +40,9 @@
     --input: 214 32% 88%;
     --ring: 221 83% 53%;
 
-    /* Rectangular-leaning geometry: surfaces get a small, deliberate radius
-       instead of the pill shapes the old 1.25rem token produced. */
-    --radius: 0.5rem;
+    /* iOS app-icon geometry: generously rounded corners (~22-25% of a control's
+       height) without ever reaching a pill. One lever drives the whole scale. */
+    --radius: 0.75rem;
 
     /* 3D shadow system */
     --shadow-card:

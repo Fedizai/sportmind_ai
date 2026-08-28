@@ -1,4 +1,3 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit-instance';
@@ -9,43 +8,149 @@ import {
     type FoodSearchOutput,
 } from '@/ai/schemas';
 
+/**
+ * Food lookup for the nutrition tracker.
+ *
+ * Two providers, tried in order:
+ *
+ *  1. USDA FoodData Central — works from any IP, so it survives serverless
+ *     hosting where the egress address changes between requests.
+ *  2. FatSecret — richer branded catalogue, but its API rejects any request
+ *     from an address that isn't registered in the FatSecret console
+ *     ("Invalid IP address detected"). That makes it unusable as the primary
+ *     provider on Cloud Run, where IPs are dynamic — it stays as a fallback
+ *     for deployments that do have a fixed, allow-listed address.
+ */
+
+type FoodItem = FoodSearchOutput['items'][number];
+
+/* ----------------------------- USDA (primary) ---------------------------- */
+
+/** Nutrient IDs in the USDA FoodData Central schema. */
+const USDA_NUTRIENT = {
+    calories: 1008,
+    protein: 1003,
+    fat: 1004,
+    carbs: 1005,
+    sugar: 2000,
+    sodium: 1093,
+    iron: 1089,
+    potassium: 1092,
+} as const;
+
+async function searchUsda(query: string): Promise<FoodItem[]> {
+    // DEMO_KEY works without signup but is rate limited to ~30 requests/hour,
+    // so it is only a stop-gap until a free key is set in the environment.
+    const apiKey = process.env.USDA_FOODDATA_CENTRAL_API_KEY?.trim();
+    const key = apiKey && !apiKey.startsWith('YOUR_') ? apiKey : 'DEMO_KEY';
+
+    const res = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${encodeURIComponent(key)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            query,
+            dataType: ['Foundation', 'SR Legacy', 'Branded'],
+            pageSize: 12,
+        }),
+    });
+
+    if (!res.ok) {
+        throw new Error(`USDA responded ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    }
+
+    const data = await res.json();
+    return (data.foods ?? []).map((food: any): FoodItem => {
+        const read = (id: number) =>
+            Number(food.foodNutrients?.find((n: any) => n.nutrientId === id)?.value) || 0;
+        return {
+            fdcId: String(food.fdcId ?? ''),
+            name: food.description ?? '',
+            calories: read(USDA_NUTRIENT.calories),
+            protein: read(USDA_NUTRIENT.protein),
+            carbs: read(USDA_NUTRIENT.carbs),
+            fat: read(USDA_NUTRIENT.fat),
+            sugar: read(USDA_NUTRIENT.sugar),
+            sodium: read(USDA_NUTRIENT.sodium),
+            iron: read(USDA_NUTRIENT.iron),
+            potassium: read(USDA_NUTRIENT.potassium),
+            portion: 100, // USDA values are per 100 g
+            image: null,
+        };
+    });
+}
+
+/* --------------------------- FatSecret (fallback) ------------------------- */
+
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
 async function getFatSecretToken(): Promise<string> {
-    if (cachedToken && Date.now() < cachedToken.expiresAt) {
-        return cachedToken.value;
-    }
+    if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.value;
 
     const clientId = process.env.FATSECRET_CLIENT_ID;
     const clientSecret = process.env.FATSECRET_CLIENT_SECRET;
-
-    if (!clientId || !clientSecret) {
-        throw new Error('FatSecret API credentials are not configured. Add FATSECRET_CLIENT_ID and FATSECRET_CLIENT_SECRET to your .env file.');
-    }
-
-    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    if (!clientId || !clientSecret) throw new Error('FatSecret credentials are not configured.');
 
     const res = await fetch('https://oauth.fatsecret.com/connect/token', {
         method: 'POST',
         headers: {
-            'Authorization': `Basic ${credentials}`,
+            Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
             'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: 'grant_type=client_credentials&scope=basic',
     });
-
-    if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`FatSecret auth failed (${res.status}): ${err}`);
-    }
+    if (!res.ok) throw new Error(`FatSecret auth failed (${res.status})`);
 
     const data = await res.json();
-    cachedToken = {
-        value: data.access_token,
-        expiresAt: Date.now() + (data.expires_in - 60) * 1000,
-    };
+    cachedToken = { value: data.access_token, expiresAt: Date.now() + (data.expires_in - 60) * 1000 };
     return cachedToken.value;
 }
+
+async function searchFatSecret(query: string): Promise<FoodItem[]> {
+    const token = await getFatSecretToken();
+    const params = new URLSearchParams({
+        method: 'foods.search',
+        search_expression: query,
+        format: 'json',
+        max_results: '12',
+    });
+
+    const res = await fetch(`https://platform.fatsecret.com/rest/server.api?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`FatSecret search failed (${res.status})`);
+
+    const data = await res.json();
+    // FatSecret reports IP-allowlist rejections as a 200 with an error body.
+    if (data.error) throw new Error(`FatSecret error ${data.error.code}: ${data.error.message}`);
+
+    const foods = data.foods?.food;
+    if (!foods) return [];
+
+    return (Array.isArray(foods) ? foods : [foods]).map((food: any): FoodItem => {
+        // e.g. "Per 100g - Calories: 89kcal | Fat: 0.33g | Carbs: 23g | Protein: 1.09g"
+        const desc: string = food.food_description ?? '';
+        const read = (label: string) => {
+            const m = desc.match(new RegExp(`${label}:\\s*([\\d.]+)`, 'i'));
+            return m ? parseFloat(m[1]) : 0;
+        };
+        return {
+            fdcId: String(food.food_id ?? ''),
+            name: food.food_name ?? '',
+            calories: read('Calories'),
+            protein: read('Protein'),
+            carbs: read('Carbs'),
+            fat: read('Fat'),
+            sugar: 0,
+            sodium: 0,
+            iron: 0,
+            potassium: 0,
+            portion: 100,
+            image: null,
+        };
+    });
+}
+
+/* --------------------------------- flow ---------------------------------- */
 
 const searchFoodFlow = ai.defineFlow(
     {
@@ -54,56 +159,28 @@ const searchFoodFlow = ai.defineFlow(
         outputSchema: FoodSearchOutputSchema,
     },
     async ({ query }) => {
-        const token = await getFatSecretToken();
+        const term = query.trim();
+        if (!term) return { items: [] };
 
-        const params = new URLSearchParams({
-            method: 'foods.search',
-            search_expression: query,
-            format: 'json',
-            max_results: '10',
-        });
+        const failures: string[] = [];
 
-        const res = await fetch(`https://platform.fatsecret.com/rest/server.api?${params}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-            const err = await res.text();
-            throw new Error(`FatSecret search failed (${res.status}): ${err}`);
+        for (const [label, provider] of [
+            ['USDA', searchUsda],
+            ['FatSecret', searchFatSecret],
+        ] as const) {
+            try {
+                const items = await provider(term);
+                if (items.length > 0) return { items };
+                failures.push(`${label}: no results`);
+            } catch (err) {
+                // Try the next provider rather than failing the whole search.
+                console.error(`Food search via ${label} failed:`, err);
+                failures.push(`${label}: ${err instanceof Error ? err.message : String(err)}`);
+            }
         }
 
-        const data = await res.json();
-        const foods = data.foods?.food;
-
-        if (!foods) return { items: [] };
-
-        const list = Array.isArray(foods) ? foods : [foods];
-
-        const items = list.map((food: any) => {
-            // FatSecret returns a description string like "Per 100g - Calories: 89kcal | Fat: 0.33g | Carbs: 23g | Protein: 1.09g"
-            const desc: string = food.food_description || '';
-            const get = (label: string) => {
-                const m = desc.match(new RegExp(`${label}:\\s*([\\d.]+)`,'i'));
-                return m ? parseFloat(m[1]) : 0;
-            };
-
-            return {
-                fdcId: food.food_id?.toString() ?? '',
-                name: food.food_name ?? '',
-                calories: get('Calories'),
-                protein: get('Protein'),
-                carbs: get('Carbs'),
-                fat: get('Fat'),
-                sugar: 0,
-                sodium: 0,
-                iron: 0,
-                potassium: 0,
-                portion: 100,
-                image: null,
-            };
-        });
-
-        return { items };
+        console.warn('Food search returned nothing.', failures.join(' | '));
+        return { items: [] };
     }
 );
 
