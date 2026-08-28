@@ -326,12 +326,7 @@ export default function AdminPage() {
                                             </Select>
                                         </div>
                                     </div>
-                                    <StreakEditor
-                                        uid={user.uid}
-                                        displayName={user.displayName}
-                                        initialBonusDays={(user as any).streak?.bonusDays ?? 0}
-                                        initialFreezesUsed={(user as any).streak?.freezesUsed ?? 0}
-                                    />
+                                    <StreakEditor uid={user.uid} displayName={user.displayName} />
                                     <div className="grid grid-cols-2 gap-2 w-full">
                                          <Button
                                             variant="outline"

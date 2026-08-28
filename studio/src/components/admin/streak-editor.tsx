@@ -1,55 +1,95 @@
 "use client";
 
-import { useState } from 'react';
-import { Flame } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { Flame, RotateCcw } from 'lucide-react';
+import { doc, updateDoc, getDoc, deleteField } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/use-translation';
+import { pick } from '@/lib/bilingual';
+import { STREAK_TIERS, tierForStreak } from '@/lib/streak-tiers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 /**
- * Admin control for a single athlete's streak.
+ * Admin control for one athlete's streak.
  *
- * Bonus days are added on top of whatever their logged activity earns, which is
- * how a granted restore is represented — so this is also the manual lever for
- * approving a restore request from the support queue.
+ * Setting a length writes an override that replaces the computed streak
+ * outright, so the number an admin types is exactly what the athlete sees.
+ * Clearing it hands the streak back to the activity-based calculation.
  */
 export function StreakEditor({
   uid,
   displayName,
-  initialBonusDays = 0,
-  initialFreezesUsed = 0,
 }: {
   uid: string;
   displayName: string | null;
-  initialBonusDays?: number;
-  initialFreezesUsed?: number;
 }) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { toast } = useToast();
+
   const [open, setOpen] = useState(false);
-  const [bonusDays, setBonusDays] = useState(String(initialBonusDays));
-  const [freezesUsed, setFreezesUsed] = useState(String(initialFreezesUsed));
+  const [days, setDays] = useState('');
+  const [freezesUsed, setFreezesUsed] = useState('0');
+  const [hasOverride, setHasOverride] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Load whatever is currently stored each time the dialog opens.
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'users', uid));
+        const streak = snap.data()?.streak ?? {};
+        const override = streak.overrideDays;
+        setHasOverride(override !== undefined && override !== null);
+        setDays(override !== undefined && override !== null ? String(override) : '');
+        setFreezesUsed(String(Number(streak.freezesUsed) || 0));
+      } catch (err) {
+        console.error('Could not read streak state:', err);
+      }
+    })();
+  }, [open, uid]);
+
+  const parsedDays = Math.max(0, Number(days) || 0);
+  const resultingTier = tierForStreak(parsedDays);
 
   const save = async () => {
     setSaving(true);
     try {
       await updateDoc(doc(db, 'users', uid), {
-        'streak.bonusDays': Math.max(0, Number(bonusDays) || 0),
+        'streak.overrideDays': parsedDays,
         'streak.freezesUsed': Math.max(0, Number(freezesUsed) || 0),
       });
       toast({ title: t('adminStreakSaved') });
       setOpen(false);
     } catch (err) {
       console.error('Streak update failed:', err);
+      toast({ variant: 'destructive', title: t('supportSendFailed') });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const clearOverride = async () => {
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, 'users', uid), {
+        'streak.overrideDays': deleteField(),
+      });
+      toast({ title: t('adminStreakSaved') });
+      setOpen(false);
+    } catch (err) {
+      console.error('Streak reset failed:', err);
       toast({ variant: 'destructive', title: t('supportSendFailed') });
     } finally {
       setSaving(false);
@@ -64,27 +104,77 @@ export function StreakEditor({
           {t('adminStreakEdit')}
         </Button>
       </DialogTrigger>
+
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {t('adminStreakEdit')} — {displayName || uid}
-          </DialogTitle>
+          <DialogTitle>{t('adminStreakEdit')} — {displayName || uid}</DialogTitle>
+          <DialogDescription>{t('adminStreakTierHint')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {hasOverride && (
+            <p className="rounded-md bg-warning/10 px-3 py-2 text-xs text-warning">
+              {t('adminStreakOverrideOn')}
+            </p>
+          )}
+
+          {/* Type / tier — selecting one fills in its threshold */}
           <div className="space-y-2">
-            <Label htmlFor={`bonus-${uid}`}>{t('adminStreakBonus')}</Label>
-            <Input id={`bonus-${uid}`} type="number" min={0}
-              value={bonusDays} onChange={(e) => setBonusDays(e.target.value)} />
+            <Label>{t('adminStreakTier')}</Label>
+            <Select
+              value={resultingTier.id}
+              onValueChange={(id) => {
+                const tier = STREAK_TIERS.find((x) => x.id === id);
+                if (tier) setDays(String(tier.minDays));
+              }}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {STREAK_TIERS.map((tier) => (
+                  <SelectItem key={tier.id} value={tier.id}>
+                    {pick(tier.name, language)} · {tier.minDays}+ · {tier.freezes} 🛡
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          {/* Exact number of days */}
+          <div className="space-y-2">
+            <Label htmlFor={`days-${uid}`}>{t('adminStreakDays')}</Label>
+            <Input
+              id={`days-${uid}`}
+              type="number"
+              min={0}
+              value={days}
+              placeholder={t('adminStreakAuto')}
+              onChange={(e) => setDays(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t('adminStreakResulting')}:{' '}
+              <span className={cn('font-semibold', resultingTier.text)}>
+                {pick(resultingTier.name, language)}
+              </span>
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor={`freezes-${uid}`}>{t('adminStreakFreezesUsed')}</Label>
-            <Input id={`freezes-${uid}`} type="number" min={0}
-              value={freezesUsed} onChange={(e) => setFreezesUsed(e.target.value)} />
+            <Input
+              id={`freezes-${uid}`}
+              type="number"
+              min={0}
+              value={freezesUsed}
+              onChange={(e) => setFreezesUsed(e.target.value)}
+            />
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:justify-between">
+          <Button variant="ghost" onClick={clearOverride} disabled={saving || !hasOverride}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            {t('adminStreakClear')}
+          </Button>
           <Button onClick={save} disabled={saving}>
             {saving ? t('supportSending') : t('adminStreakSave')}
           </Button>

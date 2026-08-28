@@ -29,6 +29,8 @@ export interface StreakState {
   activeDays: string[];
   /** Days credited on top of logged activity — from restores or an admin edit. */
   bonusDays: number;
+  /** Admin-imposed streak length. When set it replaces the computed value. */
+  overrideDays: number | null;
   /** Recovery credits already spent at the current tier. */
   freezesUsed: number;
   isLoading: boolean;
@@ -75,6 +77,7 @@ export const useStreakStore = create<StreakState>()(
       activeToday: false,
       activeDays: [],
       bonusDays: 0,
+      overrideDays: null,
       freezesUsed: 0,
       isLoading: true,
       lastCalculated: null,
@@ -130,23 +133,33 @@ export const useStreakStore = create<StreakState>()(
           // survive a new device and can be edited from the admin panel.
           let bonusDays = 0;
           let freezesUsed = 0;
+          let overrideDays: number | null = null;
           try {
             const userSnap = await getDoc(doc(db, 'users', userId));
             const streak = userSnap.data()?.streak ?? {};
             bonusDays = Number(streak.bonusDays) || 0;
             freezesUsed = Number(streak.freezesUsed) || 0;
+            overrideDays =
+              streak.overrideDays === null || streak.overrideDays === undefined
+                ? null
+                : Number(streak.overrideDays);
           } catch (err) {
             console.warn('Streak: could not read saved streak state', err);
           }
 
           const summary = summariseStreak(dates);
-          const current = summary.current + Math.max(0, bonusDays);
+          // An admin override wins outright; otherwise activity plus any bonus.
+          const current =
+            overrideDays !== null && !Number.isNaN(overrideDays)
+              ? Math.max(0, overrideDays)
+              : summary.current + Math.max(0, bonusDays);
           set({
             current,
             longest: Math.max(summary.longest, current),
             activeToday: summary.activeToday,
             activeDays: summary.activeDays,
             bonusDays,
+            overrideDays,
             freezesUsed,
             isLoading: false,
             lastCalculated: todayKey(),
@@ -198,6 +211,7 @@ export const useStreakStore = create<StreakState>()(
         activeToday: state.activeToday,
         activeDays: state.activeDays,
         bonusDays: state.bonusDays,
+        overrideDays: state.overrideDays,
         freezesUsed: state.freezesUsed,
         lastCalculated: state.lastCalculated,
       }),

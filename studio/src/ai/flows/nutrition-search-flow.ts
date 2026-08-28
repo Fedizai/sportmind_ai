@@ -13,18 +13,21 @@ import {
  *
  * Two providers, tried in order:
  *
- *  1. USDA FoodData Central — works from any IP, so it survives serverless
- *     hosting where the egress address changes between requests.
- *  2. FatSecret — richer branded catalogue, but its API rejects any request
- *     from an address that isn't registered in the FatSecret console
- *     ("Invalid IP address detected"). That makes it unusable as the primary
- *     provider on Cloud Run, where IPs are dynamic — it stays as a fallback
- *     for deployments that do have a fixed, allow-listed address.
+ *  1. FatSecret — far better coverage of branded and non-US products, which is
+ *     what athletes actually scan. Its API rejects calls from addresses that
+ *     aren't registered in the FatSecret console ("Invalid IP address
+ *     detected"); Cloud Run egress IPs are dynamic, so the console must allow
+ *     the 0.0.0.0/0 range for this to succeed in production.
+ *  2. USDA FoodData Central — no IP restriction at all, so it is the safety net
+ *     whenever FatSecret rejects us or is unreachable.
+ *
+ * Order matters only for quality: if the first provider errors or returns
+ * nothing, the second one answers, so the search never hard-fails.
  */
 
 type FoodItem = FoodSearchOutput['items'][number];
 
-/* ----------------------------- USDA (primary) ---------------------------- */
+/* ---------------------------- USDA (fallback) ---------------------------- */
 
 /** Nutrient IDs in the USDA FoodData Central schema. */
 const USDA_NUTRIENT = {
@@ -79,7 +82,7 @@ async function searchUsda(query: string): Promise<FoodItem[]> {
     });
 }
 
-/* --------------------------- FatSecret (fallback) ------------------------- */
+/* --------------------------- FatSecret (primary) -------------------------- */
 
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
@@ -165,8 +168,8 @@ const searchFoodFlow = ai.defineFlow(
         const failures: string[] = [];
 
         for (const [label, provider] of [
-            ['USDA', searchUsda],
             ['FatSecret', searchFatSecret],
+            ['USDA', searchUsda],
         ] as const) {
             try {
                 const items = await provider(term);
