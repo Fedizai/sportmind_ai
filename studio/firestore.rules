@@ -21,6 +21,22 @@ service cloud.firestore {
       return request.auth != null && getUserRole(request.auth.uid) in ['admin', 'coach'];
     }
 
+    // Admins are identified by the role on their user document OR by one of the
+    // hard-coded owner addresses — the app grants admin by email, so a rule that
+    // only trusted the stored role locked real admins out of admin-only data.
+    function isSuperAdminEmail() {
+      return request.auth != null && request.auth.token.email in [
+        'fedizayen12@gmail.com',
+        'khaled05062006@gmail.com',
+        'khaled050620062@gmail.com'
+      ];
+    }
+
+    function isAdmin() {
+      return request.auth != null &&
+        (getUserRole(request.auth.uid) == 'admin' || isSuperAdminEmail());
+    }
+
     // USERS
     match /users/{userId} {
       // Any signed-in user can read profiles (needed for messaging/team directory)
@@ -129,12 +145,12 @@ service cloud.firestore {
     match /supportTickets/{ticketId} {
       // Author reads their own; admins read every ticket.
       allow read: if request.auth != null && (
-        resource.data.userId == request.auth.uid ||
-        getUserRole(request.auth.uid) == 'admin'
+        resource.data.userId == request.auth.uid || isAdmin()
       );
+      allow list: if isAdmin();
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       // Only admins triage (status, reply); authors may not edit after filing.
-      allow update, delete: if request.auth != null && getUserRole(request.auth.uid) == 'admin';
+      allow update, delete: if isAdmin();
     }
 
     // PERSONAL GOALS (athlete-set targets with progress tracking)

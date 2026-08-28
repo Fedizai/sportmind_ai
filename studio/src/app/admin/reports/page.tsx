@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Inbox, MessageSquare, Loader2 } from 'lucide-react';
+import { Inbox, MessageSquare, Loader2, Trash2 } from 'lucide-react';
 
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
@@ -24,7 +24,7 @@ const STATUS_STYLE: Record<TicketStatus, string> = {
 export default function AdminReportsPage() {
   const { user, isAdmin } = useUser();
   const { t } = useTranslation();
-  const { tickets, isLoading, updateTicket } = useSupportTickets(user?.uid, { allForAdmin: isAdmin });
+  const { tickets, isLoading, updateTicket, deleteTicket } = useSupportTickets(user?.uid, { allForAdmin: isAdmin });
   const [filter, setFilter] = useState<'all' | TicketStatus>('all');
 
   if (!isAdmin) {
@@ -58,7 +58,7 @@ export default function AdminReportsPage() {
             <p className="py-16 text-center text-muted-foreground">{t('adminNoReports')}</p>
           ) : (
             shown.map((ticket) => (
-              <TicketRow key={ticket.id} ticket={ticket} onUpdate={updateTicket} />
+              <TicketRow key={ticket.id} ticket={ticket} onUpdate={updateTicket} onDelete={deleteTicket} />
             ))
           )}
         </TabsContent>
@@ -70,9 +70,11 @@ export default function AdminReportsPage() {
 function TicketRow({
   ticket,
   onUpdate,
+  onDelete,
 }: {
   ticket: SupportTicket;
   onUpdate: (id: string, patch: { status?: TicketStatus; adminReply?: string }) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -150,6 +152,19 @@ function TicketRow({
               {t('adminMarkResolved')}
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ml-auto text-destructive hover:text-destructive"
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true);
+              try { await onDelete(ticket.id); } finally { setSaving(false); }
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {t('delete')}
+          </Button>
         </div>
       </CardContent>
     </Card>

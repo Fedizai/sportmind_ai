@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   collection, query, where, orderBy, onSnapshot, addDoc,
-  updateDoc, doc, serverTimestamp, Timestamp,
+  updateDoc, deleteDoc, doc, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -103,5 +103,10 @@ export function useSupportTickets(
     });
   };
 
-  return { tickets, isLoading, error, submitTicket, updateTicket };
+  /** Admin-only: remove a ticket entirely (spam, tests, duplicates). */
+  const deleteTicket = async (ticketId: string) => {
+    await deleteDoc(doc(db, 'supportTickets', ticketId));
+  };
+
+  return { tickets, isLoading, error, submitTicket, updateTicket, deleteTicket };
 }
