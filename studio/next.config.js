@@ -10,6 +10,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // The food database is read from disk at runtime, so it must be traced into
+  // the server bundle — Next cannot infer a plain fs.readFileSync path.
+  outputFileTracingIncludes: {
+    '/**': ['./data/**'],
+  },
 };
 
 module.exports = nextConfig;

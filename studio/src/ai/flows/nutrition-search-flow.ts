@@ -1,6 +1,7 @@
 'use server';
 
 import { ai } from '@/ai/genkit-instance';
+import { searchLocalFoods } from '@/lib/food-db';
 import {
     FoodSearchInputSchema,
     FoodSearchOutputSchema,
@@ -13,6 +14,9 @@ import {
  *
  * Two providers, tried in order:
  *
+ *  0. Local database — the Kaggle food export bundled with the app. No rate
+ *     limit, no cost, no IP allow-list, and it answers without a network call,
+ *     so it is tried first whenever the file is present.
  *  1. FatSecret — far better coverage of branded and non-US products, which is
  *     what athletes actually scan. Its API rejects calls from addresses that
  *     aren't registered in the FatSecret console ("Invalid IP address
@@ -26,6 +30,26 @@ import {
  */
 
 type FoodItem = FoodSearchOutput['items'][number];
+
+/* -------------------------- Local dataset (first) ------------------------- */
+
+/** Search the bundled dataset. Returns [] when the file was never generated. */
+async function searchLocal(query: string): Promise<FoodItem[]> {
+    return searchLocalFoods(query, 12).map((f): FoodItem => ({
+        fdcId: String(f.i),
+        name: f.b ? `${f.n} — ${f.b}` : f.n,
+        calories: f.c,
+        protein: f.p,
+        carbs: f.g,
+        fat: f.f,
+        sugar: f.s ?? 0,
+        sodium: f.so ?? 0,
+        iron: f.ir ?? 0,
+        potassium: 0,
+        portion: f.pt ?? 100,
+        image: null,
+    }));
+}
 
 /* ---------------------------- USDA (fallback) ---------------------------- */
 
@@ -168,6 +192,7 @@ const searchFoodFlow = ai.defineFlow(
         const failures: string[] = [];
 
         for (const [label, provider] of [
+            ['Local', searchLocal],
             ['FatSecret', searchFatSecret],
             ['USDA', searchUsda],
         ] as const) {
