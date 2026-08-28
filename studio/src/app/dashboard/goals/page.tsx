@@ -34,6 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGoals, type Goal, type GoalSport } from "@/hooks/use-goals";
 import { useTrainingSessions } from "@/hooks/use-training-sessions";
 import { useStreakStore } from "@/stores/streak-store";
+import { StreakCard } from "@/components/streak-card";
 import { computeAchievements } from "@/lib/achievements";
 import { cn } from "@/lib/utils";
 
@@ -198,6 +199,8 @@ export default function GoalsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <StreakCard />
 
       <Tabs defaultValue="goals">
         <TabsList>

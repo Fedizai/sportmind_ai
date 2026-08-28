@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Shield, Mail, Cake, Dumbbell, Trophy, User as UserIcon, Eye, Search, Loader2, UserPlus, FileQuestion, Star, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StreakEditor } from '@/components/admin/streak-editor';
 import { TennisBallIcon } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -325,6 +326,12 @@ export default function AdminPage() {
                                             </Select>
                                         </div>
                                     </div>
+                                    <StreakEditor
+                                        uid={user.uid}
+                                        displayName={user.displayName}
+                                        initialBonusDays={(user as any).streak?.bonusDays ?? 0}
+                                        initialFreezesUsed={(user as any).streak?.freezesUsed ?? 0}
+                                    />
                                     <div className="grid grid-cols-2 gap-2 w-full">
                                          <Button
                                             variant="outline"

@@ -38,7 +38,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Calendar as CalendarIcon, Bot, Sparkles, Send, Trophy, BrainCircuit, Star, Plus, CheckCircle, Trash2, Loader2, Bookmark, MessageCircle, Share2, Heart, BarChart2, Shield, Flame, Activity, CalendarDays, ClipboardList, Lightbulb, User as UserIcon, Clock, Repeat, Droplets, Bed, Check, Dumbbell, ShieldCheck, Zap, Edit, Target, Upload, Video, Waves, PlusCircle, HeartPulse, ArrowRight, Dribbble, UtensilsCrossed, RefreshCw, ShoppingCart, ChevronLeft, ChevronRight, XCircle, PieChart as PieChartIcon, Lock, ScanLine } from "lucide-react";
+import { Calendar as CalendarIcon, Bot, Sparkles, Send, Trophy, BrainCircuit, Star, Plus, CheckCircle, Trash2, Loader2, Bookmark, MessageCircle, Share2, Heart, BarChart2, Shield, Flame, Activity, CalendarDays, ClipboardList, Lightbulb, User as UserIcon, Clock, Repeat, Droplets, Bed, Check, Dumbbell, ShieldCheck, Zap, Edit, Target, Upload, Video, Waves, PlusCircle, HeartPulse, ArrowRight, Dribbble, UtensilsCrossed, RefreshCw, ShoppingCart, ChevronLeft, ChevronRight, XCircle, PieChart as PieChartIcon, Lock, ScanLine, LifeBuoy, Flag } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -84,6 +84,8 @@ const moreLinks = [
     { titleKey: 'mentalCoachCardTitle', subtitleKey: 'mentalCoachCardSubtitle', icon: BrainCircuit, path: '/dashboard/mental-coach' },
     { titleKey: 'myGoalsCardTitle', subtitleKey: 'myGoalsCardSubtitle', icon: Target, path: '/dashboard/goals' },
     { titleKey: 'bodyScanCardTitle', subtitleKey: 'bodyScanCardSubtitle', icon: ScanLine, path: '/dashboard/body-scan' },
+    { titleKey: 'supportHelpTitle', subtitleKey: 'supportHelpSubtitle', icon: LifeBuoy, path: '/dashboard/help' },
+    { titleKey: 'supportReportTitle', subtitleKey: 'supportReportSubtitle', icon: Flag, path: '/dashboard/report-problem' },
 ] as const;
 
 
