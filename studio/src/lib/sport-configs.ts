@@ -1,14 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 import { Dribbble, Shield, Waves } from "lucide-react";
 
-export type Lang = "en" | "fr";
+import type { Bi } from "@/lib/bilingual";
 
-/** A bilingual string. */
-export type Bi = { en: string; fr: string };
-
-export function pick(value: Bi, lang: Lang): string {
-    return value[lang] ?? value.en;
-}
+// Re-exported so existing importers of this module keep working.
+export { pick } from "@/lib/bilingual";
+export type { Lang, Bi } from "@/lib/bilingual";
 
 /** A numeric stat captured per logbook entry. */
 export type StatField = {

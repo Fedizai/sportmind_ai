@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, doc, getDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { startOfDay, format } from 'date-fns';
 import { usePlanStore } from './plan-store';
 import { summariseStreak } from '@/lib/streak-math';
+import { freezesRemaining, type RestoreMethod } from '@/lib/streak-tiers';
 
 /**
  * Training streak — consecutive calendar days with any logged activity.
@@ -26,10 +27,16 @@ export interface StreakState {
   activeToday: boolean;
   /** Recent active days as yyyy-MM-dd, newest first — drives the week strip. */
   activeDays: string[];
+  /** Days credited on top of logged activity — from restores or an admin edit. */
+  bonusDays: number;
+  /** Recovery credits already spent at the current tier. */
+  freezesUsed: number;
   isLoading: boolean;
   lastCalculated: string | null;
   /** Recalculate from Firestore. Throttled; pass `force` to bypass. */
   calculateStreak: (userId: string, force?: boolean) => Promise<void>;
+  /** Bring a broken streak back. Returns false when no credit is available. */
+  restoreStreak: (userId: string, method: RestoreMethod, days: number) => Promise<boolean>;
 }
 
 /** Module-level so it is never persisted and never survives a reload. */
@@ -62,11 +69,13 @@ function toDate(value: unknown): Date | null {
 
 export const useStreakStore = create<StreakState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       current: 0,
       longest: 0,
       activeToday: false,
       activeDays: [],
+      bonusDays: 0,
+      freezesUsed: 0,
       isLoading: true,
       lastCalculated: null,
 
@@ -117,18 +126,64 @@ export const useStreakStore = create<StreakState>()(
             console.warn('Streak: skipped bodyweightLogs', err);
           }
 
+          // Restores and admin adjustments live on the user document so they
+          // survive a new device and can be edited from the admin panel.
+          let bonusDays = 0;
+          let freezesUsed = 0;
+          try {
+            const userSnap = await getDoc(doc(db, 'users', userId));
+            const streak = userSnap.data()?.streak ?? {};
+            bonusDays = Number(streak.bonusDays) || 0;
+            freezesUsed = Number(streak.freezesUsed) || 0;
+          } catch (err) {
+            console.warn('Streak: could not read saved streak state', err);
+          }
+
           const summary = summariseStreak(dates);
+          const current = summary.current + Math.max(0, bonusDays);
           set({
-            current: summary.current,
-            longest: summary.longest,
+            current,
+            longest: Math.max(summary.longest, current),
             activeToday: summary.activeToday,
             activeDays: summary.activeDays,
+            bonusDays,
+            freezesUsed,
             isLoading: false,
             lastCalculated: todayKey(),
           });
         } catch (error) {
           console.error('Error calculating streak:', error);
           set({ isLoading: false });
+        }
+      },
+
+      restoreStreak: async (userId, method, days) => {
+        if (!userId || days <= 0) return false;
+        const { bonusDays, freezesUsed, longest } = get();
+
+        // A free recovery spends one of the tier's credits; paid and
+        // support-granted restores don't.
+        if (method === 'freeze') {
+          if (freezesRemaining(longest, freezesUsed) <= 0) return false;
+        }
+
+        try {
+          await updateDoc(doc(db, 'users', userId), {
+            'streak.bonusDays': increment(days),
+            ...(method === 'freeze' ? { 'streak.freezesUsed': increment(1) } : {}),
+            'streak.lastRestoreAt': serverTimestamp(),
+            'streak.lastRestoreMethod': method,
+          });
+          set({
+            bonusDays: bonusDays + days,
+            freezesUsed: method === 'freeze' ? freezesUsed + 1 : freezesUsed,
+            current: get().current + days,
+          });
+          await get().calculateStreak(userId, true);
+          return true;
+        } catch (err) {
+          console.error('Streak restore failed:', err);
+          return false;
         }
       },
     }),
@@ -142,6 +197,8 @@ export const useStreakStore = create<StreakState>()(
         longest: state.longest,
         activeToday: state.activeToday,
         activeDays: state.activeDays,
+        bonusDays: state.bonusDays,
+        freezesUsed: state.freezesUsed,
         lastCalculated: state.lastCalculated,
       }),
     }

@@ -72,9 +72,10 @@ const sports = [
     { name: "Gym", icon: Dumbbell, path: "/dashboard/gym" },
     { name: "Football", icon: Trophy, path: "/dashboard/football" },
     { name: "Tennis", icon: TennisBallIcon, path: "/dashboard/tennis" },
-    { name: "Basketball", icon: Dribbble, path: "/dashboard/basketball" },
-    { name: "Boxing", icon: Shield, path: "/dashboard/boxing" },
-    { name: "Swimming", icon: Waves, path: "/dashboard/swimming" },
+    // Not shipped yet: shown as inert "coming soon" cards, never navigable.
+    { name: "Basketball", icon: Dribbble, path: "/dashboard/basketball", comingSoon: true },
+    { name: "Boxing", icon: Shield, path: "/dashboard/boxing", comingSoon: true },
+    { name: "Swimming", icon: Waves, path: "/dashboard/swimming", comingSoon: true },
 ];
 
 const moreLinks = [
@@ -1152,24 +1153,41 @@ export function DashboardClient({ initialView }: { initialView?: 'sports' | 'ins
                         <motion.div
                             key={sport.name}
                             variants={itemVariants}
-                            whileHover={prefersReducedMotion ? undefined : { y: -5, scale: 1.01 }}
+                            whileHover={prefersReducedMotion || sport.comingSoon ? undefined : { y: -5, scale: 1.01 }}
                             transition={{ type: "spring", stiffness: 300, damping: 20 }}
                         >
                             <Card
-                                className="flex h-full min-h-[88px] lg:min-h-[104px] cursor-pointer group transition-all duration-300 hover:border-primary/40 hover:shadow-float"
-                                onClick={() => handleCardClick(sport.path)}
+                                aria-disabled={sport.comingSoon || undefined}
+                                className={cn(
+                                    "flex h-full min-h-[88px] lg:min-h-[104px] group transition-all duration-300",
+                                    sport.comingSoon
+                                        ? "cursor-not-allowed opacity-60 select-none"
+                                        : "cursor-pointer hover:border-primary/40 hover:shadow-float"
+                                )}
+                                onClick={sport.comingSoon ? undefined : () => handleCardClick(sport.path)}
                             >
                                 <CardContent className="flex flex-grow items-center justify-between px-6 py-5 lg:px-7 lg:py-6 w-full">
                                     <div className="space-y-1">
                                         <CardTitle className="text-lg lg:text-xl font-semibold tracking-tight">
                                             {sport.name}
                                         </CardTitle>
-                                        <p className="text-sm font-medium text-muted-foreground group-hover:text-primary flex items-center gap-1.5 transition-colors duration-200">
-                                            <span>{t('startTraining')}</span>
-                                            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5" />
-                                        </p>
+                                        {sport.comingSoon ? (
+                                            <p className="text-sm font-medium text-muted-foreground">
+                                                {t('comingSoon')}
+                                            </p>
+                                        ) : (
+                                            <p className="text-sm font-medium text-muted-foreground group-hover:text-primary flex items-center gap-1.5 transition-colors duration-200">
+                                                <span>{t('startTraining')}</span>
+                                                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5" />
+                                            </p>
+                                        )}
                                     </div>
-                                    <div className="flex h-12 w-12 lg:h-14 lg:w-14 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground group-hover:glow-primary-sm">
+                                    <div className={cn(
+                                        "flex h-12 w-12 lg:h-14 lg:w-14 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
+                                        sport.comingSoon
+                                            ? "bg-muted text-muted-foreground"
+                                            : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground group-hover:glow-primary-sm"
+                                    )}>
                                         <sport.icon className="h-6 w-6 lg:h-7 lg:w-7 transition-colors duration-200" />
                                     </div>
                                 </CardContent>

@@ -65,21 +65,23 @@ export function useMessages(userId1: string | undefined, userId2: string | undef
     }
 
     try {
-      const messagesCollectionRef = collection(db, "conversations", conversationId, "messages");
-      await addDoc(messagesCollectionRef, {
-        senderId: userId1,
-        text: text,
-        timestamp: serverTimestamp(),
-      });
-
-      // Also update the parent conversation document for the conversation list preview
+      // The parent conversation must exist first: the security rule on the
+      // messages subcollection reads `participants` off this document, so
+      // writing the message first made every new thread's opening message fail.
       const conversationDocRef = doc(db, "conversations", conversationId);
       await setDoc(conversationDocRef, {
         participants: [userId1, userId2],
         lastMessageText: text,
         lastMessageTimestamp: serverTimestamp(),
         lastMessageSenderId: userId1,
-      }, { merge: true }); // Use merge to create if it doesn't exist, or update if it does
+      }, { merge: true });
+
+      const messagesCollectionRef = collection(db, "conversations", conversationId, "messages");
+      await addDoc(messagesCollectionRef, {
+        senderId: userId1,
+        text: text,
+        timestamp: serverTimestamp(),
+      });
 
     } catch (err) {
       console.error("Error sending message:", err);

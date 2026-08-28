@@ -4,7 +4,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Dumbbell, Trophy, Dribbble, Waves, Shield } from "lucide-react";
+import { ArrowRight, Dumbbell, Trophy, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import { useUser } from "@/hooks/use-user";
 import { TennisBallIcon } from "@/components/icons/tennis-ball";
@@ -14,9 +14,6 @@ import { useTranslation } from "@/hooks/use-translation";
 const sports = [
   { name: "Gym", icon: Dumbbell, path: "/dashboard/gym" },
   { name: "Football", icon: Trophy, path: "/dashboard/football" },
-  { name: "Basketball", icon: Dribbble, path: "/dashboard/basketball" },
-  { name: "Boxing", icon: Shield, path: "/dashboard/boxing" },
-  { name: "Swimming", icon: Waves, path: "/dashboard/swimming" },
   { name: "Tennis", icon: TennisBallIcon, path: "/dashboard/tennis" },
 ];
 
