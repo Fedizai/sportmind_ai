@@ -16,7 +16,7 @@ import {
     type NutritionPlanInput,
     type NutritionPlanOutput,
 } from '@/ai/schemas';
-import { adminDb } from '@/lib/firebase-admin';
+import { assertProAccess } from '@/lib/server-access';
 
 const nutritionPlanPrompt = ai.definePrompt(
     {
@@ -48,11 +48,7 @@ const generateNutritionPlanFlow = ai.defineFlow(
         outputSchema: NutritionPlanOutputSchema,
     },
     async (input) => {
-        // Check user's plan
-        const userDoc = await adminDb.collection('users').doc(input.userId).get();
-        if (!userDoc.exists || userDoc.data()?.plan !== 'pro') {
-            throw new Error('Access denied: This feature is only available for Pro plan users.');
-        }
+        await assertProAccess(input.userId, 'Meal plan generation');
 
         const { output } = await nutritionPlanPrompt({ calories: input.calories, dietaryNeeds: input.dietaryNeeds, goal: input.goal });
         if (!output) {

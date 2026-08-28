@@ -11,7 +11,7 @@
 
 import { ai } from '@/ai/genkit-instance';
 import { z } from 'zod';
-import { adminDb } from '@/lib/firebase-admin';
+import { assertProAccess } from '@/lib/server-access';
 
 // Define Zod schemas for the flow's input and output
 export const GymVideoAnalysisInputSchema = z.object({
@@ -57,11 +57,7 @@ const analyzeGymVideoFlow = ai.defineFlow(
     outputSchema: GymVideoAnalysisOutputSchema,
   },
   async (input) => {
-    // Check user's plan
-    const userDoc = await adminDb.collection('users').doc(input.userId).get();
-    if (!userDoc.exists || userDoc.data()?.plan !== 'pro') {
-      throw new Error('Access denied: This feature is only available for Pro plan users.');
-    }
+    await assertProAccess(input.userId, 'Video form analysis');
 
     const { output } = await videoAnalysisPrompt({ videoDataUri: input.videoDataUri, prompt: input.prompt });
 

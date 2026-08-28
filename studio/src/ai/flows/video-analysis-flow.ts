@@ -16,7 +16,7 @@ import {
   type VideoAnalysisOutput,
 } from '@/ai/schemas';
 import { z } from 'zod';
-import { adminDb } from '@/lib/firebase-admin';
+import { assertProAccess } from '@/lib/server-access';
 
 // This flow simulates video analysis.
 const videoAnalysisFlow = ai.defineFlow(
@@ -26,11 +26,7 @@ const videoAnalysisFlow = ai.defineFlow(
     outputSchema: VideoAnalysisOutputSchema,
   },
   async (input) => {
-    // Check user's plan
-    const userDoc = await adminDb.collection('users').doc(input.userId).get();
-    if (!userDoc.exists || userDoc.data()?.plan !== 'pro') {
-      throw new Error('Access denied: This feature is only available for Pro plan users.');
-    }
+    await assertProAccess(input.userId, 'Video analysis');
 
     const { output } = await ai.generate({
       model: 'googleai/gemini-3.6-flash',

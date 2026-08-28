@@ -13,6 +13,7 @@
 import { ai } from '@/ai/genkit-instance';
 import { z } from 'zod';
 import { adminDb } from '@/lib/firebase-admin';
+import { assertProAccess } from '@/lib/server-access';
 
 const ZONE_ENUM = z.enum(['shoulders', 'chest', 'arms', 'core', 'back', 'legs']);
 
@@ -110,9 +111,7 @@ const analyzeBodyFlow = ai.defineFlow(
   async (input) => {
     // Server-side PRO gate.
     const userSnap = await adminDb.collection('users').doc(input.userId).get();
-    if (!userSnap.exists || userSnap.data()?.plan !== 'pro') {
-      throw new Error('Access denied: Body Scanner is only available for Pro plan users.');
-    }
+    await assertProAccess(input.userId, 'Body Scanner');
 
     const sport = input.sport || (userSnap.data()?.sport as string | undefined);
 

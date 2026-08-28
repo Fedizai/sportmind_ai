@@ -15,7 +15,7 @@ import {
     type TacticalAdviceInput,
     type TacticalAdviceOutput
 } from '@/ai/schemas';
-import { adminDb } from '@/lib/firebase-admin';
+import { assertProAccess } from '@/lib/server-access';
 
 const getTacticalAdviceFlow = ai.defineFlow(
     {
@@ -24,11 +24,7 @@ const getTacticalAdviceFlow = ai.defineFlow(
         outputSchema: TacticalAdviceOutputSchema,
     },
     async ({ sport, question, userId }) => {
-        // Check user's plan
-        const userDoc = await adminDb.collection('users').doc(userId).get();
-        if (!userDoc.exists || userDoc.data()?.plan !== 'pro') {
-            throw new Error('Access denied: This feature is only available for Pro plan users.');
-        }
+        await assertProAccess(userId, 'Tactical advice');
 
         const { output } = await ai.generate({
             model: 'googleai/gemini-3.5-flash-lite',
