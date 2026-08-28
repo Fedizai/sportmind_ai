@@ -47,3 +47,12 @@ export const VIEW_ROTATION: Record<'front' | 'side' | 'back', number> = {
   side: Math.PI / 2,
   back: Math.PI,
 };
+
+/**
+ * Vertical stretch about the floor plane. The mesh and the measurement rings
+ * both run heights through this, so bands stay pinned to the body when the
+ * athlete's height changes.
+ */
+export function stretchHeight(y: number, scale: number): number {
+  return BODY_BOTTOM_Y + (y - BODY_BOTTOM_Y) * scale;
+}

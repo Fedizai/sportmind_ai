@@ -16,6 +16,11 @@ import type { WorkoutPlanOutput, ExerciseFeedbackOutput } from "@/ai/schemas";
 import { useChatHistoryStore, type ChatMessage, type SavedChat } from "@/stores/chat-history-store";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
@@ -80,7 +85,10 @@ function ConversationHistoryList({ conversations, isFavorites, onSelect, onLoad,
 }
 
 function HistoryDialog({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
-    const { savedHistories, favorites, toggleFavorite, removeSavedHistory, removeFavorite, loadChat } = useChatHistoryStore();
+    const {
+        savedHistories, favorites, toggleFavorite, removeSavedHistory, removeFavorite,
+        loadChat, clearSavedHistories, clearFavorites,
+    } = useChatHistoryStore();
     const { t } = useTranslation();
     const [selectedHistory, setSelectedHistory] = useState<ChatMessage[] | null>(null);
 
@@ -101,10 +109,37 @@ function HistoryDialog({ onOpenChange }: { onOpenChange: (open: boolean) => void
                 </DialogHeader>
                  <Tabs defaultValue="history" className="flex-grow overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex flex-col gap-2 h-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="history">{t('history')}</TabsTrigger>
-                            <TabsTrigger value="favorites">{t('favorites')}</TabsTrigger>
-                        </TabsList>
+                        <div className="flex items-center gap-2">
+                            <TabsList className="grid flex-1 grid-cols-2">
+                                <TabsTrigger value="history">{t('history')}</TabsTrigger>
+                                <TabsTrigger value="favorites">{t('favorites')}</TabsTrigger>
+                            </TabsList>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" title={t('clearAllHistory')}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>{t('clearAllHistory')}</AlertDialogTitle>
+                                        <AlertDialogDescription>{t('clearAllHistoryDescription')}</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            onClick={() => {
+                                                clearSavedHistories('fitness-assistant');
+                                                clearFavorites('fitness-assistant');
+                                                setSelectedHistory(null);
+                                            }}
+                                        >
+                                            {t('delete')}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
                         <TabsContent value="history" className="m-0 h-full overflow-y-auto">
                            <ConversationHistoryList 
                                 conversations={savedHistories['fitness-assistant'] || []} 

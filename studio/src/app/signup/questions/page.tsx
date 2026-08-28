@@ -19,7 +19,11 @@ import { useTheme } from "next-themes";
 import { Languages, Sun, Moon } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
-import { useRouter, type NextRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useLanguageStore } from '@/stores/language-store';
+
+/** App Router has no exported router type — derive it from the hook. */
+type AppRouter = ReturnType<typeof useRouter>;
 import { Slider } from "@/components/ui/slider";
 import { useUser, UserProvider } from "@/hooks/use-user";
 import Link from 'next/link';
@@ -63,8 +67,9 @@ function FieldError({ msg }: { msg?: string }) {
 }
 
 // Moved the main logic to a child component to properly receive the router instance
-function OnboardingForm({ router }: { router: NextRouter }) {
-  const { t, language, setLanguage } = useTranslation();
+function OnboardingForm({ router }: { router: AppRouter }) {
+  const { t, language } = useTranslation();
+  const setLanguage = useLanguageStore((s) => s.setLanguage);
   const { theme, setTheme } = useTheme();
   const { user } = useUser();
   const isAdmin = user?.role === 'admin';

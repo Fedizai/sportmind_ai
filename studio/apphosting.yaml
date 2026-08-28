@@ -9,3 +9,51 @@ runConfig:
 frameworks:
   cleanUrls: true
   trailingSlash: false
+
+# Server-only secrets, pulled from Secret Manager at deploy time (never
+# committed — set each one first with `firebase apphosting:secrets:set <NAME>`).
+# NEXT_PUBLIC_* Firebase config is not secret and can stay in the client
+# bundle, but it still needs to be present at build time, so it's included too.
+env:
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+  - variable: FATSECRET_CLIENT_ID
+    secret: FATSECRET_CLIENT_ID
+  - variable: FATSECRET_CLIENT_SECRET
+    secret: FATSECRET_CLIENT_SECRET
+  - variable: FIREBASE_PROJECT_ID
+    secret: FIREBASE_PROJECT_ID
+  - variable: FIREBASE_CLIENT_EMAIL
+    secret: FIREBASE_CLIENT_EMAIL
+  - variable: FIREBASE_PRIVATE_KEY
+    secret: FIREBASE_PRIVATE_KEY
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyBxaFnYcaClocRg-fNyy6_fo71Cqxib-0M
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: sportmind-ai-lo721.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: sportmind-ai-lo721
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: sportmind-ai-lo721.appspot.com
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "712273946926"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:712273946926:web:a693a59a2ca8387f57f2bf"
+    availability:
+      - BUILD
+      - RUNTIME

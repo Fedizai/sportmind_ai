@@ -1,80 +1,133 @@
-
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { startOfDay, format, subDays } from 'date-fns';
+import { startOfDay, format } from 'date-fns';
 import { usePlanStore } from './plan-store';
+import { summariseStreak } from '@/lib/streak-math';
 
-interface StreakState {
-  streak: number;
+/**
+ * Training streak — consecutive calendar days with any logged activity.
+ *
+ * "Activity" is deliberately broad: a completed gym day, a logged match or
+ * session in any of the six sports, a nutrition log, or a bodyweight entry.
+ * Anything the athlete does inside the product should keep the streak alive.
+ *
+ * Day comparison uses `differenceInCalendarDays`, never raw millisecond gaps —
+ * a 23h or 25h daylight-saving day would otherwise silently break a streak.
+ */
+
+export interface StreakState {
+  /** Consecutive days ending today, or yesterday if today isn't logged yet. */
+  current: number;
+  /** Best run the athlete has ever put together. */
+  longest: number;
+  /** Whether something has already been logged today. */
+  activeToday: boolean;
+  /** Recent active days as yyyy-MM-dd, newest first — drives the week strip. */
+  activeDays: string[];
   isLoading: boolean;
   lastCalculated: string | null;
-  calculateStreak: (userId: string) => Promise<void>;
+  /** Recalculate from Firestore. Throttled; pass `force` to bypass. */
+  calculateStreak: (userId: string, force?: boolean) => Promise<void>;
 }
 
-const getTodayString = () => format(new Date(), 'yyyy-MM-dd');
+/** Module-level so it is never persisted and never survives a reload. */
+let lastRunAt = 0;
+const MIN_INTERVAL_MS = 20_000;
+
+const dayKey = (d: Date) => format(d, 'yyyy-MM-dd');
+const todayKey = () => dayKey(new Date());
+
+/** Collections keyed by the field holding the activity date. */
+const SPORT_SOURCES: { path: string; dateField: string }[] = [
+  { path: 'football_matches', dateField: 'date' },
+  { path: 'tennis_matches', dateField: 'date' },
+  { path: 'basketball_games', dateField: 'date' },
+  { path: 'boxing_bouts', dateField: 'date' },
+  { path: 'swimming_sessions', dateField: 'date' },
+  { path: 'nutritionLogs', dateField: 'createdAt' },
+];
+
+function toDate(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Timestamp) return value.toDate();
+  if (value instanceof Date) return value;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
 
 export const useStreakStore = create<StreakState>()(
   persist(
     (set) => ({
-      streak: 0,
+      current: 0,
+      longest: 0,
+      activeToday: false,
+      activeDays: [],
       isLoading: true,
       lastCalculated: null,
 
-      calculateStreak: async (userId: string) => {
+      calculateStreak: async (userId: string, force = false) => {
+        if (!userId) return;
+        // Callers fire this on mount, focus and navigation; throttle so a burst
+        // of route changes doesn't re-query seven collections each time.
+        if (!force && Date.now() - lastRunAt < MIN_INTERVAL_MS) return;
+        lastRunAt = Date.now();
         set({ isLoading: true });
 
         try {
+          const dates: Date[] = [];
+
+          // Completed days from the locally-held gym plan.
           const { plan } = usePlanStore.getState();
+          (plan?.days || []).forEach((d) => {
+            const parsed = toDate(d.completed_at);
+            if (parsed) dates.push(startOfDay(parsed));
+          });
 
-          const gymQuery = (plan?.days || [])
-            .filter(d => d.completed_at)
-            .map(d => startOfDay(new Date(d.completed_at!)));
+          // One failing collection (missing index, rules) must not zero the streak.
+          const results = await Promise.allSettled(
+            SPORT_SOURCES.map((src) =>
+              getDocs(query(collection(db, src.path), where('userId', '==', userId)))
+            )
+          );
 
-          const footballQuery = query(collection(db, "football_matches"), where("userId", "==", userId));
-          const tennisQuery = query(collection(db, "tennis_matches"), where("userId", "==", userId));
-          const nutritionQuery = query(collection(db, "nutritionLogs"), where("userId", "==", userId));
+          results.forEach((res, i) => {
+            if (res.status !== 'fulfilled') {
+              console.warn(`Streak: skipped ${SPORT_SOURCES[i].path}`, res.reason);
+              return;
+            }
+            res.value.docs.forEach((docSnap) => {
+              const parsed = toDate(docSnap.data()[SPORT_SOURCES[i].dateField]);
+              if (parsed) dates.push(startOfDay(parsed));
+            });
+          });
 
-          const [footballSnapshot, tennisSnapshot, nutritionSnapshot] = await Promise.all([
-            getDocs(footballQuery),
-            getDocs(tennisQuery),
-            getDocs(nutritionQuery)
-          ]);
-
-          const footballDates = footballSnapshot.docs.map(doc => startOfDay((doc.data().date as Timestamp).toDate()));
-          const tennisDates = tennisSnapshot.docs.map(doc => startOfDay((doc.data().date as Timestamp).toDate()));
-          const nutritionDates = nutritionSnapshot.docs.map(doc => startOfDay((doc.data().createdAt as Timestamp).toDate()));
-
-          const activityTimestamps = [...gymQuery, ...footballDates, ...tennisDates, ...nutritionDates].map(d => d.getTime());
-          const uniqueDays = [...new Set(activityTimestamps)].sort((a, b) => b - a);
-          
-          if (uniqueDays.length === 0) {
-            set({ streak: 0, isLoading: false, lastCalculated: getTodayString() });
-            return;
+          // Bodyweight logs live in a per-user subcollection (no userId field).
+          try {
+            const bw = await getDocs(collection(db, `users/${userId}/bodyweightLogs`));
+            bw.docs.forEach((docSnap) => {
+              const parsed = toDate(docSnap.data().date);
+              if (parsed) dates.push(startOfDay(parsed));
+            });
+          } catch (err) {
+            console.warn('Streak: skipped bodyweightLogs', err);
           }
 
-          let currentStreak = 0;
-          let checkDate = new Date(uniqueDays[0]);
-          const today = startOfDay(new Date());
-          const yesterday = startOfDay(subDays(new Date(), 1));
-
-          if (checkDate.getTime() === today.getTime() || checkDate.getTime() === yesterday.getTime()) {
-             currentStreak = 1;
-             for (let i = 1; i < uniqueDays.length; i++) {
-                const currentDate = new Date(uniqueDays[i-1]);
-                const prevDate = new Date(uniqueDays[i]);
-                if (currentDate.getTime() - prevDate.getTime() === 24 * 60 * 60 * 1000) {
-                    currentStreak++;
-                } else {
-                    break;
-                }
-             }
-          }
-           set({ streak: currentStreak, isLoading: false, lastCalculated: getTodayString() });
-
+          const summary = summariseStreak(dates);
+          set({
+            current: summary.current,
+            longest: summary.longest,
+            activeToday: summary.activeToday,
+            activeDays: summary.activeDays,
+            isLoading: false,
+            lastCalculated: todayKey(),
+          });
         } catch (error) {
-          console.error("Error calculating streak:", error);
+          console.error('Error calculating streak:', error);
           set({ isLoading: false });
         }
       },
@@ -82,6 +135,15 @@ export const useStreakStore = create<StreakState>()(
     {
       name: 'streak-storage',
       storage: createJSONStorage(() => localStorage),
+      // `isLoading` must never be restored — a persisted `true` used to leave the
+      // counter spinning forever whenever the day's calculation was already done.
+      partialize: (state) => ({
+        current: state.current,
+        longest: state.longest,
+        activeToday: state.activeToday,
+        activeDays: state.activeDays,
+        lastCalculated: state.lastCalculated,
+      }),
     }
   )
 );

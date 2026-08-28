@@ -27,11 +27,15 @@ export interface ScanAnalysis {
   summary: string;
 }
 
+/** Base skeletal proportions used to reconstruct the 3D avatar. */
+export type BodySexInput = 'male' | 'female' | 'neutral';
+
 export interface BodyScan {
   id: string;
   userId: string;
   unitSystem: MeasurementUnitSystem;
   sport?: string;
+  sex?: BodySexInput;
   measurements: Partial<Measurements>;
   analysis: ScanAnalysis | null;
   createdAt: Timestamp;
@@ -40,6 +44,7 @@ export interface BodyScan {
 export interface BodyScanInput {
   unitSystem: MeasurementUnitSystem;
   sport?: string;
+  sex?: BodySexInput;
   measurements: Partial<Measurements>;
   analysis: ScanAnalysis | null;
 }

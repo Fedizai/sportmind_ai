@@ -55,7 +55,8 @@ export async function logNutrition(
       throw new Error("Invalid data provided for nutrition log.");
     }
     console.error("❌ Firestore error:", error);
-    throw new Error(`Could not save nutrition log to the database: ${error.message}`);
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Could not save nutrition log to the database: ${detail}`);
   }
 }
 

@@ -6,7 +6,8 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dumbbell, Utensils, Plus, Trash2, Loader2, Calendar, Target, Sparkles, CheckCircle, RefreshCw, Video, Upload, LineChart, BarChart2, CalendarDays, HeartPulse, Move, Eye, Camera, ImagePlus, Weight, FileImage, FileVideo, X, Lock } from "lucide-react";
+import { Dumbbell, Utensils, Plus, Trash2, Loader2, Calendar as CalendarIcon, Target, Sparkles, CheckCircle, RefreshCw, Video, Upload, LineChart, BarChart2, CalendarDays, HeartPulse, Move, Eye, Camera, ImagePlus, Weight, FileImage, FileVideo, X, Lock } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
 import { bodyParts, exercises as allExercises } from "@/lib/data";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -286,7 +287,7 @@ const handleDeletePhoto = async (photo: ProgressPhoto) => {
                         <FormField control={weightForm.control} name="date" render={({ field }) => (
                             <FormItem className="flex flex-col"><Label>Date</Label>
                             <Popover>
-                                <PopoverTrigger asChild><Button variant="outline" className="justify-start font-normal"><Calendar className="mr-2 h-4 w-4"/>{field.value ? format(field.value, 'PPP') : "Pick a date"}</Button></PopoverTrigger>
+                                <PopoverTrigger asChild><Button variant="outline" className="justify-start font-normal"><CalendarIcon className="mr-2 h-4 w-4"/>{field.value ? format(field.value, 'PPP') : "Pick a date"}</Button></PopoverTrigger>
                                 <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} /></PopoverContent>
                             </Popover>
                             </FormItem>
@@ -322,7 +323,7 @@ const handleDeletePhoto = async (photo: ProgressPhoto) => {
                             <FormField control={photoForm.control} name="date" render={({ field }) => (
                                 <FormItem className="flex flex-col"><Label>Date</Label>
                                 <Popover>
-                                    <PopoverTrigger asChild><Button variant="outline" className="justify-start font-normal"><Calendar className="mr-2 h-4 w-4"/>{field.value ? format(field.value, 'PPP') : "Pick a date"}</Button></PopoverTrigger>
+                                    <PopoverTrigger asChild><Button variant="outline" className="justify-start font-normal"><CalendarIcon className="mr-2 h-4 w-4"/>{field.value ? format(field.value, 'PPP') : "Pick a date"}</Button></PopoverTrigger>
                                     <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} /></PopoverContent>
                                 </Popover>
                                 </FormItem>
@@ -464,7 +465,7 @@ function WorkoutLogger() {
                     {bodyParts.map(part => (
                         <Button
                             key={part.id}
-                            variant={selectedBodyPart?.id === part.id ? "secondary" : "ghost"}
+                            variant="ghost"
                             className="w-full justify-start"
                             onClick={() => handleSelectPart(part.id)}
                         >
@@ -992,7 +993,7 @@ function GymScheduleTab() {
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !addSessionForm.watch("date") && "text-muted-foreground")}>
-                                            <Calendar className="mr-2 h-4 w-4" />
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
                                             {addSessionForm.watch("date") ? format(addSessionForm.watch("date"), "PPP") : <span>Pick a date</span>}
                                         </Button>
                                     </PopoverTrigger>
@@ -1201,6 +1202,7 @@ function GymVideoReviewTab() {
         try {
           const fileAsDataUri = await fileToDataUri(fileForAnalysis!);
           const result = await analyzeGymVideo({
+            userId: user.uid,
             videoDataUri: fileAsDataUri,
             prompt: currentPrompt,
           });
@@ -1346,7 +1348,7 @@ function GymModuleClientContent() {
 
   const tabs = [
     { value: 'workout', labelKey: t('gymWorkoutLoggerTab'), icon: Dumbbell, pro: false },
-    { value: 'plan', labelKey: t('gymPlan'), icon: Calendar, pro: false },
+    { value: 'plan', labelKey: t('gymPlan'), icon: CalendarIcon, pro: false },
     { value: 'progress', labelKey: t('gymProgressTab'), icon: LineChart, pro: false },
     { value: 'schedule', labelKey: t('gymScheduleTab'), icon: CalendarDays, pro: false },
     { value: 'nutrition', labelKey: t('gymNutritionCalculatorTab'), icon: Utensils, pro: false },

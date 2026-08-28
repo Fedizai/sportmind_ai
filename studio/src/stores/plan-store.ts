@@ -31,6 +31,14 @@ export type GymPlan = {
   days: DayPlan[];
 };
 
+/**
+ * A freshly generated plan, before the store normalises it: weights are still
+ * raw strings ("60 kg", "bodyweight") and per-exercise completion isn't set yet.
+ */
+export type PlanDraftExercise = Omit<Exercise, 'weight' | 'completed'> & { weight?: string };
+export type PlanDraftDay = Omit<DayPlan, 'exercises'> & { exercises: PlanDraftExercise[] };
+export type GymPlanDraft = { days: PlanDraftDay[] };
+
 export type PlanOptions = {
     goal: 'fat_loss' | 'muscle_gain' | 'recomposition';
     experience: 'beginner' | 'intermediate' | 'advanced';
@@ -47,7 +55,7 @@ interface PlanState {
   userId: string | null;
 
   initialize: (userId: string, initialPlan: GymPlan | null) => void;
-  setPlan: (newPlan: { days: Omit<DayPlan, 'exercises'> & { exercises: Omit<Exercise, 'weight' | 'completed'> & { weight?: string } }[] }) => Promise<void>;
+  setPlan: (newPlan: GymPlanDraft) => Promise<void>;
   resetPlan: () => Promise<void>;
   markDayAsCompleted: (completed: boolean) => Promise<void>;
   toggleExerciseCompleted: (dayIndex: number, exerciseIndex: number) => Promise<void>;

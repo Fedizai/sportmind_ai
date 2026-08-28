@@ -30,6 +30,10 @@ interface ChatHistoryState {
   toggleFavorite: (chatId: string, conversation: SavedChat) => void;
   removeSavedHistory: (chatId: string, conversationId: string) => void;
   removeFavorite: (chatId: string, conversationId: string) => void;
+  /** Wipe every archived conversation for a chat (favorites are kept). */
+  clearSavedHistories: (chatId: string) => void;
+  /** Wipe every favorited conversation for a chat. */
+  clearFavorites: (chatId: string) => void;
 
   _setIsHydrated: (isHydrated: boolean) => void;
 }
@@ -148,6 +152,18 @@ export const useChatHistoryStore = create<ChatHistoryState>()(
                 ...state.favorites,
                 [chatId]: currentFavorites.filter(c => c.id !== conversationId)
             }
+        }));
+      },
+
+      clearSavedHistories: (chatId) => {
+        set((state) => ({
+          savedHistories: { ...state.savedHistories, [chatId]: [] },
+        }));
+      },
+
+      clearFavorites: (chatId) => {
+        set((state) => ({
+          favorites: { ...state.favorites, [chatId]: [] },
         }));
       },
 

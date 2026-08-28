@@ -58,7 +58,8 @@ import { PhysiqueReport } from "@/components/body-scan/physique-report";
 import { BODY_RINGS } from "@/components/body-scan/three/human-landmarks";
 import type { RingDatum } from "@/components/body-scan/three/measure-rings";
 import type { ZoneScore } from "@/components/body-scan/three/body-model";
-import type { BodyMorph } from "@/components/body-scan/three/human-geometry";
+import type { BodySex } from "@/components/body-scan/three/human-geometry";
+import { deriveMorph } from "@/lib/body-morph";
 
 type TFn = (k: TranslationKey) => string;
 
@@ -98,25 +99,6 @@ function buildRings(
     });
   }
   return out;
-}
-
-/** Reshape the holographic body toward the athlete's entered proportions. */
-function deriveMorph(
-  values: Partial<Record<MeasurementId, number>>,
-  system: MeasurementUnitSystem
-): BodyMorph {
-  const toCm = (v?: number) => (v === undefined ? undefined : system === "imperial" ? v * 2.54 : v);
-  const clamp = (n: number) => Math.max(0.72, Math.min(1.4, n));
-  const ratio = (v: number | undefined, base: number) => (v === undefined ? 1 : clamp(v / base));
-  const chest = toCm(values.chest);
-  return {
-    shoulders: ratio(chest, 104),
-    chest: ratio(chest, 102),
-    waist: ratio(toCm(values.waist), 85),
-    hips: ratio(toCm(values.hips), 99),
-    arms: ratio(toCm(values.arms), 35),
-    legs: ratio(toCm(values.thighs), 56),
-  };
 }
 
 function scan3dLabels(t: TFn): BodyScan3DLabels {
@@ -162,6 +144,7 @@ export function BodyScanClient() {
   const [inputMode, setInputMode] = useState<"measurements" | "photos">("measurements");
   const [form, setForm] = useState<Record<MeasurementId, string>>(emptyForm);
   const [sport, setSport] = useState("general");
+  const [sex, setSex] = useState<BodySex>("male");
   const [frontPhoto, setFrontPhoto] = useState<string | undefined>();
   const [sidePhoto, setSidePhoto] = useState<string | undefined>();
   const [view, setView] = useState<ScanView>("front");
@@ -212,7 +195,7 @@ export function BodyScanClient() {
         frontPhotoUri: frontPhoto,
         sidePhotoUri: sidePhoto,
       });
-      await addScan({ unitSystem, sport, measurements: parsed, analysis });
+      await addScan({ unitSystem, sport, sex, measurements: parsed, analysis });
       toast({ title: t("bodyScanSaved") });
       setTab("results");
     } catch (err) {
@@ -252,7 +235,7 @@ export function BodyScanClient() {
   }, [form]);
 
   const liveRings = useMemo(() => buildRings(parsedForm, unitSystem, t), [parsedForm, unitSystem, t]);
-  const liveMorph = useMemo(() => deriveMorph(parsedForm, unitSystem), [parsedForm, unitSystem]);
+  const liveMorph = useMemo(() => deriveMorph(parsedForm, unitSystem, sex), [parsedForm, unitSystem, sex]);
   const scanLabels = useMemo(() => scan3dLabels(t), [t]);
 
   const progressData = useMemo(() => {
@@ -383,6 +366,28 @@ export function BodyScanClient() {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">{t("bodyScanBodyType")}</Label>
+                <div className="inline-flex w-full rounded-xl border border-border/60 dark:border-white/[0.07] bg-muted/50 dark:bg-white/[0.03] p-1">
+                  {(["male", "female", "neutral"] as BodySex[]).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSex(s)}
+                      aria-pressed={sex === s}
+                      className={cn(
+                        "flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-all",
+                        sex === s
+                          ? "bg-background dark:bg-white/[0.09] text-foreground shadow-card"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {t(s === "male" ? "bodyTypeMale" : s === "female" ? "bodyTypeFemale" : "bodyTypeNeutral")}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -586,7 +591,7 @@ function ResultsView({
 }) {
   const analysis = latest.analysis!;
   const rings = buildRings(latest.measurements, latest.unitSystem, t);
-  const morph = deriveMorph(latest.measurements, latest.unitSystem);
+  const morph = deriveMorph(latest.measurements, latest.unitSystem, latest.sex ?? "male");
   const scanLabels = scan3dLabels(t);
   return (
     <div className="grid gap-6 lg:grid-cols-[380px_1fr]">

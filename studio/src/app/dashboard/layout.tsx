@@ -87,7 +87,9 @@ function DashboardHeader() {
                          return (
                             <Link key={item.label} href={item.href} legacyBehavior>
                                 <a
-                                    ref={(el) => (tabsRef.current[index] = el)}
+                                    ref={(el) => {
+                                        tabsRef.current[index] = el;
+                                    }}
                                     className={cn(
                                         "relative z-10 px-4 py-2 text-sm font-medium transition-colors",
                                         isActive ? "font-bold text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -112,16 +114,20 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   useDailyReset();
   const [isNavVisible, setIsNavVisible] = useState(true);
   const lastScrollY = useRef(0);
-  const { calculateStreak, lastCalculated } = useStreakStore();
+  const calculateStreak = useStreakStore((s) => s.calculateStreak);
   const { t } = useTranslation();
 
   const isDashboardRoot = ['/dashboard', '/dashboard/insights', '/dashboard/messages'].includes(pathname);
 
+  // Refresh on navigation and on tab focus so a session logged a moment ago is
+  // reflected immediately; the store throttles the actual Firestore reads.
   useEffect(() => {
-    if (user?.uid && lastCalculated !== new Date().toISOString().split('T')[0]) {
-      calculateStreak(user.uid);
-    }
-  }, [user, lastCalculated, calculateStreak]);
+    if (!user?.uid) return;
+    calculateStreak(user.uid);
+    const onFocus = () => calculateStreak(user.uid);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [user?.uid, pathname, calculateStreak]);
 
   useEffect(() => {
     const handleScroll = () => {

@@ -501,7 +501,7 @@ export default function TennisModuleClient() {
                                 <CardContent className="h-80 w-full p-0">
                                     <ChartContainer config={radarChartConfig} className="mx-auto aspect-square h-full w-full">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={tennisRadarData} gridType="circle">
+                                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={tennisRadarData}>
                                                 <PolarGrid gridType="circle" />
                                                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12 }} />
                                                 <Radar name="Player" dataKey="A" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.6} />

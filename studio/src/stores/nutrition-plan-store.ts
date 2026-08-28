@@ -10,7 +10,8 @@ export interface NutritionPlanState {
     meals: Meal[];
     lastOptions: NutritionPlanInput;
   } | null;
-  setGeneratedPlan: (plan: NutritionPlanOutput, options: NutritionPlanInput) => void;
+  /** Pass null to clear the current plan (options omitted). */
+  setGeneratedPlan: (plan: NutritionPlanOutput | null, options?: NutritionPlanInput) => void;
   toggleMealCompleted: (mealIndex: number) => void;
   removePlan: () => void;
   resetDailyData: () => void;
@@ -21,7 +22,7 @@ export const useNutritionPlanStore = create<NutritionPlanState>()(
     (set, get) => ({
       generatedPlan: null,
       setGeneratedPlan: (plan, options) => {
-        if (plan) {
+        if (plan && options) {
           const planWithCompletion = {
             ...plan,
             meals: plan.meals.map(meal => ({ ...meal, completed: false })),

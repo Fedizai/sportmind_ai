@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/theme-provider';
 import { UserProvider } from '@/hooks/use-user';
-import { Public_Sans, Archivo } from 'next/font/google';
+import { Public_Sans, Big_Shoulders_Display } from 'next/font/google';
 import { cn } from '@/lib/utils';
 
 const publicSans = Public_Sans({
@@ -11,10 +11,12 @@ const publicSans = Public_Sans({
   variable: '--font-sans',
 })
 
-// Engineered, broadcast-grade grotesque used for display headlines on marketing
-// surfaces. Scoped via the `font-display` Tailwind family so app UI keeps Public Sans.
-const archivo = Archivo({
+// Condensed industrial signage face (Chicago wayfinding lineage) — taut and
+// engineered, for campaign headlines only. Scoped via the `font-display`
+// Tailwind family so all app UI keeps Public Sans.
+const bigShoulders = Big_Shoulders_Display({
   subsets: ['latin'],
+  weight: ['400', '600', '700', '800'],
   variable: '--font-display',
 })
 
@@ -48,7 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className={cn("antialiased font-sans", publicSans.variable, archivo.variable)}>
+      <body className={cn("antialiased font-sans", publicSans.variable, bigShoulders.variable)}>
         <UserProvider>
           <ThemeProvider
             attribute="class"

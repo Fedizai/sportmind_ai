@@ -6,8 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Flame, Loader2 } from "lucide-react";
 import { useRouter } from 'next/navigation';
-import { useLanguageStore } from '@/stores/language-store';
-import { t } from '@/lib/i18n';
+import { useTranslation } from '@/hooks/use-translation';
 import { useNutritionStore } from '@/stores/nutrition-store';
 import { motion } from 'framer-motion';
 
@@ -24,21 +23,21 @@ interface NutritionChartProps {
 
 export const NutritionChart = ({ nutritionData }: NutritionChartProps) => {
     const router = useRouter();
-    const { language } = useLanguageStore();
+    const { t } = useTranslation();
     const { isLoading } = useNutritionStore();
 
     if (isLoading) {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>{t('dailyIntake', language)}</CardTitle>
+                    <CardTitle>{t('dailyIntake')}</CardTitle>
                     <CardDescription>Estimated daily nutrition based on logged meals.</CardDescription>
                 </CardHeader>
                 <CardContent className="h-64 flex flex-col items-center justify-center p-4">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </CardContent>
                  <CardFooter>
-                    <Button disabled className="w-full"><Flame className="mr-2 h-4 w-4" /> {t('logMeal', language)}</Button>
+                    <Button disabled className="w-full"><Flame className="mr-2 h-4 w-4" /> {t('logMeal')}</Button>
                 </CardFooter>
             </Card>
         );
@@ -60,7 +59,7 @@ export const NutritionChart = ({ nutritionData }: NutritionChartProps) => {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>{t('dailyIntake', language)}</CardTitle>
+                <CardTitle>{t('dailyIntake')}</CardTitle>
                 <CardDescription>Estimated daily nutrition based on logged meals.</CardDescription>
             </CardHeader>
             <CardContent className="h-64 flex items-center justify-around p-4">
@@ -110,7 +109,7 @@ export const NutritionChart = ({ nutritionData }: NutritionChartProps) => {
                 </div>
             </CardContent>
             <CardFooter>
-                <Button className="w-full" onClick={() => router.push('/dashboard/nutrition')}><Flame className="mr-2 h-4 w-4" /> {t('logMeal', language)}</Button>
+                <Button className="w-full" onClick={() => router.push('/dashboard/nutrition')}><Flame className="mr-2 h-4 w-4" /> {t('logMeal')}</Button>
             </CardFooter>
         </Card>
     );

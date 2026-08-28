@@ -190,7 +190,7 @@ const motivationalMessages: TranslationKey[] = [
 ];
 
 const StreakCard = () => {
-    const { streak } = useStreakStore();
+    const { current: streak } = useStreakStore();
     const { t } = useTranslation();
     const [message, setMessage] = useState(t('streakMessage1'));
 

@@ -34,6 +34,14 @@ export interface AppUser {
   privacy?: {
     shareDataWithCoach?: boolean;
   };
+  /** Sport profile captured during onboarding. Shape mirrors use-all-users.AppUser. */
+  tennisProfile?: {
+    level?: string;
+    hasRanking?: boolean;
+    ranking?: string;
+    dominantHand?: string;
+    playStyle?: string;
+  };
 }
 
 

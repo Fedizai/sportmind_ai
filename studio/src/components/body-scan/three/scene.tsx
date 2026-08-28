@@ -5,10 +5,10 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
-import { buildHumanGeometry, type BodyMorph } from './human-geometry';
+import { buildBodySurfaces, DEFAULT_MORPH, type BodyMorph } from './human-geometry';
 import { BodyModel } from './body-model';
 import { MeasureRings, type RingDatum } from './measure-rings';
-import { VIEW_ROTATION, BODY_BOTTOM_Y } from './human-landmarks';
+import { VIEW_ROTATION, BODY_BOTTOM_Y, stretchHeight } from './human-landmarks';
 
 export type ScanView3D = 'front' | 'side' | 'back';
 
@@ -93,8 +93,32 @@ function EnergyRing({ color, animate }: { color: string; animate: boolean }) {
   );
 }
 
+/** Ring id → the morph factor that widens that band with the body. */
+const RING_FACTOR: Record<string, keyof BodyMorph> = {
+  shoulders: 'shoulders',
+  chest: 'chest',
+  waist: 'waist',
+  hips: 'hips',
+};
+
 export default function Scene({ view, color, rings, morph, animate = true }: SceneProps) {
-  const geometry = useMemo(() => buildHumanGeometry(morph), [morph]);
+  const surfaces = useMemo(() => buildBodySurfaces(morph), [morph]);
+
+  /** Bands follow the body: same vertical stretch, same regional widening. */
+  const fittedRings = useMemo(() => {
+    const m = morph ?? DEFAULT_MORPH;
+    return rings.map((r) => {
+      const key = RING_FACTOR[r.id];
+      const raw = key ? m[key] : 1;
+      const f = typeof raw === 'number' ? raw : 1;
+      return {
+        ...r,
+        y: stretchHeight(r.y, m.heightScale),
+        radiusX: r.radiusX * f,
+        radiusZ: r.radiusZ * f,
+      };
+    });
+  }, [rings, morph]);
 
   return (
     <Canvas
@@ -105,8 +129,24 @@ export default function Scene({ view, color, rings, morph, animate = true }: Sce
     >
       <color attach="background" args={['#05090e']} />
       <Rig view={view} animate={animate}>
-        <BodyModel geometry={geometry} color={color} animate={animate} />
-        <MeasureRings rings={rings} color={color} animate={animate} />
+        <BodyModel geometry={surfaces.geometry} contours={surfaces.contours} color={color} animate={animate} />
+
+        {/* Mirrored silhouette on the platform — grounds the figure so it reads
+            as standing on the pad rather than floating above it. */}
+        <group scale={[1, -1, 1]} position={[0, BODY_BOTTOM_Y * 2, 0]}>
+          <mesh geometry={surfaces.geometry}>
+            <meshBasicMaterial
+              color={color}
+              transparent
+              opacity={0.055}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
+
+        <MeasureRings rings={fittedRings} color={color} animate={animate} />
       </Rig>
 
       <EnergyRing color={color} animate={animate} />

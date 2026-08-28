@@ -52,7 +52,7 @@ export default function GoalsPage() {
   const { toast } = useToast();
   const { goals, addGoal, updateGoalProgress, deleteGoal } = useGoals(user?.uid);
   const { sessions } = useTrainingSessions();
-  const { streak } = useStreakStore();
+  const { current: streak } = useStreakStore();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [title, setTitle] = useState("");
