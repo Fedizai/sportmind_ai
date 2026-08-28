@@ -40,7 +40,7 @@ const gymPlanPrompt = ai.definePrompt(
     name: 'generateGymPlanPrompt',
     input: { schema: GymPlanInputSchema },
     output: { schema: GymPlanOutputSchema },
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-3.5-flash-lite',
   },
   `You are an expert fitness coach tasked with creating a personalized weekly workout plan.
 

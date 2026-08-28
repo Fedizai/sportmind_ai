@@ -32,7 +32,7 @@ const videoAnalysisPrompt = ai.definePrompt(
     name: 'gymVideoAnalysisPrompt',
     input: { schema: GymVideoAnalysisInputSchema.omit({ userId: true }) },
     output: { schema: GymVideoAnalysisOutputSchema },
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-3.6-flash',
   },
   `You are a world-class personal trainer and biomechanics expert. Analyze the provided video of an exercise and give specific, actionable feedback based on the user's prompt.
 

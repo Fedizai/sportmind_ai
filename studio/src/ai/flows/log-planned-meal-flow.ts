@@ -24,7 +24,7 @@ const nutritionPrompt = ai.definePrompt(
     name: 'plannedMealNutritionPrompt',
     input: { schema: LogPlannedMealInputSchema },
     output: { schema: NutritionInfoOutputSchema },
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-3.5-flash-lite',
   },
   `You are a nutrition expert. Given a list of food items, provide the estimated nutritional information for the entire meal.
   

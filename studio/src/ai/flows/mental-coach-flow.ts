@@ -20,7 +20,7 @@ const mentalCoachPrompt = ai.definePrompt(
     name: 'mentalCoachPrompt',
     input: { schema: MentalCoachInputSchema },
     output: { schema: MentalCoachOutputSchema },
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-3.5-flash-lite',
   },
   `You are an expert sports psychologist and mental coach. A user is looking for mental preparation advice for a specific scenario.
 

@@ -67,7 +67,7 @@ const bodyAnalysisPrompt = ai.definePrompt(
     name: 'bodyAnalysisPrompt',
     input: { schema: BodyAnalysisInputSchema.omit({ userId: true }) },
     output: { schema: BodyAnalysisOutputSchema },
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-3.6-flash',
   },
   `You are a world-class body-composition analyst and strength & conditioning coach.
 Analyze the athlete's physique from the measurements (and photos, if provided) and return a structured assessment.

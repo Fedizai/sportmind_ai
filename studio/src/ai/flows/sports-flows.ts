@@ -31,7 +31,7 @@ const getTacticalAdviceFlow = ai.defineFlow(
         }
 
         const { output } = await ai.generate({
-            model: 'googleai/gemini-1.5-flash',
+            model: 'googleai/gemini-3.5-flash-lite',
             prompt: `You are an expert sports strategist and coach for ${sport}. A user has a tactical question.
 
             User's Question: "${question}"

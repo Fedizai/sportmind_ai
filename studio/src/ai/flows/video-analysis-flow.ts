@@ -33,7 +33,7 @@ const videoAnalysisFlow = ai.defineFlow(
     }
 
     const { output } = await ai.generate({
-      model: 'googleai/gemini-1.5-flash',
+      model: 'googleai/gemini-3.6-flash',
       prompt: `You are a world-class football coach. Analyze the provided video of a player and give specific, actionable feedback based on the user's prompt.
 
         User's Focus: "${input.prompt}"

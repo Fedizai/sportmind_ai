@@ -20,7 +20,7 @@ const drillSuggestionPrompt = ai.definePrompt(
     name: 'tennisDrillPrompt',
     input: { schema: TennisDrillInputSchema },
     output: { schema: TennisDrillOutputSchema },
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-3.5-flash-lite',
   },
   `You are an expert tennis coach. A player wants drill suggestions for a specific focus area.
 

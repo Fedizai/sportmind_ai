@@ -23,7 +23,7 @@ const nutritionPlanPrompt = ai.definePrompt(
         name: 'generateNutritionPlanPrompt',
         input: { schema: NutritionPlanInputSchema.omit({ userId: true }) },
         output: { schema: NutritionPlanOutputSchema },
-        model: 'googleai/gemini-1.5-flash',
+        model: 'googleai/gemini-3.5-flash-lite',
     },
     `You are an expert nutritionist. A user wants a 1-day meal plan.
 
