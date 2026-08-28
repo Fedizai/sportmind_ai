@@ -151,6 +151,20 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       // Only admins triage (status, reply); authors may not edit after filing.
       allow update, delete: if isAdmin();
+
+      // Threaded conversation on a ticket — the author and any admin can both
+      // post, so a report can go back and forth instead of a single reply.
+      match /replies/{replyId} {
+        function ticket() {
+          return get(/databases/$(database)/documents/supportTickets/$(ticketId)).data;
+        }
+        allow read: if request.auth != null &&
+          (ticket().userId == request.auth.uid || isAdmin());
+        allow create: if request.auth != null &&
+          request.resource.data.authorId == request.auth.uid &&
+          (ticket().userId == request.auth.uid || isAdmin());
+        allow update, delete: if isAdmin();
+      }
     }
 
     // PERSONAL GOALS (athlete-set targets with progress tracking)

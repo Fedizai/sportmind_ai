@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import {
   collection, query, where, orderBy, onSnapshot, addDoc,
-  updateDoc, deleteDoc, doc, serverTimestamp, Timestamp,
+  updateDoc, deleteDoc, doc, serverTimestamp, Timestamp, getDocs,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '@/lib/firebase';
 
 /** What the athlete is writing in about. */
 export type TicketKind = 'problem' | 'help' | 'streak_restore';
@@ -21,6 +22,8 @@ export interface SupportTicket {
   message: string;
   /** Free-form context, e.g. the page the report came from. */
   context?: string;
+  /** Screenshot URLs uploaded with the report. */
+  attachments?: string[];
   status: TicketStatus;
   adminReply?: string;
   createdAt: Timestamp | null;
@@ -32,6 +35,33 @@ export interface NewTicket {
   subject: string;
   message: string;
   context?: string;
+  attachments?: string[];
+}
+
+/** One message in a ticket's back-and-forth thread. */
+export interface TicketReply {
+  id: string;
+  authorId: string;
+  authorName: string | null;
+  isAdmin: boolean;
+  text: string;
+  attachments?: string[];
+  createdAt: Timestamp | null;
+}
+
+/**
+ * Upload screenshots for a ticket and return their download URLs.
+ * Images land under the author's own uid, which is what the storage rule allows.
+ */
+export async function uploadTicketImages(userId: string, files: File[]): Promise<string[]> {
+  const urls: string[] = [];
+  for (const file of files) {
+    const path = `supportAttachments/${userId}/${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, file);
+    urls.push(await getDownloadURL(storageRef));
+  }
+  return urls;
 }
 
 /**
@@ -103,10 +133,32 @@ export function useSupportTickets(
     });
   };
 
+  /** Post into a ticket's thread — used by both the author and admins. */
+  const addReply = async (
+    ticketId: string,
+    text: string,
+    author: { uid: string; displayName: string | null; isAdmin: boolean },
+    attachments: string[] = []
+  ) => {
+    await addDoc(collection(db, 'supportTickets', ticketId, 'replies'), {
+      authorId: author.uid,
+      authorName: author.displayName,
+      isAdmin: author.isAdmin,
+      text,
+      attachments,
+      createdAt: serverTimestamp(),
+    });
+    // Surface activity on the parent so the queue can be sorted by freshness.
+    await updateDoc(doc(db, 'supportTickets', ticketId), { updatedAt: serverTimestamp() });
+  };
+
   /** Admin-only: remove a ticket entirely (spam, tests, duplicates). */
   const deleteTicket = async (ticketId: string) => {
+    // Clear the thread first so no orphaned replies are left behind.
+    const replies = await getDocs(collection(db, 'supportTickets', ticketId, 'replies'));
+    await Promise.all(replies.docs.map((r) => deleteDoc(r.ref)));
     await deleteDoc(doc(db, 'supportTickets', ticketId));
   };
 
-  return { tickets, isLoading, error, submitTicket, updateTicket, deleteTicket };
+  return { tickets, isLoading, error, submitTicket, updateTicket, deleteTicket, addReply };
 }

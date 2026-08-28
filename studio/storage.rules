@@ -17,6 +17,16 @@ service firebase.storage {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Screenshots attached to a support ticket. The author uploads under their
+    // own uid; any signed-in user may read, because an admin has to open the
+    // image while triaging a report they did not write.
+    match /supportAttachments/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
     // Profile pictures - viewable by any signed-in user (avatars), editable by owner only
     match /profilePictures/{userId}/{allPaths=**} {
       allow read: if request.auth != null;

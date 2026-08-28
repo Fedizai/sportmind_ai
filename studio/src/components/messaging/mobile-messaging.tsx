@@ -25,14 +25,12 @@ export function MobileMessaging() {
   let usersToShow: AppUser[] = [];
   if (user) {
     if (user.role === 'admin') {
-      // Admins can see everyone except themselves
+      // Admins can reach everyone.
       usersToShow = allUsers.filter(u => u.uid !== user.uid);
-    } else if (user.role === 'coach') {
-      // Coaches can only see players
-      usersToShow = allUsers.filter(u => u.role === 'player');
-    } else if (user.role === 'player') {
-      // Players can only see coaches
-      usersToShow = allUsers.filter(u => u.role === 'coach');
+    } else {
+      // Coaches and players can both message anyone else on the platform —
+      // players talk to each other as well as to their coaches.
+      usersToShow = allUsers.filter(u => u.uid !== user.uid && u.role !== 'admin');
     }
   }
 

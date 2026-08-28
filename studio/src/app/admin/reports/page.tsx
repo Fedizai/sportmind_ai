@@ -8,6 +8,7 @@ import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/use-translation';
 import { useSupportTickets, type SupportTicket, type TicketStatus } from '@/hooks/use-support-tickets';
+import { TicketThread } from '@/components/support/ticket-thread';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,7 +25,7 @@ const STATUS_STYLE: Record<TicketStatus, string> = {
 export default function AdminReportsPage() {
   const { user, isAdmin } = useUser();
   const { t } = useTranslation();
-  const { tickets, isLoading, updateTicket, deleteTicket } = useSupportTickets(user?.uid, { allForAdmin: isAdmin });
+  const { tickets, isLoading, updateTicket, deleteTicket, addReply } = useSupportTickets(user?.uid, { allForAdmin: isAdmin });
   const [filter, setFilter] = useState<'all' | TicketStatus>('all');
 
   if (!isAdmin) {
@@ -58,7 +59,7 @@ export default function AdminReportsPage() {
             <p className="py-16 text-center text-muted-foreground">{t('adminNoReports')}</p>
           ) : (
             shown.map((ticket) => (
-              <TicketRow key={ticket.id} ticket={ticket} onUpdate={updateTicket} onDelete={deleteTicket} />
+              <TicketRow key={ticket.id} ticket={ticket} onUpdate={updateTicket} onDelete={deleteTicket} addReply={addReply} />
             ))
           )}
         </TabsContent>
@@ -71,10 +72,17 @@ function TicketRow({
   ticket,
   onUpdate,
   onDelete,
+  addReply,
 }: {
   ticket: SupportTicket;
   onUpdate: (id: string, patch: { status?: TicketStatus; adminReply?: string }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  addReply: (
+    ticketId: string,
+    text: string,
+    author: { uid: string; displayName: string | null; isAdmin: boolean },
+    attachments?: string[]
+  ) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -125,6 +133,26 @@ function TicketRow({
 
       <CardContent className="space-y-3">
         <p className="whitespace-pre-wrap rounded-md bg-muted/50 p-3 text-sm">{ticket.message}</p>
+
+        {ticket.attachments && ticket.attachments.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('ticketAttachments')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {ticket.attachments.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="h-24 w-24 rounded-md object-cover ring-1 ring-border" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="border-t pt-3">
+          <TicketThread ticketId={ticket.id} addReply={addReply} />
+        </div>
 
         <div className="space-y-2">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">

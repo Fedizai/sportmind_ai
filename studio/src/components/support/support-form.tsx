@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Send, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Send, Paperclip, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/use-translation';
-import { useSupportTickets, type TicketKind, type TicketStatus } from '@/hooks/use-support-tickets';
+import { useSupportTickets, uploadTicketImages, type TicketKind, type TicketStatus } from '@/hooks/use-support-tickets';
+import { TicketThread } from '@/components/support/ticket-thread';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,10 +31,11 @@ export function SupportForm({ kind }: { kind: Extract<TicketKind, 'problem' | 'h
   const { user } = useUser();
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { tickets, submitTicket } = useSupportTickets(user?.uid);
+  const { tickets, submitTicket, addReply } = useSupportTickets(user?.uid);
 
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
 
   const statusLabel = (s: TicketStatus) =>
@@ -44,12 +46,14 @@ export function SupportForm({ kind }: { kind: Extract<TicketKind, 'problem' | 'h
     if (!user || !subject.trim() || !message.trim()) return;
     setSending(true);
     try {
+      const attachments = files.length ? await uploadTicketImages(user.uid, files) : [];
       await submitTicket(
-        { kind, subject: subject.trim(), message: message.trim(), context: kind },
+        { kind, subject: subject.trim(), message: message.trim(), context: kind, attachments },
         { uid: user.uid, email: user.email, displayName: user.displayName }
       );
       setSubject('');
       setMessage('');
+      setFiles([]);
       toast({ title: t('supportSent') });
     } catch (err) {
       console.error('Support ticket failed:', err);
@@ -95,6 +99,34 @@ export function SupportForm({ kind }: { kind: Extract<TicketKind, 'problem' | 'h
                 required
               />
             </div>
+            <div className="space-y-2">
+              <Label>{t('ticketAttach')}</Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <label className="cursor-pointer">
+                    <Paperclip className="mr-2 h-4 w-4" />
+                    {t('ticketAttach')}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => setFiles([...files, ...Array.from(e.target.files ?? [])])}
+                    />
+                  </label>
+                </Button>
+                {files.map((f, i) => (
+                  <span key={i} className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs">
+                    {f.name.slice(0, 22)}
+                    <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} aria-label={t('ticketRemoveImage')}>
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">{t('ticketAttachHint')}</p>
+            </div>
+
             <Button type="submit" disabled={sending || !subject.trim() || !message.trim()}>
               <Send className="mr-2 h-4 w-4" />
               {sending ? t('supportSending') : t('supportSend')}
@@ -125,14 +157,25 @@ export function SupportForm({ kind }: { kind: Extract<TicketKind, 'problem' | 'h
                     {format(ticket.createdAt.toDate(), 'PPp')}
                   </p>
                 )}
+                {ticket.attachments && ticket.attachments.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {ticket.attachments.map((url, i) => (
+                      <a key={i} href={url} target="_blank" rel="noreferrer">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" className="h-20 w-20 rounded-md object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                )}
                 {ticket.adminReply && (
                   <div className="mt-3 rounded-md bg-primary/10 p-3">
-                    <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-                      <MessageSquare className="h-3.5 w-3.5" /> {t('supportAdminReply')}
-                    </p>
+                    <p className="text-xs font-semibold text-primary">{t('supportAdminReply')}</p>
                     <p className="mt-1 whitespace-pre-wrap text-sm">{ticket.adminReply}</p>
                   </div>
                 )}
+                <div className="mt-4 border-t pt-3">
+                  <TicketThread ticketId={ticket.id} addReply={addReply} />
+                </div>
               </div>
             ))
           )}
