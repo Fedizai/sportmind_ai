@@ -848,7 +848,7 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
                                             key={cat.key}
                                             onClick={() => setExerciseCategory(cat.key)}
                                             className={cn(
-                                                "rounded-full px-4 py-1.5 text-sm font-medium transition-colors border",
+                                                "rounded-md px-4 py-1.5 text-sm font-medium transition-colors border",
                                                 active
                                                     ? "bg-primary text-primary-foreground border-primary glow-primary-sm"
                                                     : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted hover:text-foreground",

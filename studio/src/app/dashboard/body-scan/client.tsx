@@ -292,13 +292,13 @@ export function BodyScanClient() {
       <Header t={t} />
 
       {/* lightweight tab bar */}
-      <div className="inline-flex rounded-xl border border-border/60 dark:border-white/[0.07] bg-muted/50 dark:bg-white/[0.03] p-1 shadow-card">
+      <div className="inline-flex rounded-lg border border-border/60 dark:border-white/[0.07] bg-muted/50 dark:bg-white/[0.03] p-1 shadow-card">
         {(["scan", "results", "progress"] as Tab[]).map((tb) => (
           <button
             key={tb}
             onClick={() => setTab(tb)}
             className={cn(
-              "rounded-lg px-4 py-1.5 text-sm font-medium transition-all",
+              "rounded-md px-4 py-1.5 text-sm font-medium transition-all",
               tab === tb
                 ? "bg-background dark:bg-white/[0.09] text-foreground shadow-card"
                 : "text-muted-foreground hover:text-foreground"
@@ -323,14 +323,14 @@ export function BodyScanClient() {
                 <CardTitle>{t("bodyScanMeasurements")}</CardTitle>
                 <CardDescription>{t("bodyScanInputChoiceHint")}</CardDescription>
               </div>
-              <div className="inline-flex w-full rounded-xl border border-border/60 dark:border-white/[0.07] bg-muted/50 dark:bg-white/[0.03] p-1">
+              <div className="inline-flex w-full rounded-lg border border-border/60 dark:border-white/[0.07] bg-muted/50 dark:bg-white/[0.03] p-1">
                 {(["measurements", "photos"] as const).map((m) => (
                   <button
                     key={m}
                     type="button"
                     onClick={() => setInputMode(m)}
                     className={cn(
-                      "flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-all",
+                      "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
                       inputMode === m
                         ? "bg-background dark:bg-white/[0.09] text-foreground shadow-card"
                         : "text-muted-foreground hover:text-foreground"
@@ -370,7 +370,7 @@ export function BodyScanClient() {
 
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">{t("bodyScanBodyType")}</Label>
-                <div className="inline-flex w-full rounded-xl border border-border/60 dark:border-white/[0.07] bg-muted/50 dark:bg-white/[0.03] p-1">
+                <div className="inline-flex w-full rounded-lg border border-border/60 dark:border-white/[0.07] bg-muted/50 dark:bg-white/[0.03] p-1">
                   {(["male", "female", "neutral"] as BodySex[]).map((s) => (
                     <button
                       key={s}
@@ -378,7 +378,7 @@ export function BodyScanClient() {
                       onClick={() => setSex(s)}
                       aria-pressed={sex === s}
                       className={cn(
-                        "flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-all",
+                        "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
                         sex === s
                           ? "bg-background dark:bg-white/[0.09] text-foreground shadow-card"
                           : "text-muted-foreground hover:text-foreground"
@@ -613,7 +613,7 @@ function ResultsView({
               key={v}
               onClick={() => setView(v)}
               className={cn(
-                "flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-all",
+                "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
                 view === v
                   ? "bg-background dark:bg-white/[0.09] text-foreground shadow-card"
                   : "text-muted-foreground hover:text-foreground"

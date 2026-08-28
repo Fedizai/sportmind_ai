@@ -36,7 +36,7 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t("searchConversationsPlaceholder")}
-            className="h-10 rounded-full bg-muted/50 pl-9 dark:bg-white/[0.04]"
+            className="h-10 rounded-md bg-muted/50 pl-9 dark:bg-white/[0.04]"
           />
         </div>
       </div>

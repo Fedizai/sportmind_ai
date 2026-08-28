@@ -50,7 +50,7 @@ const DialogContent = React.forwardRef<
         if (!canClose) e.preventDefault()
       }}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border/60 dark:border-white/[0.09] bg-card/90 backdrop-blur-2xl backdrop-saturate-150 p-6 shadow-float duration-200 rounded-2xl overflow-hidden",
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border/60 dark:border-white/[0.09] bg-card/90 backdrop-blur-2xl backdrop-saturate-150 p-6 shadow-float duration-200 rounded-xl overflow-hidden",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
         className
       )}
@@ -59,7 +59,7 @@ const DialogContent = React.forwardRef<
       {/* top edge shine */}
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent dark:via-white/20 to-transparent" />
       {/* inner corner glow */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-br dark:from-white/[0.03] via-transparent to-transparent rounded-2xl" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-br dark:from-white/[0.03] via-transparent to-transparent rounded-xl" />
       {children}
       {canClose && (
         <DialogPrimitive.Close className="absolute right-4 top-4 rounded-xl opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:bg-accent dark:hover:bg-white/[0.08] p-1 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">

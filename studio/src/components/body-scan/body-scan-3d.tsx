@@ -107,7 +107,7 @@ export function BodyScan3D({ rings, morph, scanDate, labels, defaultView = 'fron
 
       {/* drag hint */}
       <div className="pointer-events-none absolute inset-x-0 bottom-16 z-10 flex justify-center">
-        <span className="flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[10px] font-medium text-white/55 backdrop-blur-sm">
+        <span className="flex items-center gap-1.5 rounded-md bg-black/30 px-2.5 py-1 text-[10px] font-medium text-white/55 backdrop-blur-sm">
           <Move3d className="h-3 w-3" />
           {labels.hint}
         </span>
@@ -115,7 +115,7 @@ export function BodyScan3D({ rings, morph, scanDate, labels, defaultView = 'fron
 
       {/* view toggle */}
       <div className="absolute inset-x-0 bottom-0 z-10 flex justify-center p-4">
-        <div className="flex gap-1 rounded-full border border-primary/20 bg-black/40 p-1 backdrop-blur-md">
+        <div className="flex gap-1 rounded-lg border border-primary/20 bg-black/40 p-1 backdrop-blur-md">
           {VIEWS.map((v) => {
             const active = view === v;
             return (
@@ -124,14 +124,14 @@ export function BodyScan3D({ rings, morph, scanDate, labels, defaultView = 'fron
                 type="button"
                 onClick={() => setView(v)}
                 className={cn(
-                  'relative rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors',
+                  'relative rounded-md px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors',
                   active ? 'text-primary-foreground' : 'text-white/60 hover:text-white'
                 )}
               >
                 {active && (
                   <motion.span
                     layoutId="bodyscan-view-pill"
-                    className="absolute inset-0 -z-10 rounded-full bg-primary"
+                    className="absolute inset-0 -z-10 rounded-md bg-primary"
                     transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   />
                 )}

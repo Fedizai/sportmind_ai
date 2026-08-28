@@ -134,7 +134,7 @@ export function PhysiqueReport({ measurements, unitSystem, bodyFat, bodyFatRange
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-3 pb-6">
           <ScoreGauge score={score} />
-          <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+          <span className="rounded-md bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
             {t(GRADE_KEY[grade.tone])}
           </span>
           <p className="text-center text-xs text-muted-foreground">{t('physiqueScoreHint')}</p>

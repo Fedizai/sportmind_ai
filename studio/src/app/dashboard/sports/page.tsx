@@ -65,11 +65,11 @@ export default function SportsSelectionPage() {
                         <sport.icon className="h-8 w-8 text-muted-foreground transition-transform duration-300 group-hover:text-primary group-hover:scale-110 group-hover:-rotate-12" />
                     </div>
 
-                    <Button variant="secondary" className="w-fit self-end rounded-full h-auto p-0 pl-3">
+                    <Button variant="secondary" className="w-fit self-end rounded-md h-auto p-0 pl-3">
                         <span className="text-sm font-medium">
                           {user?.role === 'coach' ? t('viewDashboard') : t('startTraining')}
                         </span>
-                        <div className="bg-background/50 p-2 rounded-full ml-2">
+                        <div className="bg-background/50 p-2 rounded-md ml-2">
                            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                         </div>
                     </Button>

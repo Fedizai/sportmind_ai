@@ -519,7 +519,7 @@ export default function LandingPage() {
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="font-display text-3xl font-bold uppercase tracking-[0.01em]">{tier.name}</h3>
                     {tier.featured && (
-                      <span className="rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground">
+                      <span className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground">
                         {tr(L.popular)}
                       </span>
                     )}

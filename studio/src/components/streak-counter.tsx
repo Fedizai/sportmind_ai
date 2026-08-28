@@ -22,7 +22,7 @@ export function StreakCounter() {
   return (
     <div
       className={cn(
-        'flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors',
+        'flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors',
         activeToday
           ? 'bg-primary/15 text-foreground'
           : 'bg-muted text-muted-foreground'

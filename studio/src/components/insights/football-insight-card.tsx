@@ -52,7 +52,7 @@ export function FootballInsightCard({ match }: { match: FootballMatch | null }) 
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary"/>{t('lastMatch')}</CardTitle>
-                        <span className={cn("px-2.5 py-1 rounded-full text-xs font-bold tracking-wide uppercase", getResultBadgeClasses(match.result))}>
+                        <span className={cn("px-2.5 py-1 rounded-md text-xs font-bold tracking-wide uppercase", getResultBadgeClasses(match.result))}>
                             {t(match.result)}
                         </span>
                     </div>

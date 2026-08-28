@@ -668,7 +668,7 @@ const TennisLastMatchCard = ({ match }: { match: TennisMatch | null }) => {
                     <div className="flex items-center justify-between">
                         <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" />{t('lastMatch')}</CardTitle>
                         <span className={cn(
-                            "px-2.5 py-1 rounded-full text-xs font-bold tracking-wide",
+                            "px-2.5 py-1 rounded-md text-xs font-bold tracking-wide",
                             match.result === 'W' ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
                         )}>
                             {match.result}
@@ -1080,7 +1080,7 @@ export function DashboardClient({ initialView }: { initialView?: 'sports' | 'ins
                 <Dialog>
                     <DialogTrigger asChild>
                         <Button className={cn(
-                            "lg:hidden fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg z-40 transition-transform duration-300",
+                            "lg:hidden fixed bottom-20 right-4 h-14 w-14 rounded-xl shadow-lg z-40 transition-transform duration-300",
                             isNavVisible ? "translate-y-0" : "translate-y-24"
                         )}>
                             <MessageCircle className="h-7 w-7" />

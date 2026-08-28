@@ -76,11 +76,11 @@ function DashboardHeader() {
              <div className="hidden md:flex items-center justify-center">
                 <nav
                     ref={tabsContainerRef}
-                    className="relative inline-flex items-center gap-8 rounded-full p-1.5 ring-1 ring-border/60 dark:ring-white/[0.08] bg-muted/40 dark:bg-white/[0.03] backdrop-blur-xl shadow-card"
+                    className="relative inline-flex items-center gap-8 rounded-lg p-1.5 ring-1 ring-border/60 dark:ring-white/[0.08] bg-muted/40 dark:bg-white/[0.03] backdrop-blur-xl shadow-card"
                 >
                     <span
                         id="tab-indicator"
-                        className="pointer-events-none absolute left-0 h-9 rounded-full bg-background/90 dark:bg-white/[0.09] shadow-card border border-border/60 dark:border-white/[0.08] transition-all duration-300 ease-out"
+                        className="pointer-events-none absolute left-0 h-9 rounded-md bg-background/90 dark:bg-white/[0.09] shadow-card border border-border/60 dark:border-white/[0.08] transition-all duration-300 ease-out"
                     />
                     {navItems.map((item, index) => {
                          const isActive = activeTab === item.href;
@@ -308,7 +308,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         {/* touchAction:none lets us capture horizontal swipes before the browser does */}
         <div
           ref={bottomNavRef}
-          className="liquid-glass-pill relative flex h-[62px] w-full max-w-sm items-center overflow-hidden rounded-full"
+          className="liquid-glass-pill relative flex h-[62px] w-full max-w-sm items-center overflow-hidden rounded-xl"
           style={{ touchAction: 'none', userSelect: 'none' }}
           onPointerDown={handleNavPointerDown}
           onPointerMove={handleNavPointerMove}
@@ -320,14 +320,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           {/* Inner glass gradient */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 rounded-full"
+            className="pointer-events-none absolute inset-0 rounded-xl"
             style={{ background: 'linear-gradient(155deg, rgba(255,255,255,0.06) 0%, transparent 55%)' }}
           />
 
           {/* Bubble — always in DOM so dragBubbleRef is always valid */}
           <div
             ref={dragBubbleRef}
-            className="liquid-glass-bubble absolute rounded-full"
+            className="liquid-glass-bubble absolute rounded-md"
             style={{
               top: '50%',
               transform: 'translateY(-50%)',

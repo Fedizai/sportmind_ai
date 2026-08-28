@@ -85,9 +85,15 @@ export default {
         },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        // The scale used to be inverted — `sm` resolved to 16px while `xl` was
+        // only 12px — which is why every surface read as a pill. Keep it
+        // monotonic and rectangular-leaning.
+        sm: 'calc(var(--radius) - 4px)',   /* 4px  */
+        md: 'calc(var(--radius) - 2px)',   /* 6px  */
+        lg: 'var(--radius)',               /* 8px  */
+        xl: 'calc(var(--radius) + 2px)',   /* 10px */
+        '2xl': 'calc(var(--radius) + 4px)',/* 12px */
+        '3xl': 'calc(var(--radius) + 8px)',/* 16px */
       },
       keyframes: {
         'accordion-down': {

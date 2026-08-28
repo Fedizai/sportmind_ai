@@ -127,7 +127,7 @@ export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) 
                 <React.Fragment key={msg.id}>
                   {daySeparator && (
                     <div className="flex justify-center py-3">
-                      <span className="rounded-full bg-muted px-3 py-1 text-[11px] font-medium text-muted-foreground">
+                      <span className="rounded-md bg-muted px-3 py-1 text-[11px] font-medium text-muted-foreground">
                         {daySeparator}
                       </span>
                     </div>
@@ -187,13 +187,13 @@ export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) 
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             placeholder={t("messageInputPlaceholder", { name: otherUser.displayName || "" })}
-            className="h-11 flex-grow rounded-full bg-muted/50 px-4 dark:bg-white/[0.04]"
+            className="h-11 flex-grow rounded-md bg-muted/50 px-4 dark:bg-white/[0.04]"
           />
           <Button
             type="submit"
             size="icon"
             disabled={!inputMessage.trim()}
-            className="h-11 w-11 shrink-0 rounded-full transition-transform active:scale-95 disabled:opacity-40"
+            className="h-11 w-11 shrink-0 rounded-md transition-transform active:scale-95 disabled:opacity-40"
           >
             <Send className="h-5 w-5" />
           </Button>

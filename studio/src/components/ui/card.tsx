@@ -8,7 +8,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "relative rounded-2xl border bg-card text-card-foreground overflow-hidden",
+      "relative rounded-xl border bg-card text-card-foreground overflow-hidden",
       "dark:border-white/[0.07] border-black/[0.06]",
       "shadow-card",
       "transition-all duration-300",
@@ -24,7 +24,7 @@ const Card = React.forwardRef<
     {/* Inner gradient overlay — light hitting top-left corner */}
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.04] via-transparent to-transparent rounded-2xl"
+      className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.04] via-transparent to-transparent rounded-xl"
     />
     {children}
   </div>
