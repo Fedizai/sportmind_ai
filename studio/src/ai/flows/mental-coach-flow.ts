@@ -7,7 +7,7 @@
  * - MentalCoachOutput - The return type for the getMentalPrepAdvice function.
  */
 
-import { ai } from '@/ai/genkit-instance';
+import { ai, TEXT_MODEL } from '@/ai/genkit-instance';
 import {
     MentalCoachInputSchema,
     MentalCoachOutputSchema,
@@ -20,7 +20,7 @@ const mentalCoachPrompt = ai.definePrompt(
     name: 'mentalCoachPrompt',
     input: { schema: MentalCoachInputSchema },
     output: { schema: MentalCoachOutputSchema },
-    model: 'googleai/gemini-3.5-flash-lite',
+    model: TEXT_MODEL,
   },
   `You are an expert sports psychologist and mental coach. A user is looking for mental preparation advice for a specific scenario.
 

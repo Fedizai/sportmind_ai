@@ -7,7 +7,7 @@
  * - GymPlanOutput - The return type for the generateGymPlan function.
  */
 
-import { ai } from '@/ai/genkit-instance';
+import { ai, TEXT_MODEL } from '@/ai/genkit-instance';
 import { z } from 'zod';
 import { type PlanOptions } from '@/stores/plan-store';
 
@@ -40,7 +40,7 @@ const gymPlanPrompt = ai.definePrompt(
     name: 'generateGymPlanPrompt',
     input: { schema: GymPlanInputSchema },
     output: { schema: GymPlanOutputSchema },
-    model: 'googleai/gemini-3.5-flash-lite',
+    model: TEXT_MODEL,
   },
   `You are an expert fitness coach tasked with creating a personalized weekly workout plan.
 

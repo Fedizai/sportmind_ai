@@ -8,7 +8,7 @@
  * - TacticalAdviceOutput - The return type for the getTacticalAdvice function.
  */
 
-import { ai } from '@/ai/genkit-instance';
+import { ai, TEXT_MODEL } from '@/ai/genkit-instance';
 import {
     TacticalAdviceInputSchema,
     TacticalAdviceOutputSchema,
@@ -27,7 +27,7 @@ const getTacticalAdviceFlow = ai.defineFlow(
         await assertProAccess(userId, 'Tactical advice');
 
         const { output } = await ai.generate({
-            model: 'googleai/gemini-3.5-flash-lite',
+            model: TEXT_MODEL,
             prompt: `You are an expert sports strategist and coach for ${sport}. A user has a tactical question.
 
             User's Question: "${question}"

@@ -3,7 +3,7 @@
  * @fileOverview A general-purpose fitness assistant AI flow.
  */
 
-import { ai } from '@/ai/genkit-instance';
+import { ai, TEXT_MODEL } from '@/ai/genkit-instance';
 import { z } from 'zod';
 import {
   AssistantResponseInputSchema,
@@ -25,7 +25,7 @@ const intentPrompt = ai.definePrompt(
     name: 'assistantIntentPrompt',
     input: { schema: AssistantResponseInputSchema },
     output: { schema: intentSchema },
-    model: 'googleai/gemini-3.5-flash-lite',
+    model: TEXT_MODEL,
   },
   `Classify the user's request as WORKOUT_PLAN, FORM_FEEDBACK, or GENERAL_INQUIRY.
 
@@ -37,7 +37,7 @@ const workoutPrompt = ai.definePrompt(
     name: 'generateWorkoutPlanPrompt',
     input: { schema: z.object({ goal: z.string() }) },
     output: { schema: WorkoutPlanOutputSchema },
-    model: 'googleai/gemini-3.5-flash-lite',
+    model: TEXT_MODEL,
   },
   `Create a detailed 3-day workout plan for this goal: {{{goal}}}.`
 );
@@ -47,7 +47,7 @@ const feedbackPrompt = ai.definePrompt(
     name: 'getExerciseFeedbackPrompt',
     input: { schema: z.object({ exercise: z.string() }) },
     output: { schema: ExerciseFeedbackOutputSchema },
-    model: 'googleai/gemini-3.5-flash-lite',
+    model: TEXT_MODEL,
   },
   `Give 2-3 form feedback tips for this exercise: {{{exercise}}}.`
 );
@@ -57,7 +57,7 @@ const generalPrompt = ai.definePrompt(
     name: 'assistantGeneralPrompt',
     input: { schema: AssistantResponseInputSchema },
     output: { schema: z.object({ response: z.string() }) },
-    model: 'googleai/gemini-3.5-flash-lite',
+    model: TEXT_MODEL,
   },
   `Answer clearly as a friendly AI fitness coach.
 

@@ -7,7 +7,7 @@
  * - LogPlannedMealOutput - The return type for the function.
  */
 
-import { ai } from '@/ai/genkit-instance';
+import { ai, TEXT_MODEL } from '@/ai/genkit-instance';
 import { z } from 'zod';
 import { NutritionInfoOutputSchema } from '@/ai/schemas';
 
@@ -24,7 +24,7 @@ const nutritionPrompt = ai.definePrompt(
     name: 'plannedMealNutritionPrompt',
     input: { schema: LogPlannedMealInputSchema },
     output: { schema: NutritionInfoOutputSchema },
-    model: 'googleai/gemini-3.5-flash-lite',
+    model: TEXT_MODEL,
   },
   `You are a nutrition expert. Given a list of food items, provide the estimated nutritional information for the entire meal.
   

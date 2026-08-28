@@ -10,7 +10,7 @@
  * - BodyAnalysisInput / BodyAnalysisOutput - I/O types.
  */
 
-import { ai } from '@/ai/genkit-instance';
+import { ai, VISION_MODEL } from '@/ai/genkit-instance';
 import { z } from 'zod';
 import { adminDb } from '@/lib/firebase-admin';
 import { assertProAccess } from '@/lib/server-access';
@@ -68,7 +68,7 @@ const bodyAnalysisPrompt = ai.definePrompt(
     name: 'bodyAnalysisPrompt',
     input: { schema: BodyAnalysisInputSchema.omit({ userId: true }) },
     output: { schema: BodyAnalysisOutputSchema },
-    model: 'googleai/gemini-3.6-flash',
+    model: VISION_MODEL,
   },
   `You are a world-class body-composition analyst and strength & conditioning coach.
 Analyze the athlete's physique from the measurements (and photos, if provided) and return a structured assessment.

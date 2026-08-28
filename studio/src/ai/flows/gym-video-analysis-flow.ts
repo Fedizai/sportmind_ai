@@ -9,7 +9,7 @@
  * - VideoAnalysisOutput - The return type for the function.
  */
 
-import { ai } from '@/ai/genkit-instance';
+import { ai, VISION_MODEL } from '@/ai/genkit-instance';
 import { z } from 'zod';
 import { assertProAccess } from '@/lib/server-access';
 
@@ -32,7 +32,7 @@ const videoAnalysisPrompt = ai.definePrompt(
     name: 'gymVideoAnalysisPrompt',
     input: { schema: GymVideoAnalysisInputSchema.omit({ userId: true }) },
     output: { schema: GymVideoAnalysisOutputSchema },
-    model: 'googleai/gemini-3.6-flash',
+    model: VISION_MODEL,
   },
   `You are a world-class personal trainer and biomechanics expert. Analyze the provided video of an exercise and give specific, actionable feedback based on the user's prompt.
 

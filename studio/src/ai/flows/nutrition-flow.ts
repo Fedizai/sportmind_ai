@@ -8,7 +8,7 @@
  * - NutritionInfoOutput - The return type for the getNutritionInfo function.
  */
 
-import { ai } from '@/ai/genkit-instance';
+import { ai, TEXT_MODEL } from '@/ai/genkit-instance';
 import {
     NutritionInfoInputSchema,
     NutritionInfoOutputSchema,
@@ -22,7 +22,7 @@ const nutritionPrompt = ai.definePrompt(
     name: 'nutritionPrompt',
     input: { schema: NutritionInfoInputSchema },
     output: { schema: NutritionInfoOutputSchema },
-    model: 'googleai/gemini-3.5-flash-lite',
+    model: TEXT_MODEL,
   },
   `You are an expert nutritionist. Analyze the user's input, which can be either a text description of a meal or a photo of a meal. Identify the food items and estimate their nutritional information.
 

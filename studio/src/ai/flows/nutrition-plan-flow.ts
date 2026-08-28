@@ -8,7 +8,7 @@
  * - NutritionPlanOutput - The return type for the generateNutritionPlan function.
  */
 
-import { ai } from '@/ai/genkit-instance';
+import { ai, TEXT_MODEL } from '@/ai/genkit-instance';
 import { z } from 'zod';
 import {
     NutritionPlanInputSchema,
@@ -23,7 +23,7 @@ const nutritionPlanPrompt = ai.definePrompt(
         name: 'generateNutritionPlanPrompt',
         input: { schema: NutritionPlanInputSchema.omit({ userId: true }) },
         output: { schema: NutritionPlanOutputSchema },
-        model: 'googleai/gemini-3.5-flash-lite',
+        model: TEXT_MODEL,
     },
     `You are an expert nutritionist. A user wants a 1-day meal plan.
 

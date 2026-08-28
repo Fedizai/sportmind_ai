@@ -8,7 +8,7 @@
  * - VideoAnalysisOutput - The return type for the function.
  */
 
-import { ai } from '@/ai/genkit-instance';
+import { ai, VISION_MODEL } from '@/ai/genkit-instance';
 import {
   VideoAnalysisInputSchema,
   VideoAnalysisOutputSchema,
@@ -29,7 +29,7 @@ const videoAnalysisFlow = ai.defineFlow(
     await assertProAccess(input.userId, 'Video analysis');
 
     const { output } = await ai.generate({
-      model: 'googleai/gemini-3.6-flash',
+      model: VISION_MODEL,
       prompt: `You are a world-class football coach. Analyze the provided video of a player and give specific, actionable feedback based on the user's prompt.
 
         User's Focus: "${input.prompt}"

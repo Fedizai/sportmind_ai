@@ -7,7 +7,7 @@
  * - TennisDrillOutput - The return type for the getDrillSuggestions function.
  */
 
-import { ai } from '@/ai/genkit-instance';
+import { ai, TEXT_MODEL } from '@/ai/genkit-instance';
 import { 
     TennisDrillInputSchema, 
     TennisDrillOutputSchema, 
@@ -20,7 +20,7 @@ const drillSuggestionPrompt = ai.definePrompt(
     name: 'tennisDrillPrompt',
     input: { schema: TennisDrillInputSchema },
     output: { schema: TennisDrillOutputSchema },
-    model: 'googleai/gemini-3.5-flash-lite',
+    model: TEXT_MODEL,
   },
   `You are an expert tennis coach. A player wants drill suggestions for a specific focus area.
 
