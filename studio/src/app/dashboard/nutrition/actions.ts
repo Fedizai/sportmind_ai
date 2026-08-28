@@ -6,16 +6,40 @@ import { adminDb } from "@/lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 
 
+/**
+ * A nutrient value coming off the client.
+ *
+ * Portion maths can produce NaN or Infinity (an empty portion field divides to
+ * NaN), and a strict `z.number()` rejects those outright — which surfaced to
+ * the athlete as "Could not save your meal" with no way to recover. Nutrient
+ * figures are informational, so coerce anything non-finite to 0 and let the
+ * meal save rather than losing the whole entry.
+ */
+const nutrientValue = z.preprocess(
+    (v) => {
+        const n = typeof v === 'string' ? parseFloat(v) : v;
+        return typeof n === 'number' && Number.isFinite(n) ? n : 0;
+    },
+    z.number()
+);
+
 const mealItemSchema = z.object({
     id: z.string().optional(), // Optional client-side ID
-    name: z.string(),
-    calories: z.number(),
-    protein: z.number(),
-    carbs: z.number(),
-    fat: z.number(),
-    sugar: z.number(),
-    sodium: z.number(),
-    portion: z.number(),
+    name: z.string().min(1, 'A food item needs a name.'),
+    calories: nutrientValue,
+    protein: nutrientValue,
+    carbs: nutrientValue,
+    fat: nutrientValue,
+    sugar: nutrientValue,
+    sodium: nutrientValue,
+    // A portion of 0 would make every downstream total meaningless.
+    portion: z.preprocess(
+        (v) => {
+            const n = typeof v === 'string' ? parseFloat(v) : v;
+            return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : 100;
+        },
+        z.number().positive()
+    ),
 });
 
 const nutritionLogSchema = z.object({
@@ -52,7 +76,9 @@ export async function logNutrition(
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error("❌ Zod validation errors:", error.flatten());
-      throw new Error("Invalid data provided for nutrition log.");
+      const first = error.issues[0];
+      const where = first?.path?.join('.') || 'meal';
+      throw new Error(`Invalid meal data (${where}): ${first?.message ?? 'unknown field'}`);
     }
     console.error("❌ Firestore error:", error);
     const detail = error instanceof Error ? error.message : String(error);

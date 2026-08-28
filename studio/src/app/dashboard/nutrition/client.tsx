@@ -347,7 +347,15 @@ export function NutritionClient() {
           setCurrentMeal([]);
       } catch (error) {
           console.error(error);
-          toast({ variant: 'destructive', title: 'Logging Error', description: 'Could not save your meal.' });
+          // Show what actually went wrong; Next redacts real server errors in
+          // production, so fall back to the generic line only for those.
+          const raw = error instanceof Error ? error.message : String(error);
+          const redacted = /Server Components render|omitted in production/i.test(raw);
+          toast({
+              variant: 'destructive',
+              title: 'Logging Error',
+              description: redacted ? 'Could not save your meal.' : raw,
+          });
       } finally {
           setIsLogging(false);
       }
