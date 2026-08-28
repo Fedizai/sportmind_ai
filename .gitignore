@@ -1,1 +1,5 @@
 .DS_Store
+
+# Raw Kaggle CSV source files — only the built data/food-db.json ships
+fooddatabase/
+studio/tmp-food/
