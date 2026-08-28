@@ -43,7 +43,7 @@ env:
       - BUILD
       - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    value: sportmind-ai-lo721.appspot.com
+    value: sportmind-ai-lo721.firebasestorage.app
     availability:
       - BUILD
       - RUNTIME

@@ -1,13 +1,27 @@
-
 [
   {
-    "origin": ["*"],
-    "method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+    "origin": [
+      "https://sportmind-live--sportmind-ai-lo721.europe-west4.hosted.app",
+      "https://sportmind-ai-lo721.web.app",
+      "https://sportmind-ai-lo721.firebaseapp.com",
+      "http://localhost:3000",
+      "http://localhost:9002"
+    ],
+    "method": [
+      "GET",
+      "HEAD",
+      "PUT",
+      "POST",
+      "DELETE"
+    ],
     "responseHeader": [
       "Content-Type",
       "Content-Length",
+      "Content-Range",
+      "Content-Disposition",
       "Access-Control-Allow-Origin",
-      "x-goog-resumable"
+      "x-goog-resumable",
+      "x-goog-meta-*"
     ],
     "maxAgeSeconds": 3600
   }
