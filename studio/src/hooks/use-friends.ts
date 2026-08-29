@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  collection, query, where, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
+  collection, query, where, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp,
 } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
@@ -76,12 +76,18 @@ export function useFriends(userId: string | undefined) {
       const id = pairId(userId, otherId);
       const ref = doc(db, 'friendships', id);
 
-      // If they already asked you, sending back is simply accepting — anything
-      // else would leave two people each waiting on the other.
-      const existing = await getDoc(ref);
-      if (existing.exists()) {
-        const data = existing.data() as Friendship;
-        if (data.status === 'pending' && data.requestedBy !== userId) {
+      // Look the existing state up in what the listener already holds, not with
+      // a getDoc. The read rule dereferences resource.data.users, and on a
+      // document that does not exist yet `resource` is null — so probing for a
+      // friendship that has never been created was itself denied, and the very
+      // first request to anyone failed with "missing or insufficient
+      // permissions" before reaching the write.
+      const existing = friendships.find((f) => f.id === id);
+
+      if (existing) {
+        // They asked first: sending back is simply accepting. Anything else
+        // would leave the two of you each waiting on the other.
+        if (existing.status === 'pending' && existing.requestedBy !== userId) {
           await updateDoc(ref, { status: 'accepted', respondedAt: serverTimestamp() });
         }
         return;
@@ -94,7 +100,7 @@ export function useFriends(userId: string | undefined) {
         createdAt: serverTimestamp(),
       });
     },
-    [userId]
+    [userId, friendships]
   );
 
   const accept = useCallback(

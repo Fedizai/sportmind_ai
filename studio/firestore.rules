@@ -251,7 +251,12 @@ service cloud.firestore {
     match /friendships/{friendshipId} {
       function pair() { return resource.data.users; }
 
-      allow read: if request.auth != null && request.auth.uid in pair();
+      // `resource` is null for a document that does not exist, and
+      // dereferencing it fails the rule outright rather than returning "not
+      // found" — which turned a harmless existence check into a permission
+      // error. A get on a missing friendship now simply comes back empty.
+      allow read: if request.auth != null
+        && (resource == null || request.auth.uid in pair());
 
       // Sending a request: you must be in the pair, you must be the one asking,
       // it starts pending, and the id must be the sorted pair — otherwise two

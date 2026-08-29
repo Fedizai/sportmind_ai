@@ -81,22 +81,49 @@ const sports = [
     { name: "Swimming", icon: Waves, path: "/dashboard/swimming", comingSoon: true },
 ];
 
-const moreLinks = [
-    { titleKey: 'teamHubCardTitle', subtitleKey: 'teamHubCardSubtitle', icon: ClipboardList, path: '/dashboard/sports-assistant' },
-    { titleKey: 'myReportsCardTitle', subtitleKey: 'myReportsCardSubtitle', icon: BarChart2, path: '/dashboard/progress' },
-    { titleKey: 'mentalCoachCardTitle', subtitleKey: 'mentalCoachCardSubtitle', icon: BrainCircuit, path: '/dashboard/mental-coach' },
-    { titleKey: 'myGoalsCardTitle', subtitleKey: 'myGoalsCardSubtitle', icon: Target, path: '/dashboard/goals' },
-    { titleKey: 'friendsTitle', subtitleKey: 'friendsSubtitle', icon: Users, path: '/dashboard/friends' },
-    { titleKey: 'bodyScanCardTitle', subtitleKey: 'bodyScanCardSubtitle', icon: ScanLine, path: '/dashboard/body-scan' },
-    { titleKey: 'supportHelpTitle', subtitleKey: 'supportHelpSubtitle', icon: LifeBuoy, path: '/dashboard/help' },
-    { titleKey: 'supportReportTitle', subtitleKey: 'supportReportSubtitle', icon: Flag, path: '/dashboard/report-problem' },
+/**
+ * The tools section, grouped.
+ *
+ * These were ten undifferentiated cards in one grid, each tall enough to hold
+ * a three-line description. On a phone that is roughly five screens of
+ * scrolling to reach the last one. Grouping them gives the list a shape, and
+ * the rows below are compact enough that the whole set fits on one screen.
+ */
+const moreGroups = [
+    {
+        titleKey: 'moreGroupTraining' as const,
+        links: [
+            { titleKey: 'teamHubCardTitle', subtitleKey: 'teamHubCardSubtitle', icon: ClipboardList, path: '/dashboard/sports-assistant' },
+            { titleKey: 'myReportsCardTitle', subtitleKey: 'myReportsCardSubtitle', icon: BarChart2, path: '/dashboard/progress' },
+            { titleKey: 'mentalCoachCardTitle', subtitleKey: 'mentalCoachCardSubtitle', icon: BrainCircuit, path: '/dashboard/mental-coach' },
+            { titleKey: 'myGoalsCardTitle', subtitleKey: 'myGoalsCardSubtitle', icon: Target, path: '/dashboard/goals' },
+            { titleKey: 'bodyScanCardTitle', subtitleKey: 'bodyScanCardSubtitle', icon: ScanLine, path: '/dashboard/body-scan' },
+        ],
+    },
+    {
+        titleKey: 'moreGroupSocial' as const,
+        links: [
+            { titleKey: 'friendsTitle', subtitleKey: 'friendsSubtitle', icon: Users, path: '/dashboard/friends' },
+            { titleKey: 'messages', subtitleKey: 'friendsOnlyBody', icon: MessageCircle, path: '/dashboard/messages' },
+        ],
+    },
+    {
+        titleKey: 'moreGroupSupport' as const,
+        links: [
+            { titleKey: 'supportHelpTitle', subtitleKey: 'supportHelpSubtitle', icon: LifeBuoy, path: '/dashboard/help' },
+            { titleKey: 'supportReportTitle', subtitleKey: 'supportReportSubtitle', icon: Flag, path: '/dashboard/report-problem' },
+        ],
+    },
 ] as const;
 
-/** Shown only to admins, appended after the shared links. */
-const adminLinks = [
-    { titleKey: 'adminReportsTitle', subtitleKey: 'adminReportsSubtitle', icon: Inbox, path: '/admin/reports' },
-    { titleKey: 'userManagement', subtitleKey: 'userManagementDescription', icon: Users, path: '/admin' },
-] as const;
+/** Shown only to admins, as its own group. */
+const adminGroup = {
+    titleKey: 'moreGroupAdmin' as const,
+    links: [
+        { titleKey: 'adminReportsTitle', subtitleKey: 'adminReportsSubtitle', icon: Inbox, path: '/admin/reports' },
+        { titleKey: 'userManagement', subtitleKey: 'userManagementDescription', icon: Users, path: '/admin' },
+    ],
+} as const;
 
 
 const cardVariants = {
@@ -1190,29 +1217,39 @@ export function DashboardClient({ initialView }: { initialView?: 'sports' | 'ins
                 <div className="flex items-center gap-2 mb-5">
                     <h2 className="text-lg font-semibold tracking-tight text-foreground">{t('moreSection')}</h2>
                 </div>
-                <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-                    {[...moreLinks, ...(isAdmin ? adminLinks : [])].map((link) => (
-                        <motion.div
-                            key={link.path}
-                            variants={itemVariants}
-                            whileHover={prefersReducedMotion ? undefined : { y: -5, scale: 1.01 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        >
-                            <Card
-                                className="flex h-full min-h-[148px] lg:min-h-[164px] cursor-pointer group transition-all duration-300 hover:border-primary/40 hover:shadow-float"
-                                onClick={() => handleCardClick(link.path)}
-                            >
-                                <CardContent className="flex flex-col gap-3 p-5 lg:p-6 w-full">
-                                    <div className="flex h-11 w-11 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground group-hover:glow-primary-sm">
-                                        <link.icon className="h-5 w-5 lg:h-6 lg:w-6 transition-colors duration-200" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <CardTitle className="text-sm lg:text-base font-semibold tracking-tight leading-snug">{t(link.titleKey)}</CardTitle>
-                                        <p className="text-xs lg:text-sm text-muted-foreground leading-snug">{t(link.subtitleKey)}</p>
-                                    </div>
-                                </CardContent>
+
+                {/* Compact rows, not tall cards. Each entry is one line of
+                    title and one clamped line of description, so the whole set
+                    is scannable instead of being five phone-screens tall. */}
+                <div className="space-y-6">
+                    {[...moreGroups, ...(isAdmin ? [adminGroup] : [])].map((group) => (
+                        <div key={group.titleKey}>
+                            <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                {t(group.titleKey)}
+                            </h3>
+                            <Card className="overflow-hidden">
+                                <ul className="divide-y divide-border/60 dark:divide-white/[0.06]">
+                                    {group.links.map((link) => (
+                                        <li key={link.path}>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleCardClick(link.path)}
+                                                className="group flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-accent/60 dark:hover:bg-white/[0.04] focus-visible:outline-none focus-visible:bg-accent/60"
+                                            >
+                                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                                                    <link.icon className="h-5 w-5" />
+                                                </span>
+                                                <span className="min-w-0 flex-grow">
+                                                    <span className="block truncate text-sm font-semibold">{t(link.titleKey)}</span>
+                                                    <span className="block truncate text-xs text-muted-foreground">{t(link.subtitleKey)}</span>
+                                                </span>
+                                                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
                             </Card>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
             </motion.div>
