@@ -1,5 +1,10 @@
 .DS_Store
 
+# Installed dependencies, at any depth. studio/.gitignore covered its own
+# /node_modules, but the root never did, so 18,802 dependency files ended up
+# tracked — 98% of everything in the repo. They rebuild from the lockfiles.
+node_modules/
+
 # Raw Kaggle CSV source files — only the built data/food-db.json ships
 fooddatabase/
 studio/tmp-food/
