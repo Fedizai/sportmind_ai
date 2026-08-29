@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dumbbell, Utensils, Plus, Trash2, Loader2, Calendar as CalendarIcon, Target, Sparkles, CheckCircle, RefreshCw, Video, Upload, LineChart, BarChart2, CalendarDays, HeartPulse, Move, Eye, Camera, ImagePlus, Weight, FileImage, FileVideo, X, Lock, Maximize2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { bodyParts, exercises as allExercises } from "@/lib/data";
+import { bodyParts, exercises as allExercises, OTHER_BODY_PART_IDS } from "@/lib/data";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -389,16 +389,22 @@ function WorkoutLogger() {
   const { t } = useTranslation();
   const [selectedBodyPartId, setSelectedBodyPartId] = useState<string | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-  // The detail panel's own image: starts at gifUrl (360, the fast default),
-  // then swaps to hqUrl (720) once that has actually finished loading — a
-  // background upgrade rather than a flash of a bigger file blocking paint.
-  const [detailGifSrc, setDetailGifSrc] = useState<string | undefined>(undefined);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
+  // Only the eleven diagram-selectable groups show by default; cardio and the
+  // stabiliser/mobility work sit behind an explicit toggle, since the body
+  // diagram has no region that would select them.
+  const [showOtherParts, setShowOtherParts] = useState(false);
   const [sets, setSets] = useState<LogSet[]>([{ reps: "10", weight: "60" }]);
 
   const handleSelectPart = (partId: string | null) => {
     setSelectedBodyPartId(partId);
     setSelectedExercise(null);
+    // Touching the diagram means you're back on the main groups; leaving the
+    // "other" filter on would show a category list that no longer matches
+    // what the diagram just selected.
+    if (partId && !(OTHER_BODY_PART_IDS as readonly string[]).includes(partId)) {
+      setShowOtherParts(false);
+    }
   };
   
   const selectedBodyPart = bodyParts.find(p => p.id === selectedBodyPartId) || null;
@@ -409,22 +415,8 @@ function WorkoutLogger() {
 
   const handleSelectExercise = (exercise: Exercise) => {
     setSelectedExercise(exercise);
-    setDetailGifSrc(exercise.gifUrl);
     setSets([{ reps: "10", weight: "60" }]);
   };
-
-  // Preload the 720 upgrade off-DOM; only swap detailGifSrc once it has
-  // actually decoded, so the panel never shows a half-rendered frame.
-  useEffect(() => {
-    if (!selectedExercise?.hqUrl) return;
-    let cancelled = false;
-    const img = new window.Image();
-    img.src = selectedExercise.hqUrl;
-    img.onload = () => {
-      if (!cancelled) setDetailGifSrc(selectedExercise.hqUrl);
-    };
-    return () => { cancelled = true; };
-  }, [selectedExercise]);
 
   const handleAddSet = () => {
     setSets([...sets, { reps: "", weight: "" }]);
@@ -457,13 +449,38 @@ function WorkoutLogger() {
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center p-4">
              <MuscleBodySelector selectedId={selectedBodyPartId} onSelect={handleSelectPart} />
+             {/* The diagram can only select muscle regions it draws. Cardio
+                 machines and neck/hip mobility work have no region, so they
+                 need their own way in rather than being dropped. */}
+             <div className="mt-3 flex w-full justify-end">
+               <Button
+                 type="button"
+                 variant="outline"
+                 size="sm"
+                 onClick={() => {
+                   setShowOtherParts(true);
+                   setSelectedBodyPartId(null);
+                   setSelectedExercise(null);
+                 }}
+               >
+                 <Move className="mr-2 h-4 w-4" />
+                 {t('otherExercises')}
+               </Button>
+             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>{selectedBodyPart?.name ? selectedBodyPart.name : "Select a Part"}</CardTitle>
-            <CardDescription>Choose an exercise from the list.</CardDescription>
+            <CardTitle className="flex items-center justify-between gap-2">
+              <span>{selectedBodyPart?.name ?? (showOtherParts ? t('otherExercises') : t('selectAPart'))}</span>
+              {showOtherParts && !selectedBodyPart && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowOtherParts(false)}>
+                  {t('backToMuscleGroups')}
+                </Button>
+              )}
+            </CardTitle>
+            <CardDescription>{t('chooseExerciseFromList')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 max-h-60 overflow-y-auto">
             {selectedBodyPart ? (
@@ -475,29 +492,24 @@ function WorkoutLogger() {
                     className="w-full justify-start gap-2.5 h-auto py-1.5"
                     onClick={() => handleSelectExercise(ex)}
                   >
-                    {/* 180x180 — the small end of the four sizes, sized for a
-                        scrollable list where every row loads one. */}
-                    {ex.thumbUrl ? (
-                      <Image
-                        src={ex.thumbUrl}
-                        alt=""
-                        width={32}
-                        height={32}
-                        unoptimized
-                        className="h-8 w-8 shrink-0 rounded-md object-cover"
-                      />
-                    ) : (
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                        <Dumbbell className="h-4 w-4" />
-                      </span>
-                    )}
+                    <Image
+                      src={ex.gifUrl}
+                      alt=""
+                      width={32}
+                      height={32}
+                      unoptimized
+                      className="h-8 w-8 shrink-0 rounded-md object-cover"
+                    />
                     <span className="truncate">{ex.name}</span>
                   </Button>
                 ))
               ) : <p className="text-sm text-muted-foreground">No exercises found for this body part.</p>
             ) : (
                 <div className="space-y-2">
-                    {bodyParts.map(part => (
+                    {(showOtherParts
+                        ? bodyParts.filter(p => (OTHER_BODY_PART_IDS as readonly string[]).includes(p.id))
+                        : bodyParts.filter(p => !(OTHER_BODY_PART_IDS as readonly string[]).includes(p.id))
+                    ).map(part => (
                         <Button
                             key={part.id}
                             variant="ghost"
@@ -521,12 +533,9 @@ function WorkoutLogger() {
           {selectedExercise ? (
             <>
               <CardContent className="space-y-6">
-                {/* 360 shows the instant an exercise is picked; the effect
-                    above swaps this src to the 720 once it's actually loaded,
-                    so the panel never blocks on the bigger file. */}
                 <div className="relative bg-muted rounded-lg p-4 flex justify-center group">
                   <Image
-                    src={detailGifSrc || selectedExercise.gifUrl}
+                    src={selectedExercise.gifUrl}
                     alt={`${selectedExercise.name} GIF`}
                     data-ai-hint="exercise"
                     width={300}
@@ -534,32 +543,26 @@ function WorkoutLogger() {
                     unoptimized
                     className="rounded-md"
                   />
-                  {selectedExercise.xlUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setIsZoomOpen(true)}
-                      aria-label="Zoom"
-                      className="absolute bottom-6 right-6 flex h-9 w-9 items-center justify-center rounded-md bg-background/80 text-foreground opacity-0 shadow-card ring-1 ring-border backdrop-blur transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                    >
-                      <Maximize2 className="h-4 w-4" />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsZoomOpen(true)}
+                    aria-label="Zoom"
+                    className="absolute bottom-6 right-6 flex h-9 w-9 items-center justify-center rounded-md bg-background/80 text-foreground opacity-0 shadow-card ring-1 ring-border backdrop-blur transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </button>
                 </div>
 
-                {/* The 1080 — the largest of the four sizes — loads only here,
-                    on request, rather than by default in the small panel above. */}
                 <Dialog open={isZoomOpen} onOpenChange={setIsZoomOpen}>
                   <DialogContent className="max-w-2xl p-2">
-                    {selectedExercise.xlUrl && (
-                      <Image
-                        src={selectedExercise.xlUrl}
-                        alt={`${selectedExercise.name} GIF — full size`}
-                        width={1080}
-                        height={1080}
-                        unoptimized
-                        className="w-full rounded-md"
-                      />
-                    )}
+                    <Image
+                      src={selectedExercise.gifUrl}
+                      alt={`${selectedExercise.name} GIF — full size`}
+                      width={800}
+                      height={800}
+                      unoptimized
+                      className="w-full rounded-md"
+                    />
                   </DialogContent>
                 </Dialog>
                 <div>
