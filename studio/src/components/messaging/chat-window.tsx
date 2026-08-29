@@ -213,16 +213,19 @@ export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) 
                       )}
                     >
                       <p className="whitespace-pre-wrap break-words">{msg.text}</p>
-                      {isLastOfGroup && msg.timestamp?.toDate && (
+                      {/* Footer row. The tick shows on every message you
+                          sent — each one has its own delivery state — while
+                          the time stays on the last of a group, so a run of
+                          messages doesn't repeat the same minute over and
+                          over. */}
+                      {(mine || (isLastOfGroup && !!msg.timestamp)) && (
                         <span
                           className={cn(
-                            "mt-1 block text-[10px]",
+                            "mt-1 flex items-center justify-end gap-1 text-[10px]",
                             mine ? "text-primary-foreground/70" : "text-muted-foreground"
                           )}
                         >
-                          {format(msg.timestamp.toDate(), "HH:mm")}
-                          {/* Ticks only on your own messages: they report what
-                              happened to something you sent. */}
+                          {isLastOfGroup && msg.timestamp && format(msg.timestamp.toDate(), "HH:mm")}
                           {mine && (() => {
                             const status = statusOf(msg);
                             const label = t(
@@ -231,18 +234,20 @@ export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) 
                               : 'msgSent'
                             );
                             return (
-                              <span className="ml-1 inline-flex align-middle" title={label} aria-label={label}>
+                              <span className="inline-flex" title={label} aria-label={label}>
                                 {status === 'sent' ? (
                                   <Check className="h-3 w-3 text-primary-foreground/60" />
                                 ) : (
                                   <CheckCheck
                                     className={cn(
                                       "h-3 w-3",
-                                      // Read is the only state that brightens:
-                                      // grey double ticks mean it arrived,
-                                      // light ones mean they looked.
+                                      // Read is the only state that goes white.
+                                      // A tick is a graphical object, so 3:1 is
+                                      // its contrast bar, not the 4.5:1 that
+                                      // applies to text — white clears that on
+                                      // the blue bubble in both themes.
                                       status === 'read'
-                                        ? "text-primary-foreground"
+                                        ? "text-white"
                                         : "text-primary-foreground/60"
                                     )}
                                   />
