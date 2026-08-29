@@ -26,17 +26,13 @@ export function DesktopMessaging() {
       )
   }
 
-  let usersToShow: AppUser[] = [];
-  if (user) {
-    if (user.role === 'admin') {
-      // Admins can reach everyone.
-      usersToShow = allUsers.filter(u => u.uid !== user.uid);
-    } else {
-      // Coaches and players can both message anyone else on the platform —
-      // players talk to each other as well as to their coaches.
-      usersToShow = allUsers.filter(u => u.uid !== user.uid && u.role !== 'admin');
-    }
-  }
+  // Everyone signed in can reach everyone else. Players talk to each other as
+  // well as to their coaches, and staff are reachable rather than hidden:
+  // filtering admins out of a non-admin's list left the only player on the
+  // platform staring at an empty list, since every other account was an admin.
+  const usersToShow: AppUser[] = user
+    ? allUsers.filter(u => u.uid !== user.uid)
+    : [];
 
   return (
     <Card className="grid grid-cols-3 h-full overflow-hidden">

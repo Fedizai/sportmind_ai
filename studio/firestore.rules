@@ -249,22 +249,27 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid in request.resource.data.participants;
 
       match /messages/{messageId} {
-        // The parent conversation doc may not exist yet when a thread's very
-        // first message is written, and get() on a missing doc fails the rule
-        // outright — which used to reject every new conversation. Fall back to
-        // "the sender is writing as themselves" while the parent is absent.
         function parentPath() {
           return /databases/$(database)/documents/conversations/$(conversationId);
         }
         function isParticipant() {
-          return exists(parentPath()) && request.auth.uid in get(parentPath()).data.participants;
+          return request.auth != null
+            && exists(parentPath())
+            && request.auth.uid in get(parentPath()).data.participants;
         }
 
-        allow read: if request.auth != null && (!exists(parentPath()) || isParticipant());
-        allow create: if request.auth != null && (
-          isParticipant() ||
-          (!exists(parentPath()) && request.resource.data.senderId == request.auth.uid)
-        );
+        // Membership of the parent conversation is the only thing that grants
+        // access, in both directions.
+        //
+        // These used to fall back to "allow it while the parent document does
+        // not exist", to work around the opening message of a thread being
+        // written before its conversation. The client now creates the parent
+        // first and awaits it, so the fallback is dead — and on read it was a
+        // hole: anyone signed in could read the whole message history of any
+        // conversation whose parent had been deleted, just by knowing its id.
+        allow read: if isParticipant();
+        allow create: if isParticipant()
+          && request.resource.data.senderId == request.auth.uid;
       }
     }
   }

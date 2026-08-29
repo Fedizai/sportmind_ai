@@ -1,8 +1,10 @@
 "use client";
 
+import { useMemo, useState } from "react";
+
 import { type AppUser } from "@/hooks/use-user";
 import { cn } from "@/lib/utils";
-import { Search, Users, UserRoundSearch } from "lucide-react";
+import { Search, Users } from "lucide-react";
 import { Input } from "../ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { ScrollArea } from "../ui/scroll-area";
@@ -20,13 +22,36 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
   const { user } = useUser();
   const { conversations } = useConversations(user?.uid);
   const { t } = useTranslation();
+  const [search, setSearch] = useState("");
 
-  const emptyState =
-    user?.role === "player"
-      ? { icon: UserRoundSearch, title: t("noCoachAssignedTitle"), description: t("noCoachAssignedDescription") }
-      : user?.role === "coach"
-      ? { icon: Users, title: t("noPlayersToMessageTitle"), description: t("noPlayersToMessageDescription") }
-      : { icon: Users, title: t("noUsersToMessageTitle"), description: t("noUsersToMessageDescription") };
+  // The empty state is no longer about coaches: every signed-in account can
+  // reach every other one, so an empty list means there is genuinely nobody
+  // else on the platform yet, whatever role you hold.
+  const emptyState = { icon: Users, title: t("noUsersToMessageTitle"), description: t("noUsersToMessageDescription") };
+
+  /** Most recent message with this person, 0 when they have never written. */
+  const lastSeconds = (uid: string) =>
+    conversations.find((c) => c.participants.includes(uid))?.lastMessageTimestamp?.seconds ?? 0;
+
+  // The search box used to be decorative — it had no value and no handler, so
+  // typing in it did nothing at all.
+  const visibleUsers = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    const matches = needle
+      ? users.filter(
+          (u) =>
+            u.displayName?.toLowerCase().includes(needle) ||
+            u.email?.toLowerCase().includes(needle)
+        )
+      : users;
+
+    // Live conversations first, newest at the top; everyone else alphabetically.
+    return [...matches].sort((a, b) => {
+      const diff = lastSeconds(b.uid) - lastSeconds(a.uid);
+      if (diff !== 0) return diff;
+      return (a.displayName || "").localeCompare(b.displayName || "");
+    });
+  }, [users, search, conversations]);
 
   return (
     <div className="flex h-full flex-col">
@@ -35,24 +60,30 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder={t("searchConversationsPlaceholder")}
             className="h-10 rounded-md bg-muted/50 pl-9 dark:bg-white/[0.04]"
           />
         </div>
       </div>
 
-      {users.length === 0 ? (
+      {visibleUsers.length === 0 ? (
         <div className="flex flex-grow flex-col items-center justify-center p-8 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <emptyState.icon className="h-7 w-7" />
           </div>
-          <h3 className="mt-4 text-balance font-semibold">{emptyState.title}</h3>
-          <p className="mt-1 max-w-xs text-sm text-muted-foreground">{emptyState.description}</p>
+          <h3 className="mt-4 text-balance font-semibold">
+            {search ? t("searchNoResults") : emptyState.title}
+          </h3>
+          <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+            {search ? t("searchNoResultsHint") : emptyState.description}
+          </p>
         </div>
       ) : (
         <ScrollArea className="flex-grow">
           <div className="space-y-1 p-2">
-            {users.map((otherUser) => {
+            {visibleUsers.map((otherUser) => {
               const conversation = conversations.find((c) => c.participants.includes(otherUser.uid));
               const lastMessageText = conversation?.lastMessageText || t("noMessagesYet");
               const lastMessageTime = conversation?.lastMessageTimestamp

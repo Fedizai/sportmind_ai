@@ -9,7 +9,8 @@ export interface Conversation {
   id: string;
   participants: string[];
   lastMessageText: string;
-  lastMessageTimestamp: Timestamp;
+  /** Null while a just-sent message's serverTimestamp is still pending. */
+  lastMessageTimestamp: Timestamp | null;
   lastMessageSenderId: string;
 }
 
@@ -36,8 +37,14 @@ export function useConversations(userId: string | undefined) {
           convos.push({ id: doc.id, ...doc.data() } as Conversation);
         });
         
-        // Sort conversations by the most recent message
-        convos.sort((a, b) => b.lastMessageTimestamp.seconds - a.lastMessageTimestamp.seconds);
+        // Sort by most recent message. The timestamp has to be read
+        // defensively: serverTimestamp() resolves to null in the local
+        // snapshot that fires immediately after a send, so reading .seconds
+        // straight off it threw before setConversations ever ran — the list
+        // simply stopped updating at the moment you sent a message. A document
+        // written before this field existed does the same thing, permanently.
+        const seconds = (c: Conversation) => c.lastMessageTimestamp?.seconds ?? 0;
+        convos.sort((a, b) => seconds(b) - seconds(a));
 
         setConversations(convos);
         setIsLoading(false);
