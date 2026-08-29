@@ -7,6 +7,11 @@ import type { Bi } from '@/lib/bilingual';
  * recovery credits, and a perk the athlete keeps while the streak survives.
  * Higher tiers are harder to reach, so they also grant more ways back from a
  * missed day — that is what makes a long streak feel worth protecting.
+ *
+ * The colours run as one continuous heat scale — gold, orange, red, pink,
+ * magenta, violet — so the badge row reads as a temperature climbing. An
+ * earlier ramp jumped from violet to cyan to yellow, which looked like seven
+ * unrelated colours rather than one thing getting hotter.
  */
 
 export type StreakTierId =
@@ -23,6 +28,8 @@ export interface StreakTier {
   ring: string;
   /** Raw colour for canvas/inline styling (charts, the flame gradient). */
   hex: string;
+  /** Flame fill stops, [deep, bright]. Drives the badge and the unlock burst. */
+  gradient: [string, string];
   /** Recovery credits granted at this tier — a longer streak is worth more. */
   freezes: number;
   /** What the athlete unlocks while the streak holds. */
@@ -34,27 +41,31 @@ export const STREAK_TIERS: StreakTier[] = [
     id: 'none', minDays: 0,
     name: { en: 'No streak', fr: 'Aucune série' },
     text: 'text-muted-foreground', bg: 'bg-muted', ring: 'ring-border', hex: '#8b94a7',
+    gradient: ['#9aa3b2', '#c3c9d4'],
     freezes: 0,
     perks: [],
   },
   {
     id: 'spark', minDays: 1,
     name: { en: 'Spark', fr: 'Étincelle' },
-    text: 'text-slate-300', bg: 'bg-slate-500/15', ring: 'ring-slate-400/30', hex: '#cbd5e1',
+    text: 'text-amber-500', bg: 'bg-amber-400/15', ring: 'ring-amber-400/35', hex: '#fbbf24',
+    gradient: ['#f59e0b', '#fde68a'],
     freezes: 0,
     perks: [{ en: 'Daily streak tracking', fr: 'Suivi quotidien de la série' }],
   },
   {
     id: 'ember', minDays: 3,
     name: { en: 'Ember', fr: 'Braise' },
-    text: 'text-amber-400', bg: 'bg-amber-500/15', ring: 'ring-amber-400/35', hex: '#fbbf24',
+    text: 'text-orange-500', bg: 'bg-orange-400/15', ring: 'ring-orange-400/35', hex: '#fb923c',
+    gradient: ['#f97316', '#fdba74'],
     freezes: 1,
     perks: [{ en: '1 streak freeze', fr: '1 gel de série' }],
   },
   {
     id: 'blaze', minDays: 7,
     name: { en: 'Blaze', fr: 'Flamme' },
-    text: 'text-orange-400', bg: 'bg-orange-500/15', ring: 'ring-orange-400/35', hex: '#fb923c',
+    text: 'text-orange-600', bg: 'bg-orange-500/15', ring: 'ring-orange-500/35', hex: '#f97316',
+    gradient: ['#ea580c', '#fb923c'],
     freezes: 2,
     perks: [
       { en: '2 streak freezes', fr: '2 gels de série' },
@@ -64,17 +75,19 @@ export const STREAK_TIERS: StreakTier[] = [
   {
     id: 'inferno', minDays: 14,
     name: { en: 'Inferno', fr: 'Brasier' },
-    text: 'text-red-400', bg: 'bg-red-500/15', ring: 'ring-red-400/35', hex: '#f87171',
+    text: 'text-red-500', bg: 'bg-red-500/15', ring: 'ring-red-400/35', hex: '#ef4444',
+    gradient: ['#dc2626', '#f87171'],
     freezes: 3,
     perks: [
       { en: '3 streak freezes', fr: '3 gels de série' },
-      { en: 'Priority support replies', fr: "Réponses support prioritaires" },
+      { en: 'Priority support replies', fr: 'Réponses support prioritaires' },
     ],
   },
   {
     id: 'molten', minDays: 30,
     name: { en: 'Molten', fr: 'Incandescent' },
-    text: 'text-violet-400', bg: 'bg-violet-500/15', ring: 'ring-violet-400/35', hex: '#a78bfa',
+    text: 'text-pink-500', bg: 'bg-pink-500/15', ring: 'ring-pink-400/35', hex: '#ec4899',
+    gradient: ['#db2777', '#f472b6'],
     freezes: 4,
     perks: [
       { en: '4 streak freezes', fr: '4 gels de série' },
@@ -84,7 +97,8 @@ export const STREAK_TIERS: StreakTier[] = [
   {
     id: 'diamond', minDays: 60,
     name: { en: 'Diamond', fr: 'Diamant' },
-    text: 'text-cyan-300', bg: 'bg-cyan-500/15', ring: 'ring-cyan-300/35', hex: '#67e8f9',
+    text: 'text-fuchsia-500', bg: 'bg-fuchsia-500/15', ring: 'ring-fuchsia-400/35', hex: '#d946ef',
+    gradient: ['#c026d3', '#e879f9'],
     freezes: 5,
     perks: [
       { en: '5 streak freezes', fr: '5 gels de série' },
@@ -94,7 +108,8 @@ export const STREAK_TIERS: StreakTier[] = [
   {
     id: 'legend', minDays: 100,
     name: { en: 'Legend', fr: 'Légende' },
-    text: 'text-yellow-300', bg: 'bg-yellow-400/15', ring: 'ring-yellow-300/40', hex: '#fde047',
+    text: 'text-violet-500', bg: 'bg-violet-500/15', ring: 'ring-violet-400/40', hex: '#8b5cf6',
+    gradient: ['#7c3aed', '#a78bfa'],
     freezes: 6,
     perks: [
       { en: '6 streak freezes', fr: '6 gels de série' },
@@ -110,6 +125,11 @@ export function tierForStreak(days: number): StreakTier {
     if (days >= tier.minDays) match = tier;
   }
   return match;
+}
+
+/** Position on the ladder. Higher means a longer streak. */
+export function tierIndex(id: StreakTierId): number {
+  return STREAK_TIERS.findIndex((t) => t.id === id);
 }
 
 /** The next tier up, or null once the athlete is at Legend. */

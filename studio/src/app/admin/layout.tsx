@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { Logo } from "@/components/logo";
 import { Header } from "@/components/header";
 import { PageTransition } from "@/components/page-transition";
+import { StreakLevelUp } from "@/components/streak-level-up";
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     const { user, isLoading } = useUser();
@@ -39,6 +40,11 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             <main className="flex-1 flex flex-col p-4 md:p-8">
                 <PageTransition>{children}</PageTransition>
             </main>
+
+            {/* Also mounted here: the streak editor's preview button fires the
+                celebration from inside the admin panel, which is not under the
+                dashboard layout. */}
+            <StreakLevelUp />
         </div>
     );
 }

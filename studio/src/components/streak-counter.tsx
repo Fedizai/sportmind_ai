@@ -1,11 +1,10 @@
 "use client";
 
-import { Flame } from 'lucide-react';
-
 import { useStreakStore } from '@/stores/streak-store';
 import { useTranslation } from '@/hooks/use-translation';
 import { tierForStreak } from '@/lib/streak-tiers';
 import { pick } from '@/lib/bilingual';
+import { StreakFlame } from '@/components/streak-flame';
 import { cn } from '@/lib/utils';
 
 /**
@@ -32,10 +31,7 @@ export function StreakCounter() {
       )}
       title={`${pick(tier.name, language)} — ${current}`}
     >
-      <Flame
-        className={cn('h-5 w-5', activeToday ? tier.text : 'text-muted-foreground')}
-        {...(activeToday ? { fill: 'currentColor' } : {})}
-      />
+      <StreakFlame tier={tier} locked={!activeToday} className="h-5 w-5" />
       <span className={cn('text-sm font-bold tabular-nums', activeToday ? tier.text : 'text-muted-foreground')}>
         {current}
       </span>

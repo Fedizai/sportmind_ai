@@ -19,6 +19,7 @@ import { PageTransition } from "@/components/page-transition";
 import { cn } from "@/lib/utils";
 import { useDailyReset } from "@/hooks/use-daily-reset";
 import { Header } from "@/components/header";
+import { StreakLevelUp } from "@/components/streak-level-up";
 import { useTranslation } from "@/hooks/use-translation";
 
 function DashboardHeader() {
@@ -369,6 +370,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           })}
         </div>
       </nav>
+
+      {/* Mounted once here so the celebration can fire from any dashboard page
+          the streak happens to be recalculated on. */}
+      <StreakLevelUp />
     </div>
   );
 }

@@ -5,7 +5,10 @@ import { db } from '@/lib/firebase';
 import { startOfDay, format } from 'date-fns';
 import { usePlanStore } from './plan-store';
 import { summariseStreak } from '@/lib/streak-math';
-import { freezesRemaining, type RestoreMethod } from '@/lib/streak-tiers';
+import {
+  freezesRemaining, tierForStreak, tierIndex,
+  type RestoreMethod, type StreakTierId,
+} from '@/lib/streak-tiers';
 
 /**
  * Training streak — consecutive calendar days with any logged activity.
@@ -33,12 +36,26 @@ export interface StreakState {
   overrideDays: number | null;
   /** Recovery credits already spent at the current tier. */
   freezesUsed: number;
+  /**
+   * Highest tier the athlete has already been congratulated for.
+   *
+   * Persisted, and seeded silently the first time a streak is calculated: an
+   * athlete who already has a 40-day streak when this shipped should not be
+   * ambushed by a celebration for a tier they passed weeks ago.
+   */
+  celebratedTierId: StreakTierId | null;
+  /** A tier just crossed and not yet celebrated. Never persisted. */
+  pendingLevelUp: StreakTierId | null;
   isLoading: boolean;
   lastCalculated: string | null;
   /** Recalculate from Firestore. Throttled; pass `force` to bypass. */
   calculateStreak: (userId: string, force?: boolean) => Promise<void>;
   /** Bring a broken streak back. Returns false when no credit is available. */
   restoreStreak: (userId: string, method: RestoreMethod, days: number) => Promise<boolean>;
+  /** Close the celebration and record the tier as seen. */
+  dismissLevelUp: () => void;
+  /** Replay a celebration on demand — used by the admin preview control. */
+  previewLevelUp: (tierId: StreakTierId) => void;
 }
 
 /** Module-level so it is never persisted and never survives a reload. */
@@ -79,6 +96,8 @@ export const useStreakStore = create<StreakState>()(
       bonusDays: 0,
       overrideDays: null,
       freezesUsed: 0,
+      celebratedTierId: null,
+      pendingLevelUp: null,
       isLoading: true,
       lastCalculated: null,
 
@@ -153,6 +172,23 @@ export const useStreakStore = create<StreakState>()(
             overrideDays !== null && !Number.isNaN(overrideDays)
               ? Math.max(0, overrideDays)
               : summary.current + Math.max(0, bonusDays);
+          // Did this calculation move the athlete up the ladder?
+          const reachedId = tierForStreak(current).id;
+          const seenId = get().celebratedTierId;
+          let pendingLevelUp = get().pendingLevelUp;
+          let celebratedTierId = seenId;
+
+          if (seenId === null) {
+            // First ever calculation: record where they stand, celebrate nothing.
+            celebratedTierId = reachedId;
+          } else if (tierIndex(reachedId) > tierIndex(seenId)) {
+            pendingLevelUp = reachedId;
+          } else if (tierIndex(reachedId) < tierIndex(seenId)) {
+            // The streak fell back a tier. Drop the marker with it so climbing
+            // to that tier again is celebrated rather than silently skipped.
+            celebratedTierId = reachedId;
+          }
+
           set({
             current,
             longest: Math.max(summary.longest, current),
@@ -161,6 +197,8 @@ export const useStreakStore = create<StreakState>()(
             bonusDays,
             overrideDays,
             freezesUsed,
+            celebratedTierId,
+            pendingLevelUp,
             isLoading: false,
             lastCalculated: todayKey(),
           });
@@ -207,6 +245,21 @@ export const useStreakStore = create<StreakState>()(
           return false;
         }
       },
+
+      dismissLevelUp: () => {
+        const { pendingLevelUp, celebratedTierId } = get();
+        if (!pendingLevelUp) return;
+        set({
+          pendingLevelUp: null,
+          // A preview replays a tier already seen; never move the marker back.
+          celebratedTierId:
+            celebratedTierId && tierIndex(celebratedTierId) > tierIndex(pendingLevelUp)
+              ? celebratedTierId
+              : pendingLevelUp,
+        });
+      },
+
+      previewLevelUp: (tierId) => set({ pendingLevelUp: tierId }),
     }),
     {
       name: 'streak-storage',
@@ -221,6 +274,9 @@ export const useStreakStore = create<StreakState>()(
         bonusDays: state.bonusDays,
         overrideDays: state.overrideDays,
         freezesUsed: state.freezesUsed,
+        celebratedTierId: state.celebratedTierId,
+        // `pendingLevelUp` stays out on purpose: a celebration that was never
+        // dismissed should not reappear on every reload for ever after.
         lastCalculated: state.lastCalculated,
       }),
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Flame, RotateCcw } from 'lucide-react';
+import { Flame, RotateCcw, Play } from 'lucide-react';
 import { doc, setDoc, getDoc, deleteField } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/use-translation';
 import { pick } from '@/lib/bilingual';
 import { STREAK_TIERS, tierForStreak } from '@/lib/streak-tiers';
+import { useStreakStore } from '@/stores/streak-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,6 +37,7 @@ export function StreakEditor({
 }) {
   const { t, language } = useTranslation();
   const { toast } = useToast();
+  const previewLevelUp = useStreakStore((state) => state.previewLevelUp);
 
   const [open, setOpen] = useState(false);
   const [days, setDays] = useState('');
@@ -176,6 +178,20 @@ export function StreakEditor({
               </span>
             </p>
           </div>
+
+          {/* Replays the unlock celebration for the tier selected above, so the
+              animation can be checked without waiting to cross a real tier.
+              It plays on your own screen — it is not sent to the athlete. */}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => { setOpen(false); previewLevelUp(resultingTier.id); }}
+            disabled={resultingTier.id === 'none'}
+          >
+            <Play className="mr-2 h-4 w-4" />
+            {t('adminStreakPreview')}
+          </Button>
 
           <div className="space-y-2">
             <Label htmlFor={`freezes-${uid}`}>{t('adminStreakFreezesUsed')}</Label>

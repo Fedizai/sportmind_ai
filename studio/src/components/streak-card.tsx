@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Flame, Check, Lock, Sparkles, LifeBuoy, CreditCard, Trophy } from 'lucide-react';
+import { Check, Lock, Sparkles, LifeBuoy, CreditCard, Trophy } from 'lucide-react';
 
 import { useStreakStore } from '@/stores/streak-store';
 import { useUser } from '@/hooks/use-user';
@@ -11,8 +11,10 @@ import { useSupportTickets } from '@/hooks/use-support-tickets';
 import { pick } from '@/lib/bilingual';
 import {
   tierForStreak, nextTier, daysToNextTier, freezesRemaining,
-  STREAK_TIERS, type RestoreMethod,
+  type RestoreMethod,
 } from '@/lib/streak-tiers';
+import { StreakBadgeRail } from '@/components/streak-badge-rail';
+import { StreakFlame } from '@/components/streak-flame';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -85,7 +87,7 @@ export function StreakCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Flame className={cn('h-5 w-5', tier.text)} {...(activeToday ? { fill: 'currentColor' } : {})} />
+          <StreakFlame tier={tier} locked={!activeToday} className="h-5 w-5" />
           {t('streakTitle')}
         </CardTitle>
         <CardDescription>{t('streakSubtitle')}</CardDescription>
@@ -136,24 +138,8 @@ export function StreakCard() {
           </div>
         )}
 
-        {/* All tiers, so the ladder is visible */}
-        <div className="flex flex-wrap gap-1.5">
-          {STREAK_TIERS.filter((x) => x.id !== 'none').map((x) => {
-            const reached = current >= x.minDays;
-            return (
-              <span
-                key={x.id}
-                title={`${pick(x.name, language)} — ${x.minDays}+`}
-                className={cn(
-                  'rounded-md px-2 py-1 text-[11px] font-semibold ring-1',
-                  reached ? cn(x.bg, x.text, x.ring) : 'bg-muted text-muted-foreground ring-transparent'
-                )}
-              >
-                {pick(x.name, language)}
-              </span>
-            );
-          })}
-        </div>
+        {/* The ladder, as lit-up flames rather than flat text chips */}
+        <StreakBadgeRail current={current} />
 
         {/* Recovery */}
         {lapsed && (
