@@ -92,7 +92,14 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
       indicator.style.width = `${tabRect.width}px`;
       indicator.style.transform = `translateX(${tabRect.left - containerRect.left}px)`;
     }
-  }, [pathname, isNavVisible]);
+    // `isLoading` has to be a dependency, not just a value read elsewhere: this
+    // effect's very first run happens while the auth gate below still renders
+    // the spinner, so tabsContainerRef.current is null and it bails out. Once
+    // loading flips to false the nav mounts for the first time, but pathname
+    // and isNavVisible haven't changed — so without isLoading here React never
+    // reruns this effect, and the indicator stays invisible (width 0) until
+    // the athlete taps another tab and pathname finally changes.
+  }, [pathname, isNavVisible, isLoading]);
 
   const getActiveBottomIndex = () => {
     const sorted = [...bottomNavItems].sort((a, b) => b.href.length - a.href.length);
@@ -113,7 +120,11 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
     const pr = container.getBoundingClientRect();
     const ir = activeEl.getBoundingClientRect();
     setBubbleStyle({ left: ir.left - pr.left, width: ir.width });
-  }, [activeBottomIndex]);
+    // Same reasoning as the top-nav indicator above: this effect's first run
+    // happens while the loading gate below still renders the spinner, so the
+    // bottom nav isn't mounted yet and this bails via the `!container` check.
+    // `isLoading` must be a dep so it reruns once the real nav mounts.
+  }, [activeBottomIndex, isLoading]);
 
   // ── Drag / swipe state ────────────────────────────────────────────────────
   // Refs keep drag state synchronous so handlers run at 60fps without re-renders.
