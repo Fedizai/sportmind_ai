@@ -27,7 +27,7 @@ export function MessagesBell({ className }: { className?: string }) {
 
   return (
     <Link
-      href="/dashboard/messages"
+      href="/dashboard/social"
       aria-label={label}
       title={label}
       className={cn(

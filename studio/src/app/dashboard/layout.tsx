@@ -24,87 +24,79 @@ import { Header } from "@/components/header";
 import { StreakLevelUp } from "@/components/streak-level-up";
 import { useTranslation } from "@/hooks/use-translation";
 
+/**
+ * The dashboard header: who you are on the left, where you can go on the right,
+ * on one line.
+ *
+ * The navigation used to be a pill in its own centred block, hidden entirely
+ * below `md`. It now sits at the end of the same header row and stays usable on
+ * a phone by scrolling horizontally rather than disappearing.
+ */
+const NAV_ROUTES = ['/dashboard', '/dashboard/insights', '/dashboard/social', '/dashboard/autres'];
+
 function DashboardHeader() {
     const { user } = useUser();
     const pathname = usePathname();
-    const [activeTab, setActiveTab] = useState(pathname);
-    const tabsContainerRef = useRef<HTMLElement>(null);
-    const tabsRef = useRef<(HTMLAnchorElement | null)[]>([]);
     const { t } = useTranslation();
 
     const navItems = [
-        { href: "/dashboard", label: t('sports'), icon: Dumbbell },
-        { href: "/dashboard/insights", label: t('insights'), icon: BarChart2 },
-        { href: "/dashboard/messages", label: t('messages'), icon: MessageSquare }
+        { href: "/dashboard", label: t('sports') },
+        { href: "/dashboard/insights", label: t('insights') },
+        { href: "/dashboard/social", label: t('navSocial') },
+        { href: "/dashboard/autres", label: t('navOther') },
     ];
 
-    const isDashboardRoot = ['/dashboard', '/dashboard/insights', '/dashboard/messages'].includes(pathname);
+    if (!NAV_ROUTES.includes(pathname)) return null;
 
-    useEffect(() => {
-        const currentPath = pathname.split('?')[0];
-        setActiveTab(currentPath);
-    }, [pathname]);
-
-    useEffect(() => {
-        const tabs = tabsRef.current;
-        const container = tabsContainerRef.current;
-        const indicator = container?.querySelector("#tab-indicator") as HTMLSpanElement | null;
-        const activeTabIndex = navItems.findIndex(item => item.href === activeTab);
-        const activeTabEl = tabs[activeTabIndex];
-
-        if (activeTabEl && indicator) {
-            const containerRect = container!.getBoundingClientRect();
-            const tabRect = activeTabEl.getBoundingClientRect();
-
-            indicator.style.width = `${tabRect.width}px`;
-            indicator.style.transform = `translateX(${tabRect.left - containerRect.left}px)`;
-        }
-    }, [activeTab, navItems]);
-
-
-    if (!isDashboardRoot) {
-        return null;
-    }
+    // Each section titles itself, so nothing is repeated below the header.
+    const heading =
+        pathname === '/dashboard/insights' ? { title: t('insights'), subtitle: t('generalInsightsSubtitle') }
+        : pathname === '/dashboard/social' ? { title: t('navSocial'), subtitle: t('friendsSubtitle') }
+        : pathname === '/dashboard/autres' ? { title: t('navOther'), subtitle: t('navOtherSubtitle') }
+        : { title: `${t('welcome')}, ${user?.displayName || t('athleteDefaultName')}!`, subtitle: t('dashboardSubtitle') };
 
     return (
-        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-             <div>
-                <h1 className="text-3xl font-bold tracking-tight font-headline flex items-center gap-3">
-                    {`${t('welcome')}, ${user?.displayName || t('athleteDefaultName')}!`}
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
+                <h1 className="font-headline text-2xl font-bold tracking-tight sm:text-3xl">
+                    {heading.title}
                 </h1>
-                <p className="text-muted-foreground">
-                    {t('dashboardSubtitle')}
-                </p>
+                <p className="text-muted-foreground">{heading.subtitle}</p>
             </div>
-             <div className="hidden md:flex items-center justify-center">
-                <nav
-                    ref={tabsContainerRef}
-                    className="relative inline-flex items-center gap-8 rounded-lg p-1.5 ring-1 ring-border/60 dark:ring-white/[0.08] bg-muted/40 dark:bg-white/[0.03] backdrop-blur-xl shadow-card"
-                >
-                    <span
-                        id="tab-indicator"
-                        className="pointer-events-none absolute left-0 h-9 rounded-md bg-background/90 dark:bg-white/[0.09] shadow-card border border-border/60 dark:border-white/[0.08] transition-all duration-300 ease-out"
-                    />
-                    {navItems.map((item, index) => {
-                         const isActive = activeTab === item.href;
-                         return (
-                            <Link key={item.label} href={item.href} legacyBehavior>
-                                <a
-                                    ref={(el) => {
-                                        tabsRef.current[index] = el;
-                                    }}
+
+            {/* Scrolls instead of wrapping on narrow screens: four labels on one
+                line would otherwise push the header two rows tall on a phone. */}
+            <nav className="-mx-4 overflow-x-auto px-4 md:mx-0 md:shrink-0 md:px-0">
+                <ul className="flex min-w-max items-center gap-1">
+                    {navItems.map((item) => {
+                        const isActive = pathname === item.href;
+                        return (
+                            <li key={item.href}>
+                                <Link
+                                    href={item.href}
+                                    aria-current={isActive ? 'page' : undefined}
                                     className={cn(
-                                        "relative z-10 px-4 py-2 text-sm font-medium transition-colors",
-                                        isActive ? "font-bold text-foreground" : "text-muted-foreground hover:text-foreground"
+                                        "relative block whitespace-nowrap px-3 py-2 text-sm transition-colors",
+                                        isActive
+                                            ? "font-semibold text-foreground"
+                                            : "text-muted-foreground hover:text-foreground"
                                     )}
                                 >
                                     {item.label}
-                                </a>
-                            </Link>
-                         )
+                                    {/* A rule under the label, not a filled button. */}
+                                    <span
+                                        aria-hidden
+                                        className={cn(
+                                            "absolute inset-x-3 -bottom-px h-0.5 rounded-full transition-opacity",
+                                            isActive ? "bg-primary opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                </Link>
+                            </li>
+                        );
                     })}
-                </nav>
-            </div>
+                </ul>
+            </nav>
         </div>
     )
 }
@@ -122,7 +114,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   usePresence(user?.uid);
   const { t } = useTranslation();
 
-  const isDashboardRoot = ['/dashboard', '/dashboard/insights', '/dashboard/messages'].includes(pathname);
+  const isDashboardRoot = NAV_ROUTES.includes(pathname);
 
   // Refresh on navigation and on tab focus so a session logged a moment ago is
   // reflected immediately; the store throttles the actual Firestore reads.
@@ -154,14 +146,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const playerNavItems = [
     { href: "/dashboard", label: t('sports'), icon: Dumbbell },
     { href: "/dashboard/insights", label: t('insights'), icon: BarChart2 },
-    { href: "/dashboard/messages", label: t('messages'), icon: MessageSquare },
+    { href: "/dashboard/social", label: t('navSocial'), icon: MessageSquare },
     { href: "/dashboard/settings", label: t('profile'), icon: UserIcon },
   ];
 
   const coachNavItems = [
     { href: "/coach/dashboard", label: t('coachNavDashboard'), icon: Users },
     { href: "/dashboard", label: t('sports'), icon: Dumbbell },
-    { href: "/dashboard/messages", label: t('messages'), icon: MessageSquare },
+    { href: "/dashboard/social", label: t('navSocial'), icon: MessageSquare },
     { href: "/dashboard/settings", label: t('profile'), icon: UserIcon },
   ];
 
@@ -365,7 +357,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     )} />
                     {/* Unread messages have to be visible from every page, not
                         only once you are already inside the messages screen. */}
-                    {item.href === "/dashboard/messages" && unreadCount > 0 && (
+                    {item.href === "/dashboard/social" && unreadCount > 0 && (
                       <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-primary-foreground">
                         {unreadCount > 9 ? "9+" : unreadCount}
                       </span>

@@ -64,6 +64,8 @@ import FitnessAssistantChat from "../dashboard/fitness-assistant/page";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FootballInsightCard } from '@/components/insights/football-insight-card';
 import { useStreakStore } from '@/stores/streak-store';
+import { useFavorites } from '@/hooks/use-favorites';
+import { FavoriteStar } from '@/components/favorite-star';
 import { tierForStreak, nextTier, daysToNextTier } from '@/lib/streak-tiers';
 import { StreakFlame } from '@/components/streak-flame';
 import { pick } from '@/lib/bilingual';
@@ -81,49 +83,7 @@ const sports = [
     { name: "Swimming", icon: Waves, path: "/dashboard/swimming", comingSoon: true },
 ];
 
-/**
- * The tools section, grouped.
- *
- * These were ten undifferentiated cards in one grid, each tall enough to hold
- * a three-line description. On a phone that is roughly five screens of
- * scrolling to reach the last one. Grouping them gives the list a shape, and
- * the rows below are compact enough that the whole set fits on one screen.
- */
-const moreGroups = [
-    {
-        titleKey: 'moreGroupTraining' as const,
-        links: [
-            { titleKey: 'teamHubCardTitle', subtitleKey: 'teamHubCardSubtitle', icon: ClipboardList, path: '/dashboard/sports-assistant' },
-            { titleKey: 'myReportsCardTitle', subtitleKey: 'myReportsCardSubtitle', icon: BarChart2, path: '/dashboard/progress' },
-            { titleKey: 'mentalCoachCardTitle', subtitleKey: 'mentalCoachCardSubtitle', icon: BrainCircuit, path: '/dashboard/mental-coach' },
-            { titleKey: 'myGoalsCardTitle', subtitleKey: 'myGoalsCardSubtitle', icon: Target, path: '/dashboard/goals' },
-            { titleKey: 'bodyScanCardTitle', subtitleKey: 'bodyScanCardSubtitle', icon: ScanLine, path: '/dashboard/body-scan' },
-        ],
-    },
-    {
-        titleKey: 'moreGroupSocial' as const,
-        links: [
-            { titleKey: 'friendsTitle', subtitleKey: 'friendsSubtitle', icon: Users, path: '/dashboard/friends' },
-            { titleKey: 'messages', subtitleKey: 'friendsOnlyBody', icon: MessageCircle, path: '/dashboard/messages' },
-        ],
-    },
-    {
-        titleKey: 'moreGroupSupport' as const,
-        links: [
-            { titleKey: 'supportHelpTitle', subtitleKey: 'supportHelpSubtitle', icon: LifeBuoy, path: '/dashboard/help' },
-            { titleKey: 'supportReportTitle', subtitleKey: 'supportReportSubtitle', icon: Flag, path: '/dashboard/report-problem' },
-        ],
-    },
-] as const;
 
-/** Shown only to admins, as its own group. */
-const adminGroup = {
-    titleKey: 'moreGroupAdmin' as const,
-    links: [
-        { titleKey: 'adminReportsTitle', subtitleKey: 'adminReportsSubtitle', icon: Inbox, path: '/admin/reports' },
-        { titleKey: 'userManagement', subtitleKey: 'userManagementDescription', icon: Users, path: '/admin' },
-    ],
-} as const;
 
 
 const cardVariants = {
@@ -1158,6 +1118,7 @@ export function InsightsGrid() {
 export function DashboardClient({ initialView }: { initialView?: 'sports' | 'insights' }) {
     const router = useRouter();
     const { user, isAdmin } = useUser();
+    const { favorites } = useFavorites();
     const { t } = useTranslation();
     const [isNavVisible, setIsNavVisible] = useState(true);
     const lastScrollY = useRef(0);
@@ -1207,51 +1168,59 @@ export function DashboardClient({ initialView }: { initialView?: 'sports' | 'ins
 
     return (
         <div className="space-y-10">
-            {/* ── Tools & Features ── */}
-            <motion.div
-                key="more"
-                initial="hidden"
-                animate="visible"
-                variants={sectionVariants}
-            >
-                <div className="flex items-center gap-2 mb-5">
-                    <h2 className="text-lg font-semibold tracking-tight text-foreground">{t('moreSection')}</h2>
+            {/* ── Favourites ── */}
+            <motion.div key="favorites" initial="hidden" animate="visible" variants={sectionVariants}>
+                <div className="mb-4 flex items-center gap-2">
+                    <h2 className="text-lg font-semibold tracking-tight text-foreground">{t('favoritesSection')}</h2>
                 </div>
 
-                {/* Compact rows, not tall cards. Each entry is one line of
-                    title and one clamped line of description, so the whole set
-                    is scannable instead of being five phone-screens tall. */}
-                <div className="space-y-6">
-                    {[...moreGroups, ...(isAdmin ? [adminGroup] : [])].map((group) => (
-                        <div key={group.titleKey}>
-                            <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                {t(group.titleKey)}
-                            </h3>
-                            <Card className="overflow-hidden">
-                                <ul className="divide-y divide-border/60 dark:divide-white/[0.06]">
-                                    {group.links.map((link) => (
-                                        <li key={link.path}>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleCardClick(link.path)}
-                                                className="group flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-accent/60 dark:hover:bg-white/[0.04] focus-visible:outline-none focus-visible:bg-accent/60"
-                                            >
-                                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                                                    <link.icon className="h-5 w-5" />
-                                                </span>
-                                                <span className="min-w-0 flex-grow">
-                                                    <span className="block truncate text-sm font-semibold">{t(link.titleKey)}</span>
-                                                    <span className="block truncate text-xs text-muted-foreground">{t(link.subtitleKey)}</span>
-                                                </span>
-                                                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </Card>
-                        </div>
-                    ))}
-                </div>
+                {favorites.length === 0 ? (
+                    // Compact on purpose: an empty shortcut row must not take
+                    // more room than the shortcuts it is standing in for.
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-dashed border-border/70 px-4 py-3">
+                        <Star className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">{t('favoritesEmpty')}</p>
+                        <Link
+                            href="/dashboard/autres"
+                            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                        >
+                            {t('favoritesDiscover')}
+                            <ArrowRight className="h-4 w-4" />
+                        </Link>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                        {favorites.map((tool) => (
+                            <motion.div key={tool.id} variants={itemVariants}>
+                                <Card
+                                    role="link"
+                                    tabIndex={0}
+                                    onClick={() => handleCardClick(tool.path)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleCardClick(tool.path);
+                                        }
+                                    }}
+                                    className="group cursor-pointer transition-colors hover:border-primary/40"
+                                >
+                                    <CardContent className="flex items-center gap-2 p-3">
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                            <tool.icon className="h-4 w-4" />
+                                        </span>
+                                        {/* Two lines rather than truncating: at
+                                            two columns on a phone "Coach Mental"
+                                            was cut to "Coach Me...". */}
+                                        <span className="min-w-0 flex-grow text-sm font-semibold leading-tight line-clamp-2">
+                                            {t(tool.titleKey)}
+                                        </span>
+                                        <FavoriteStar toolId={tool.id} className="-mr-1 h-7 w-7" />
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        ))}
+                    </div>
+                )}
             </motion.div>
 
             <Separator />

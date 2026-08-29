@@ -23,7 +23,7 @@ export function FriendsBell({ className }: { className?: string }) {
 
   return (
     <Link
-      href="/dashboard/friends"
+      href="/dashboard/social"
       aria-label={t('friendsTitle')}
       title={t('friendsTitle')}
       className={cn(

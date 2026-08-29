@@ -14,8 +14,7 @@ import {
   FileQuestion,
   Menu,
   ChevronDown,
-  Eye
-} from "lucide-react";
+  Eye, LifeBuoy, Flag} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useUser } from "@/hooks/use-user";
@@ -145,6 +144,17 @@ export function Header() {
                 <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
                     <UserIcon className="mr-2 h-4 w-4" />
                     <span>{t('profile')}</span>
+                </DropdownMenuItem>
+                {/* Help lives here rather than on the dashboard. The spec puts
+                    it at the bottom of a sidebar; this app has none, and the
+                    profile menu is its equivalent. */}
+                <DropdownMenuItem onClick={() => router.push('/dashboard/help')}>
+                    <LifeBuoy className="mr-2 h-4 w-4" />
+                    <span>{t('supportHelpTitle')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/dashboard/report-problem')}>
+                    <Flag className="mr-2 h-4 w-4" />
+                    <span>{t('supportReportTitle')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {user?.role === 'admin' && (

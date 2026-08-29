@@ -83,7 +83,7 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
           </p>
           {!search && (
             <Button asChild size="sm" className="mt-4">
-              <Link href="/dashboard/friends">
+              <Link href="/dashboard/social">
                 <UserPlus className="mr-2 h-4 w-4" />
                 {t("friendsFindCta")}
               </Link>

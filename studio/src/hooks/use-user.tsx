@@ -22,6 +22,8 @@ export interface AppUser {
   photoUrl?: string | null;
   /** Heartbeat written while the app is open — drives the online dot. */
   lastSeenAt?: { seconds: number } | null;
+  /** Ids of the secondary tools pinned to the dashboard. See lib/tools. */
+  favorites?: string[];
   onboardingComplete?: boolean;
   gymPlan?: GymPlan | null;
   nutritionTarget?: {
@@ -102,6 +104,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
               preferences: userData.preferences || {},
               notifications: userData.notifications || {},
               privacy: userData.privacy || {},
+              favorites: userData.favorites || [],
             });
 
             // An owner whose stored role says otherwise is treated as an admin
@@ -185,6 +188,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           onboardingComplete: data.onboardingComplete || false,
           gymPlan: data.gymPlan || null,
           nutritionTarget: data.nutritionTarget || { calories: 2500 },
+          favorites: data.favorites || [],
           preferences: data.preferences || {},
           notifications: data.notifications || {},
           privacy: data.privacy || {},
