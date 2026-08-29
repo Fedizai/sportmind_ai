@@ -66,7 +66,7 @@ export default function CreateAccountPage() {
                 }
 
                 const { 
-                    fullName, email, password, role,
+                    fullName, username, email, password, role,
                     age, trainingFrequency, mainGoal, sports,
                     footballPosition, inClub,
                     tennisLevel, hasRanking, tennisRanking, dominantHand, playStyle,
@@ -89,6 +89,9 @@ export default function CreateAccountPage() {
                     uid: user.uid,
                     email: email,
                     displayName: fullName,
+                    // The public handle, chosen at signup. displayName stays
+                    // the legal name and is only changed by an admin.
+                    username,
                     role: userRole,
                     plan: plan,
                     createdAt: serverTimestamp(),

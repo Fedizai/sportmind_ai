@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Shield, Mail, Cake, Dumbbell, Trophy, User as UserIcon, Eye, Search, Loader2, UserPlus, FileQuestion, Star, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StreakEditor } from '@/components/admin/streak-editor';
+import { UserEditor } from '@/components/admin/user-editor';
 import { TennisBallIcon } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -276,7 +277,10 @@ export default function AdminPage() {
                                             {user.displayName}
                                             {isSelf && <Badge variant="outline" className="border-primary/50 text-primary">{t('adminYouBadge')}</Badge>}
                                         </CardTitle>
-                                        <CardDescription className="flex items-center gap-2"><Mail className="h-4 w-4"/>{user.email}</CardDescription>
+                                        <CardDescription className="flex flex-col gap-0.5">
+                                            <span className="flex items-center gap-2"><Mail className="h-4 w-4"/>{user.email}</span>
+                                            {user.username && <span className="text-xs">@{user.username}</span>}
+                                        </CardDescription>
                                     </div>
                                     <div className="flex flex-col gap-1 items-end">
                                         {getRoleBadge(user.role)}
@@ -341,6 +345,9 @@ export default function AdminPage() {
                                             </Select>
                                         </div>
                                     </div>
+                                    {/* Everything about the account, including the
+                                        legal name the athlete can no longer edit. */}
+                                    <UserEditor user={user} />
                                     <StreakEditor uid={user.uid} displayName={user.displayName} />
                                     <div className="grid grid-cols-2 gap-2 w-full">
                                          <Button

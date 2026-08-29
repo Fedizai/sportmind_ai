@@ -29,7 +29,11 @@ import { getAuth, updateProfile } from "firebase/auth";
 import { auth, db, storage } from "@/lib/firebase";
 
 const settingsSchema = z.object({
-    fullName: z.string().min(2, "Full name must be at least 2 characters."),
+    username: z
+        .string()
+        .min(3, "Username must be at least 3 characters.")
+        .max(20, "Username must be at most 20 characters.")
+        .regex(/^[a-zA-Z0-9_.]+$/, "Use letters, numbers, dots and underscores only."),
     theme: z.enum(["light", "dark", "system"]),
     units: z.enum(["metric", "imperial"]),
     emailNotifications: z.boolean(),
@@ -49,7 +53,7 @@ export default function SettingsPage() {
     const form = useForm<SettingsFormValues>({
         resolver: zodResolver(settingsSchema),
         defaultValues: {
-            fullName: "",
+            username: "",
             theme: "dark",
             units: "metric",
             emailNotifications: true,
@@ -61,7 +65,7 @@ export default function SettingsPage() {
     useEffect(() => {
         if (user) {
             form.reset({
-                fullName: user.displayName || "",
+                username: user.username || "",
                 theme: user.preferences?.theme || "dark",
                 units: user.preferences?.units || "metric",
                 emailNotifications: user.notifications?.emailNotifications ?? true,
@@ -81,7 +85,7 @@ export default function SettingsPage() {
         try {
             const token = await idToken();
             const results = await Promise.all([
-                updateAccountSettings(token, { fullName: data.fullName }),
+                updateAccountSettings(token, { username: data.username }),
                 updatePreferences(token, { theme: data.theme, units: data.units }),
                 updateNotifications(token, { emailNotifications: data.emailNotifications, trainingReminders: data.trainingReminders }),
                 updatePrivacy(token, { shareDataWithCoach: data.shareDataWithCoach }),
@@ -255,8 +259,18 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                             <Separator />
-                            <FormField control={form.control} name="fullName" render={({ field }) => (
-                                <FormItem><FormLabel>{t('fullName')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            {/* The legal name is fixed once the account exists:
+                                it is how a coach and an admin identify this
+                                person on a roster. Only an admin changes it. */}
+                            <FormItem>
+                                <FormLabel>{t('fullName')}</FormLabel>
+                                <FormControl>
+                                    <Input value={user?.displayName || ''} readOnly disabled />
+                                </FormControl>
+                                <FormDescription>{t('fullNameLockedHint')}</FormDescription>
+                            </FormItem>
+                            <FormField control={form.control} name="username" render={({ field }) => (
+                                <FormItem><FormLabel>{t('usernameLabel')}</FormLabel><FormControl><Input {...field} /></FormControl><FormDescription>{t('usernameHint')}</FormDescription><FormMessage /></FormItem>
                             )}/>
                             <Separator />
                             <div className="space-y-2">

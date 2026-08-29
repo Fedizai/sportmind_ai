@@ -17,6 +17,8 @@ export interface AppUser {
   uid: string;
   email: string | null;
   displayName: string | null;
+  /** Public handle, chosen at signup. displayName stays the legal name. */
+  username?: string | null;
   role: string | null;
   plan?: 'athlete' | 'pro';
   photoUrl?: string | null;
@@ -95,6 +97,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: userData.displayName,
+              username: userData.username || null,
               role: userRole,
               plan: isAdmin ? 'pro' : (userData.plan || 'athlete'),
               photoUrl: userData.photoUrl || null,
@@ -182,6 +185,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           uid: previewUser.uid,
           email: data.email ?? previewUser.email ?? null,
           displayName: data.displayName ?? previewUser.displayName ?? null,
+          username: data.username || null,
           role: data.role || 'player',
           plan: data.plan || 'athlete',
           photoUrl: data.photoUrl || null,

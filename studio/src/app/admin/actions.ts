@@ -2,6 +2,7 @@
 'use server';
 
 import { admin, adminDb } from "@/lib/firebase-admin";
+import { isAdminEmail } from "@/lib/admin-emails";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { UserRole, UserPlan } from "@/hooks/use-all-users";
@@ -97,4 +98,86 @@ export async function deleteUser(uid: string) {
 
     revalidatePath('/admin');
     return { success: true, message: "User successfully deleted from all services." };
+}
+
+/**
+ * Admin edit of any account.
+ *
+ * Runs on the Admin SDK and verifies the caller is an admin from their ID
+ * token — not from a flag the client sends. Without that check this is an HTTP
+ * endpoint that rewrites anyone's role and email for anyone who finds it.
+ *
+ * Name and email live on the Firebase Auth record as well as the profile, so
+ * both are written; leaving them to drift is what left one account with an
+ * empty auth display name and a populated Firestore one.
+ */
+const adminEditSchema = z.object({
+    displayName: z.string().min(2).max(60).optional(),
+    username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_.]+$/).optional(),
+    email: z.string().email().optional(),
+    role: z.enum(['player', 'coach', 'admin']).optional(),
+    plan: z.enum(['athlete', 'pro']).optional(),
+});
+
+async function requireAdmin(idToken: string): Promise<void> {
+    if (!idToken) throw new Error('Not signed in.');
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const snap = await adminDb.collection('users').doc(decoded.uid).get();
+    const isAdmin = snap.data()?.role === 'admin' || isAdminEmail(decoded.email);
+    if (!isAdmin) throw new Error('Admins only.');
+}
+
+export async function adminUpdateUser(
+    idToken: string,
+    targetUid: string,
+    data: z.infer<typeof adminEditSchema>
+) {
+    try {
+        await requireAdmin(idToken);
+        const parsed = adminEditSchema.safeParse(data);
+        if (!parsed.success) {
+            return { success: false, message: parsed.error.issues[0]?.message ?? 'Invalid data.' };
+        }
+        if (!targetUid) return { success: false, message: 'No user selected.' };
+
+        const { displayName, username, email, role, plan } = parsed.data;
+
+        // The two protected owner accounts keep their admin role whoever edits
+        // them, matching the rule that has always guarded them in Firestore.
+        const target = await adminDb.collection('users').doc(targetUid).get();
+        const targetEmail = target.data()?.email as string | undefined;
+        if (role && role !== 'admin' && isAdminEmail(targetEmail)) {
+            return { success: false, message: 'This account always stays an admin.' };
+        }
+
+        if (username) {
+            const clash = await adminDb.collection('users').where('username', '==', username).limit(2).get();
+            if (clash.docs.some((d) => d.id !== targetUid)) {
+                return { success: false, message: 'That username is already taken.' };
+            }
+        }
+
+        const authPatch: Record<string, string> = {};
+        if (displayName) authPatch.displayName = displayName;
+        if (email) authPatch.email = email;
+        if (Object.keys(authPatch).length > 0) {
+            await admin.auth().updateUser(targetUid, authPatch);
+        }
+
+        const profilePatch: Record<string, unknown> = {};
+        if (displayName) profilePatch.displayName = displayName;
+        if (username) profilePatch.username = username;
+        if (email) profilePatch.email = email;
+        if (role) profilePatch.role = role;
+        if (plan) profilePatch.plan = plan;
+        if (Object.keys(profilePatch).length > 0) {
+            await adminDb.collection('users').doc(targetUid).set(profilePatch, { merge: true });
+        }
+
+        revalidatePath('/admin');
+        return { success: true, message: 'User updated.' };
+    } catch (error) {
+        console.error('Admin user update failed:', error);
+        return { success: false, message: error instanceof Error ? error.message : 'Could not update the user.' };
+    }
 }

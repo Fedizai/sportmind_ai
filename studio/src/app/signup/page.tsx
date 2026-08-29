@@ -14,6 +14,7 @@ import {
   Form,
   FormControl,
   FormField,
+  FormDescription,
   FormItem,
   FormLabel,
   FormMessage,
@@ -58,6 +59,7 @@ export default function SignupPage() {
     resolver: zodResolver(signupSchema),
     defaultValues: {
       fullName: "",
+      username: "",
       email: "",
       password: "",
       role: "player",
@@ -81,7 +83,7 @@ export default function SignupPage() {
   const selectedSports = form.watch("sports");
 
   const steps = [
-    { id: 'account', fields: ['fullName', 'email', 'password', 'role'] },
+    { id: 'account', fields: ['fullName', 'username', 'email', 'password', 'role'] },
     { id: 'general', fields: ['age', 'trainingFrequency', 'mainGoal', 'sports'] },
     ...(selectedSports.includes('football') ? [{ id: 'football', fields: ['footballPosition', 'inClub'] }] : []),
     ...(selectedSports.includes('tennis') ? [{ id: 'tennis', fields: ['tennisLevel', 'hasRanking', 'tennisRanking', 'dominantHand', 'playStyle'] }] : []),
@@ -204,6 +206,7 @@ export default function SignupPage() {
                                 <p className="text-sm text-muted-foreground">Let's start with the basics.</p>
                             </div>
                             <FormField control={form.control} name="fullName" render={({ field }) => (<FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder={t('fullNamePlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name="username" render={({ field }) => (<FormItem><FormLabel>{t('usernameLabel')}</FormLabel><FormControl><Input placeholder={t('usernamePlaceholder')} {...field} /></FormControl><FormDescription>{t('usernameHint')}</FormDescription><FormMessage /></FormItem>)} />
                             <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder={t('emailPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
                             <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder={t('passwordPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
                             <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>I am a...</FormLabel><FormControl><RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex pt-2"><FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="player" /></FormControl><FormLabel className="font-normal">Player</FormLabel></FormItem><FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="coach" /></FormControl><FormLabel className="font-normal">Coach</FormLabel></FormItem></RadioGroup></FormControl><FormMessage /></FormItem>)} />

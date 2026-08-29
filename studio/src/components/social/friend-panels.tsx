@@ -49,7 +49,9 @@ function PersonRow({ person, action }: { person: AppUser; action: React.ReactNod
       </div>
       <div className="min-w-0 flex-grow">
         <p className="truncate font-semibold">{person.displayName}</p>
-        <p className="truncate text-xs text-muted-foreground">{person.email}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          {person.username ? `@${person.username}` : person.email}
+        </p>
       </div>
       <div className="shrink-0">{action}</div>
     </li>
@@ -227,6 +229,7 @@ export function FriendSearchPanel() {
       .filter((u) => u.uid !== user.uid)
       .filter(
         (u) =>
+          u.username?.toLowerCase().includes(needle) ||
           u.displayName?.toLowerCase().includes(needle) ||
           u.email?.toLowerCase().includes(needle)
       )

@@ -9,8 +9,20 @@ import { getAuth, updateProfile } from 'firebase/auth';
 import { doc, updateDoc, getDoc, getDocs, addDoc, collection, query, where } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 
+/**
+ * What an athlete may change about their own account.
+ *
+ * The legal name is not in here. It identifies the person on a coach's roster
+ * and in an admin's list, so it is set once at signup and only an admin can
+ * change it afterwards. The username is the handle other athletes see, and is
+ * the athlete's to change.
+ */
 const accountSchema = z.object({
-  fullName: z.string().min(2, "Full name must be at least 2 characters."),
+  username: z
+    .string()
+    .min(3, 'Username must be at least 3 characters.')
+    .max(20, 'Username must be at most 20 characters.')
+    .regex(/^[a-zA-Z0-9_.]+$/, 'Use letters, numbers, dots and underscores only.'),
 });
 
 const preferencesSchema = z.object({
@@ -50,11 +62,17 @@ export async function updateAccountSettings(idToken: string, data: z.infer<typeo
 
   try {
     const uid = await requireCaller(idToken);
-    const { fullName } = validatedData.data;
+    const { username } = validatedData.data;
 
-    // Both records, or the header and the auth account disagree about the name.
-    await admin.auth().updateUser(uid, { displayName: fullName });
-    await adminDb.collection('users').doc(uid).set({ displayName: fullName }, { merge: true });
+    // Taken already? Not race-proof — two people claiming the same handle in
+    // the same instant both pass — but it catches every realistic collision at
+    // this scale without a second collection to keep in step.
+    const clash = await adminDb.collection('users').where('username', '==', username).limit(2).get();
+    if (clash.docs.some((d) => d.id !== uid)) {
+      return { success: false, message: 'That username is already taken.' };
+    }
+
+    await adminDb.collection('users').doc(uid).set({ username }, { merge: true });
 
     revalidatePath('/dashboard/settings');
     return { success: true, message: 'Account settings updated successfully.' };

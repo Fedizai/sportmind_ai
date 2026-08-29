@@ -13,6 +13,8 @@ export type UserPlan = 'athlete' | 'pro';
 export interface AppUser {
   uid: string;
   displayName: string | null;
+  /** Public handle, chosen at signup. displayName stays the legal name. */
+  username?: string | null;
   email: string | null;
   role: UserRole;
   plan?: UserPlan;
@@ -60,6 +62,7 @@ export function useAllUsers() {
           usersData.push({
             uid: doc.id,
             displayName: data.displayName || 'Unknown User',
+            username: data.username || null,
             email: data.email || 'No email',
             role: data.role || 'player',
             plan: data.plan || 'athlete',

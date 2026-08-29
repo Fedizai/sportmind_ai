@@ -15,6 +15,15 @@ export const loginSchema = z.object({
 
 export const signupSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters long." }),
+  /**
+   * The name other athletes see. Chosen at signup and editable afterwards,
+   * unlike the legal name, which is fixed once the account exists.
+   */
+  username: z
+    .string()
+    .min(3, { message: "Username must be at least 3 characters long." })
+    .max(20, { message: "Username must be at most 20 characters long." })
+    .regex(/^[a-zA-Z0-9_.]+$/, { message: "Use letters, numbers, dots and underscores only." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters long." }),
   role: z.enum(["player", "coach"]),
