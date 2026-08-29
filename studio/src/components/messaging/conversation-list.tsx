@@ -91,7 +91,9 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
           )}
         </div>
       ) : (
-        <ScrollArea className="flex-grow">
+        // min-h-0 for the same reason as the chat window: without it this grows
+        // past the card instead of scrolling once the list outgrows the panel.
+        <ScrollArea className="min-h-0 flex-grow">
           <div className="space-y-1 p-2">
             {visibleUsers.map((otherUser) => {
               const conversation = conversationWith(otherUser.uid);

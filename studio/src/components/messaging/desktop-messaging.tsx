@@ -36,7 +36,13 @@ export function DesktopMessaging() {
     : [];
 
   return (
-    <Card className="grid grid-cols-3 h-full overflow-hidden">
+    // grid-rows-[100%] is what actually bounds the columns. A grid's implicit
+    // rows are auto-sized, so the row grew to fit the message list and both
+    // `h-full` columns resolved against that overflowing row rather than the
+    // card: measured at 1470px inside a 490px card, putting the composer ~1000px
+    // below the card's own bottom edge where overflow-hidden clipped it away.
+    // That left no way to type a reply once a conversation had a few messages.
+    <Card className="grid grid-cols-3 grid-rows-[100%] h-full overflow-hidden">
       <div className="col-span-1 border-r h-full">
         <ConversationList
           users={usersToShow}

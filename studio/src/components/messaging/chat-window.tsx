@@ -128,9 +128,15 @@ export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) 
         </div>
       </header>
 
-      {/* Messages */}
+      {/* Messages.
+          min-h-0 is what makes this scroll instead of grow. A flex item
+          defaults to min-height:auto, so without it this refuses to shrink
+          below its content: the message list expanded to fit every message
+          and pushed the composer below the bottom of the card, which is why
+          there was no way to type a reply once a conversation had a few
+          messages in it. */}
       <ScrollArea
-        className="flex-grow bg-[radial-gradient(circle_at_50%_0%,hsl(var(--primary)/0.04),transparent_60%)] px-4 py-5"
+        className="min-h-0 flex-grow bg-[radial-gradient(circle_at_50%_0%,hsl(var(--primary)/0.04),transparent_60%)] px-4 py-5"
         ref={scrollAreaRef}
       >
         {isLoading ? (
