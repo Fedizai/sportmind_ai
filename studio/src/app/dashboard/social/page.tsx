@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from 'react';
-import { Users } from 'lucide-react';
-
 import { useUser } from '@/hooks/use-user';
 import { useFriends } from '@/hooks/use-friends';
 import { useConversations } from '@/hooks/use-conversations';
@@ -31,15 +29,8 @@ export default function SocialPage() {
   const [tab, setTab] = useState(incoming.length > 0 ? 'requests' : 'friends');
 
   return (
+    // The section is titled once, by the shared dashboard header.
     <div className="mx-auto flex w-full max-w-4xl flex-col space-y-5">
-      <div>
-        <h1 className="flex items-center gap-3 font-headline text-3xl font-bold tracking-tight">
-          <Users className="h-8 w-8 text-primary" />
-          {t('navSocial')}
-        </h1>
-        <p className="text-muted-foreground">{t('friendsSubtitle')}</p>
-      </div>
-
       <Tabs value={tab} onValueChange={setTab} className="flex flex-grow flex-col">
         <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
           <TabsTrigger value="friends">{t('friendsTabFriends')}</TabsTrigger>

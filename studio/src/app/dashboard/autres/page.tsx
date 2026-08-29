@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
-import { ArrowRight, LayoutGrid } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 import { TOOLS } from '@/lib/tools';
 import { useTranslation } from '@/hooks/use-translation';
@@ -19,16 +19,9 @@ export default function AutresPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="flex items-center gap-3 font-headline text-3xl font-bold tracking-tight">
-          <LayoutGrid className="h-8 w-8 text-primary" />
-          {t('navOther')}
-        </h1>
-        <p className="text-muted-foreground">{t('navOtherSubtitle')}</p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    // The section is titled once, by the shared dashboard header, so this
+    // page is the grid and nothing else.
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {TOOLS.map((tool) => (
           <Card
             key={tool.id}
@@ -63,7 +56,6 @@ export default function AutresPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
     </div>
   );
 }
