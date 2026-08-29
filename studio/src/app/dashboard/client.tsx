@@ -285,17 +285,19 @@ const StreakCard = () => {
     )
 }
 /**
- * Macro ring geometry.
+ * Calorie ring geometry.
  *
- * The ring is split into one arc per macro, sized by the calories that macro
- * actually contributes (4 kcal/g for carbs and protein, 9 for fat), so the
- * three arcs add up to the calories shown in the centre. Three shades of the
- * same blue would have made the ring unreadable without the legend; one hue
- * per macro lets it be read on its own.
+ * One arc, showing calories eaten against the day's target — the same figure
+ * printed in the centre.
+ *
+ * It used to be split into one arc per macro, sized by the calories each macro
+ * contributes at 4/4/9 kcal per gram. That silently contradicted the number in
+ * the middle: logged foods often carry a calorie figure with incomplete macro
+ * data, so a day reading 1856 kcal drew arcs worth 550 and the ring looked
+ * barely touched. The macro breakdown still lives in the bars beside the ring,
+ * where a gap in the data is obvious rather than misleading.
  */
 const RING_RADIUS = 45;
-/** Thinner than this and the arc is under a pixel — noise rather than data. */
-const MIN_VISIBLE_ARC = 0.006;
 
 const NutritionChart = () => {
     const { dailyTotals, isLoading, dailyLogs } = useNutritionStore();
@@ -323,27 +325,18 @@ const NutritionChart = () => {
     const totalLogs = dailyLogs.breakfast.length + dailyLogs.lunch.length + dailyLogs.dinner.length + dailyLogs.snack.length;
 
     const macros = [
-        { name: t('carbs'), value: carbs, target: targetCarbs, kcalPerGram: 4, color: "bg-macro-carbs", stroke: "hsl(var(--macro-carbs))" },
-        { name: t('protein'), value: protein, target: targetProtein, kcalPerGram: 4, color: "bg-macro-protein", stroke: "hsl(var(--macro-protein))" },
-        { name: t('fat'), value: fat, target: targetFat, kcalPerGram: 9, color: "bg-macro-fat", stroke: "hsl(var(--macro-fat))" },
+        { name: t('carbs'), value: carbs, target: targetCarbs, color: "bg-macro-carbs" },
+        { name: t('protein'), value: protein, target: targetProtein, color: "bg-macro-protein" },
+        { name: t('fat'), value: fat, target: targetFat, color: "bg-macro-fat" },
     ];
 
-    // Each macro's share of the ring, by the calories it contributes. A zero or
-    // missing target would otherwise divide to Infinity and blank the ring.
+    // Calories eaten against the target. A zero or missing target would divide
+    // to Infinity and blank the ring.
     const safeTarget = targetCalories > 0 ? targetCalories : 2500;
-    const rawShares = macros.map(m => Math.max(0, m.value) * m.kcalPerGram / safeTarget);
-    const rawTotal = rawShares.reduce((sum, s) => sum + s, 0);
-    const isOverTarget = rawTotal > 1;
-    // Past the target the ring is simply full; the arcs keep their relative
-    // proportions rather than overdrawing on top of one another.
-    const shares = isOverTarget ? rawShares.map(s => s / rawTotal) : rawShares;
-
-    let cursor = 0;
-    const arcs = macros.map((macro, i) => {
-        const start = cursor;
-        cursor += shares[i];
-        return { ...macro, start, length: shares[i] };
-    }).filter(arc => arc.length >= MIN_VISIBLE_ARC);
+    const rawProgress = Math.max(0, calories) / safeTarget;
+    const isOverTarget = rawProgress > 1;
+    // Past the target the ring is simply full rather than drawing over itself.
+    const progress = Math.min(rawProgress, 1);
 
     return (
         <Card className="h-full group flex flex-col cursor-pointer" onClick={() => router.push('/dashboard/nutrition')}>
@@ -360,32 +353,21 @@ const NutritionChart = () => {
                     <div className="relative w-36 h-36 mx-auto">
                         <svg className="w-full h-full" viewBox="0 0 100 100">
                             <circle cx="50" cy="50" r={RING_RADIUS} stroke="hsl(var(--muted))" strokeWidth="10" fill="none" />
-                            {arcs.map((arc, index) => {
-                                // Butt caps, not round: a round cap overhangs the
-                                // arc by half the stroke, so on a lightly-logged
-                                // day the three macros merged into one blob and
-                                // the ring read as far fuller than it was. Butt
-                                // caps also let the segments meet exactly, with
-                                // no separator, so the ring reads as one bar
-                                // divided into three rather than three bars.
-                                const drawn = arc.length;
-                                return (
-                                    <motion.circle
-                                        key={arc.name}
-                                        cx="50"
-                                        cy="50"
-                                        r={RING_RADIUS}
-                                        stroke={arc.stroke}
-                                        strokeWidth="10"
-                                        strokeLinecap="butt"
-                                        fill="none"
-                                        transform="rotate(-90 50 50)"
-                                        initial={reduceMotion ? false : { pathLength: 0, pathOffset: arc.start }}
-                                        animate={{ pathLength: drawn, pathOffset: arc.start }}
-                                        transition={{ duration: 0.6, delay: index * 0.12, ease: [0.16, 1, 0.3, 1] }}
-                                    />
-                                );
-                            })}
+                            {progress > 0 && (
+                                <motion.circle
+                                    cx="50"
+                                    cy="50"
+                                    r={RING_RADIUS}
+                                    stroke={isOverTarget ? "hsl(var(--warning))" : "hsl(var(--primary))"}
+                                    strokeWidth="10"
+                                    strokeLinecap="round"
+                                    fill="none"
+                                    transform="rotate(-90 50 50)"
+                                    initial={reduceMotion ? false : { pathLength: 0 }}
+                                    animate={{ pathLength: progress }}
+                                    transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                                />
+                            )}
                             <text x="50%" y="45%" textAnchor="middle" dominantBaseline="middle" className={cn("text-2xl font-bold", isOverTarget ? "fill-warning" : "fill-current")}>
                                 {calories.toFixed(0)}
                             </text>
