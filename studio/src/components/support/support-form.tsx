@@ -63,7 +63,26 @@ export function SupportForm({ kind }: { kind: Extract<TicketKind, 'problem' | 'h
     }
   };
 
-  const mine = tickets.filter((x) => x.kind === kind || kind === 'help');
+  /**
+   * The athlete's own open tickets for this page.
+   *
+   * `tickets` is already scoped to this user — the query filters on userId and
+   * the Firestore rules refuse anything else — so nobody sees another person's
+   * case here. Only admins get the full list, on /admin/reports.
+   *
+   * Resolved ones drop out: once a case is closed it is no longer something to
+   * follow up on, and leaving it in the list buries whatever is still waiting
+   * for an answer.
+   *
+   * The kind check used to read `x.kind === kind || kind === 'help'`, whose
+   * second half is true for every ticket whenever the page is Help — so that
+   * page listed problem reports too. Help keeps streak restores, which are
+   * filed from the streak card and have no page of their own to appear on.
+   */
+  const mine = tickets.filter((x) => {
+    if (x.status === 'resolved') return false;
+    return kind === 'help' ? x.kind !== 'problem' : x.kind === kind;
+  });
 
   return (
     <div className="space-y-6">
