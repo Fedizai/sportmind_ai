@@ -3,3 +3,8 @@
 # Raw Kaggle CSV source files — only the built data/food-db.json ships
 fooddatabase/
 studio/tmp-food/
+
+# Raw datasets (391 MB of CSV and GIFs). Consumed by build scripts and
+# served from Storage — never committed: GitHub rejects files over 100 MB and
+# a git add -A once swept the whole folder into a commit.
+datasets/

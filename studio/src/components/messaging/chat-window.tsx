@@ -12,7 +12,9 @@ import type { AppUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "@/hooks/use-translation";
-import { format, isSameDay } from "date-fns";
+import { format, formatDistanceToNow, isSameDay } from "date-fns";
+import { fr, enUS } from "date-fns/locale";
+import { isOnline } from "@/lib/presence";
 
 interface ChatWindowProps {
   currentUser: AppUser;
@@ -37,7 +39,7 @@ export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) 
   const [inputMessage, setInputMessage] = React.useState("");
   const { messages, isLoading, sendMessage, markAsRead } = useMessages(currentUser.uid, otherUser.uid);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   // Opening the thread, and every message that lands while it is open, clears
   // the unread badge for this side of the conversation.
@@ -70,6 +72,19 @@ export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) 
     });
   }, [messages, currentUser.uid]);
 
+  // Presence, read from the other person's heartbeat rather than assumed.
+  const online = isOnline(otherUser.lastSeenAt);
+  const presenceLabel = online
+    ? t("presenceOnline")
+    : otherUser.lastSeenAt
+      ? t("presenceLastSeen", {
+          when: formatDistanceToNow(new Date(otherUser.lastSeenAt.seconds * 1000), {
+            addSuffix: true,
+            locale: language === "fr" ? fr : enUS,
+          }),
+        })
+      : t("presenceOffline");
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim()) return;
@@ -92,19 +107,24 @@ export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) 
             <AvatarImage src={avatarSrc(otherUser)} alt={otherUser.displayName || ""} data-ai-hint="player portrait" />
             <AvatarFallback>{initials(otherUser.displayName)}</AvatarFallback>
           </Avatar>
-          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-emerald-500" />
+          <span className={cn(
+            "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
+            online ? "bg-emerald-500" : "bg-muted-foreground/40"
+          )} />
         </div>
         <div className="flex-grow">
           <p className="font-semibold leading-tight">{otherUser.displayName}</p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            {t("onlineStatus")}
+            <span className={cn("h-1.5 w-1.5 rounded-full", online ? "bg-emerald-500" : "bg-muted-foreground/40")} />
+            {presenceLabel}
           </p>
         </div>
+        {/* Calling is not built. These used to look like working controls and
+            did nothing at all when pressed. */}
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Phone className="h-[1.1rem] w-[1.1rem]" /></Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Video className="h-[1.1rem] w-[1.1rem]" /></Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><MoreVertical className="h-[1.1rem] w-[1.1rem]" /></Button>
+          <Button variant="ghost" size="icon" disabled title={t("featureComingSoon")} className="text-muted-foreground"><Phone className="h-[1.1rem] w-[1.1rem]" /></Button>
+          <Button variant="ghost" size="icon" disabled title={t("featureComingSoon")} className="text-muted-foreground"><Video className="h-[1.1rem] w-[1.1rem]" /></Button>
+          <Button variant="ghost" size="icon" disabled title={t("featureComingSoon")} className="text-muted-foreground"><MoreVertical className="h-[1.1rem] w-[1.1rem]" /></Button>
         </div>
       </header>
 

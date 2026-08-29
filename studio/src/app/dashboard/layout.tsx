@@ -13,6 +13,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useStreakStore } from '@/stores/streak-store';
 import { useConversations } from '@/hooks/use-conversations';
+import { usePresence } from '@/hooks/use-presence';
 
 
 import { UserProvider, useUser } from "@/hooks/use-user";
@@ -118,6 +119,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const lastScrollY = useRef(0);
   const calculateStreak = useStreakStore((s) => s.calculateStreak);
   const { unreadCount } = useConversations(user?.uid);
+  usePresence(user?.uid);
   const { t } = useTranslation();
 
   const isDashboardRoot = ['/dashboard', '/dashboard/insights', '/dashboard/messages'].includes(pathname);

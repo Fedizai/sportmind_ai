@@ -20,6 +20,8 @@ export interface AppUser {
   role: string | null;
   plan?: 'athlete' | 'pro';
   photoUrl?: string | null;
+  /** Heartbeat written while the app is open — drives the online dot. */
+  lastSeenAt?: { seconds: number } | null;
   onboardingComplete?: boolean;
   gymPlan?: GymPlan | null;
   nutritionTarget?: {

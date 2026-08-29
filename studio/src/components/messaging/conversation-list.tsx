@@ -9,6 +9,7 @@ import { Input } from "../ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { ScrollArea } from "../ui/scroll-area";
 import { useConversations } from "@/hooks/use-conversations";
+import { isOnline } from "@/lib/presence";
 import { useUser } from "@/hooks/use-user";
 import { useTranslation } from "@/hooks/use-translation";
 
@@ -20,7 +21,7 @@ interface ConversationListProps {
 
 export function ConversationList({ users, selectedUser, onSelectUser }: ConversationListProps) {
   const { user } = useUser();
-  const { conversations, isUnread, conversationWith } = useConversations(user?.uid);
+  const { conversations, unreadIn, conversationWith } = useConversations(user?.uid);
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
 
@@ -85,8 +86,14 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
           <div className="space-y-1 p-2">
             {visibleUsers.map((otherUser) => {
               const conversation = conversationWith(otherUser.uid);
-              const unread = conversation ? isUnread(conversation) : false;
-              const lastMessageText = conversation?.lastMessageText || t("noMessagesYet");
+              const unread = conversation ? unreadIn(conversation) : 0;
+              // Whose message is sitting at the top of this thread — without
+              // it, your own last message reads as if they wrote it.
+              const sentByMe = !!conversation && conversation.lastMessageSenderId === user?.uid;
+              const online = isOnline(otherUser.lastSeenAt);
+              const lastMessageText = conversation?.lastMessageText
+                ? (sentByMe ? `${t("youPrefix")} ${conversation.lastMessageText}` : conversation.lastMessageText)
+                : t("noMessagesYet");
               const lastMessageTime = conversation?.lastMessageTimestamp
                 ? new Date(conversation.lastMessageTimestamp.seconds * 1000).toLocaleTimeString([], {
                     hour: "2-digit",
@@ -115,26 +122,44 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
                       />
                       <AvatarFallback>{otherUser.displayName?.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
                     </Avatar>
-                    <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-emerald-500" />
+                    {/* Real presence. This dot used to be hard-coded green,
+                        so everyone always looked online, including accounts
+                        that had never signed in. */}
+                    <span
+                      aria-label={online ? t("presenceOnline") : t("presenceOffline")}
+                      className={cn(
+                        "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
+                        online ? "bg-emerald-500" : "bg-muted-foreground/40"
+                      )}
+                    />
                   </div>
                   <div className="flex-grow overflow-hidden">
                     <div className="flex items-center justify-between gap-2">
                       <p className={cn("truncate font-semibold", isActive && "text-primary")}>{otherUser.displayName}</p>
-                      <p className={cn("shrink-0 text-[11px]", unread ? "font-semibold text-primary" : "text-muted-foreground")}>
+                      <p className={cn("shrink-0 text-[11px]", unread > 0 ? "font-semibold text-primary" : "text-muted-foreground")}>
                         {lastMessageTime}
                       </p>
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className={cn("truncate text-sm", unread ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                    <div className="flex items-start justify-between gap-2">
+                      {/* Two lines, not one: the point of a preview is to let
+                          you read the last message without opening the thread,
+                          and a single truncated line rarely gets there. */}
+                      <p
+                        title={conversation?.lastMessageText || undefined}
+                        className={cn(
+                          "line-clamp-2 text-sm",
+                          unread > 0 ? "font-semibold text-foreground" : "text-muted-foreground"
+                        )}
+                      >
                         {lastMessageText}
                       </p>
-                      {/* A dot rather than a count: the badge answers "is there
-                          something new here", which is all this row needs. */}
-                      {unread && (
+                      {unread > 0 && (
                         <span
-                          aria-label={t("unreadMessage")}
-                          className="h-2.5 w-2.5 shrink-0 rounded-full bg-primary"
-                        />
+                          aria-label={t("unreadMessages", { count: unread })}
+                          className="mt-0.5 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold leading-none text-primary-foreground"
+                        >
+                          {unread > 99 ? "99+" : unread}
+                        </span>
                       )}
                     </div>
                   </div>

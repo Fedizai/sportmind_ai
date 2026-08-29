@@ -17,6 +17,8 @@ export interface AppUser {
   role: UserRole;
   plan?: UserPlan;
   photoUrl?: string | null;
+  /** Heartbeat written while the app is open — drives the online dot. */
+  lastSeenAt?: { seconds: number } | null;
   onboardingComplete?: boolean;
   sports?: string[];
   age?: number;
@@ -62,6 +64,7 @@ export function useAllUsers() {
             role: data.role || 'player',
             plan: data.plan || 'athlete',
             photoUrl: data.photoUrl || null,
+            lastSeenAt: data.lastSeenAt || null,
             // Map all other available data, providing defaults where necessary
             onboardingComplete: data.onboardingComplete || false,
             sports: data.sports || [],

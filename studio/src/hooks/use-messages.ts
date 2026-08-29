@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, increment, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from './use-toast';
 
@@ -74,6 +74,14 @@ export function useMessages(userId1: string | undefined, userId2: string | undef
         lastMessageText: text,
         lastMessageTimestamp: serverTimestamp(),
         lastMessageSenderId: userId1,
+        // A counter held on the conversation, incremented for the recipient
+        // and cleared for the sender. Counting unread messages by querying the
+        // subcollection instead would mean one extra query per conversation
+        // every time the list renders.
+        unreadBy: {
+          ...(userId2 ? { [userId2]: increment(1) } : {}),
+          [userId1]: 0,
+        },
       }, { merge: true });
 
       const messagesCollectionRef = collection(db, "conversations", conversationId, "messages");
@@ -109,6 +117,7 @@ export function useMessages(userId1: string | undefined, userId2: string | undef
         {
           participants: [userId1, userId2],
           lastReadBy: { [userId1]: serverTimestamp() },
+          unreadBy: { [userId1]: 0 },
         },
         { merge: true }
       );

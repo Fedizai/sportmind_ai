@@ -14,6 +14,8 @@ export interface Conversation {
   lastMessageSenderId: string;
   /** When each participant last opened this thread, keyed by uid. */
   lastReadBy?: Record<string, Timestamp | null>;
+  /** Messages waiting for each participant, keyed by uid. */
+  unreadBy?: Record<string, number>;
 }
 
 export function useConversations(userId: string | undefined) {
@@ -62,25 +64,39 @@ export function useConversations(userId: string | undefined) {
   }, [userId]);
 
   /**
-   * Has someone written here since you last opened it?
+   * How many messages are waiting for you in this thread.
    *
-   * A pending timestamp means the write is still your own, in flight, so it is
-   * never unread. Your own messages are never unread either.
+   * Reads the counter the sender maintains. Conversations that predate that
+   * counter have none, so they fall back to the timestamp comparison and
+   * report 1 — enough to show the thread as unread without inventing a count.
    */
-  const isUnread = (conversation: Conversation) => {
-    if (!userId) return false;
+  const unreadIn = (conversation: Conversation) => {
+    if (!userId) return 0;
+    const counted = conversation.unreadBy?.[userId];
+    if (typeof counted === 'number') return Math.max(0, counted);
+
     const last = conversation.lastMessageTimestamp;
-    if (!last) return false;
-    if (conversation.lastMessageSenderId === userId) return false;
+    // A pending timestamp means the write is still your own, in flight.
+    if (!last) return 0;
+    if (conversation.lastMessageSenderId === userId) return 0;
     const read = conversation.lastReadBy?.[userId];
-    return !read || read.seconds < last.seconds;
+    return !read || read.seconds < last.seconds ? 1 : 0;
   };
+
+  const isUnread = (conversation: Conversation) => unreadIn(conversation) > 0;
 
   /** Conversation with this person, if one has been started. */
   const conversationWith = (otherUid: string) =>
     conversations.find((c) => c.participants.includes(otherUid));
 
-  const unreadCount = conversations.filter(isUnread).length;
+  /** Threads with something waiting — what the nav badge counts. */
+  const unreadConversations = conversations.filter(isUnread).length;
+  /** Every waiting message across every thread. */
+  const unreadCount = conversations.reduce((sum, c) => sum + unreadIn(c), 0);
 
-  return { conversations, isLoading, error, isUnread, conversationWith, unreadCount };
+  return {
+    conversations, isLoading, error,
+    isUnread, unreadIn, conversationWith,
+    unreadCount, unreadConversations,
+  };
 }
