@@ -23,7 +23,12 @@ export interface StreakTier {
   /** Inclusive lower bound, in consecutive days. */
   minDays: number;
   name: Bi;
-  /** Tailwind classes — kept as literals so the JIT compiler can see them. */
+  /**
+   * Tailwind classes, written as whole literals so the JIT compiler can see
+   * them. That is necessary but not sufficient: this file also has to be
+   * inside tailwind.config's `content` globs, which for a long time covered
+   * only app/components/pages.
+   */
   text: string;
   bg: string;
   ring: string;
@@ -59,7 +64,9 @@ export const STREAK_TIERS: StreakTier[] = [
     // Day 3: it catches. This is where the heat scale starts.
     id: 'ember', minDays: 3,
     name: { en: 'Ember', fr: 'Braise' },
-    text: 'text-amber-500', bg: 'bg-amber-400/15', ring: 'ring-amber-400/35', hex: '#f59e0b',
+    // amber-600, not 500: at 2.15:1 on a white card the 500 failed even the
+    // 3:1 bar for large text, and this class now carries a 5xl streak count.
+    text: 'text-amber-600', bg: 'bg-amber-400/15', ring: 'ring-amber-400/35', hex: '#f59e0b',
     gradient: ['#d97706', '#fcd34d'],
     freezes: 1,
     perks: [{ en: '1 streak freeze', fr: '1 gel de série' }],

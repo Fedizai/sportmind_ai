@@ -22,8 +22,12 @@ export function StreakBadgeRail({ current }: { current: number }) {
   const reduceMotion = useReducedMotion();
   const activeTier = tierForStreak(current);
 
-  // 'none' is the absence of a streak, not something to display as a badge.
-  const tiers = STREAK_TIERS.filter((tier) => tier.id !== 'none');
+  // The ladder starts at the first badge worth earning, three days in.
+  // 'none' is the absence of a streak, and 'spark' is days 1-2 — the streak
+  // has started but has not caught yet, which is a state rather than a badge.
+  const tiers = STREAK_TIERS.filter(
+    (tier) => tier.id !== 'none' && tier.id !== 'spark'
+  );
 
   return (
     <div className="space-y-3">

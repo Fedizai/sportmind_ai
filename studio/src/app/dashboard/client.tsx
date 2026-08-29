@@ -64,6 +64,9 @@ import FitnessAssistantChat from "../dashboard/fitness-assistant/page";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FootballInsightCard } from '@/components/insights/football-insight-card';
 import { useStreakStore } from '@/stores/streak-store';
+import { tierForStreak, nextTier, daysToNextTier } from '@/lib/streak-tiers';
+import { StreakFlame } from '@/components/streak-flame';
+import { pick } from '@/lib/bilingual';
 import { UpgradeProModal } from '@/components/upgrade-pro-modal';
 import { useTranslation } from "@/hooks/use-translation";
 import { TranslationKey } from "@/lib/i18n";
@@ -200,8 +203,9 @@ const motivationalMessages: TranslationKey[] = [
 
 const StreakCard = () => {
     const { current: streak } = useStreakStore();
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
     const router = useRouter();
+    const reduceMotion = useReducedMotion();
     const [message, setMessage] = useState(t('streakMessage1'));
 
     useEffect(() => {
@@ -209,8 +213,16 @@ const StreakCard = () => {
         setMessage(t(randomKey));
     }, [streak, t]);
 
-    // Opens the streak page. This card used to be inert — a big number with
-    // no way through to the tiers, perks or recovery behind it.
+    // Everything here follows the tier rather than the brand colour: the card
+    // used to show the same blue flame at day 1 and at day 300, so it said
+    // nothing about how far the athlete had come. It also opens the streak
+    // page — it was a big number with no way through to the tiers, perks or
+    // recovery behind it.
+    const tier = tierForStreak(streak);
+    const next = nextTier(streak);
+    const toGo = daysToNextTier(streak);
+    const hasStreak = streak > 0;
+
     return (
         <motion.div
             variants={itemVariants}
@@ -225,30 +237,53 @@ const StreakCard = () => {
                 }
             }}
         >
-            <Card className="h-full flex flex-col items-center justify-center text-center bg-gradient-to-br from-primary/10 to-transparent cursor-pointer transition-shadow hover:shadow-float">
+            <Card
+                className="h-full flex flex-col items-center justify-center text-center cursor-pointer transition-shadow hover:shadow-float"
+                style={hasStreak ? { background: `linear-gradient(to bottom right, ${tier.gradient[1]}22, transparent)` } : undefined}
+            >
                 <CardContent className="p-6">
                     <motion.div
-                        animate={{
-                            scale: streak > 0 ? [1, 1.2, 1] : 1,
-                            filter: streak > 0 ? ['drop-shadow(0 0 0px hsl(var(--primary)))', 'drop-shadow(0 0 10px hsl(var(--primary)))', 'drop-shadow(0 0 0px hsl(var(--primary)))'] : 'none',
-                        }}
-                        transition={{
-                            duration: 1.5,
-                            repeat: streak > 0 ? Infinity : 0,
-                            ease: "easeInOut"
-                        }}
+                        className="flex justify-center"
+                        animate={
+                            reduceMotion || !hasStreak
+                                ? {}
+                                : {
+                                    scale: [1, 1.08, 1],
+                                    filter: [
+                                        `drop-shadow(0 0 0px ${tier.hex}00)`,
+                                        `drop-shadow(0 0 12px ${tier.hex}cc)`,
+                                        `drop-shadow(0 0 0px ${tier.hex}00)`,
+                                    ],
+                                }
+                        }
+                        transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
                     >
-                        <Flame className="h-16 w-16 text-primary" />
+                        <StreakFlame tier={tier} locked={!hasStreak} className="h-16 w-16" />
                     </motion.div>
-                    <p className="text-5xl font-bold mt-2">{streak}</p>
+
+                    <p className={cn("text-5xl font-bold mt-2 tabular-nums", hasStreak ? tier.text : "text-muted-foreground")}>
+                        {streak}
+                    </p>
                     <p className="text-muted-foreground mt-1 font-semibold">{t('dayStreak')}</p>
-                    <p className="text-xs text-muted-foreground mt-2">{streak > 0 ? message : t('startStreakPrompt')}</p>
+
+                    {hasStreak && (
+                        <span className={cn('mt-3 inline-block rounded-md px-2.5 py-1 text-xs font-bold ring-1', tier.bg, tier.text, tier.ring)}>
+                            {pick(tier.name, language)}
+                        </span>
+                    )}
+
+                    <p className="text-xs text-muted-foreground mt-3">
+                        {hasStreak
+                            ? (next
+                                ? `${t('streakNextTier')}: ${pick(next.name, language)} — ${t('streakDaysToGo', { days: toGo ?? 0 })}`
+                                : message)
+                            : t('startStreakPrompt')}
+                    </p>
                 </CardContent>
             </Card>
         </motion.div>
     )
 }
-
 /**
  * Macro ring geometry.
  *

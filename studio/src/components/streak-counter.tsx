@@ -37,7 +37,10 @@ export function StreakCounter() {
       title={`${pick(tier.name, language)} — ${current}`}
     >
       <StreakFlame tier={tier} locked={!activeToday} className="h-5 w-5" />
-      <span className={cn('text-sm font-bold tabular-nums', activeToday ? tier.text : 'text-muted-foreground')}>
+      {/* The count stays on the foreground colour: at 14px bold it needs 4.5:1,
+          which the warmer tier hues do not reach on a light header. The flame
+          beside it carries the tier's colour instead. */}
+      <span className={cn('text-sm font-bold tabular-nums', activeToday ? 'text-foreground' : 'text-muted-foreground')}>
         {current}
       </span>
     </Link>

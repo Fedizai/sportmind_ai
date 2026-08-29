@@ -6,6 +6,12 @@ export default {
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    // src/lib holds data tables that carry Tailwind classes as literals — the
+    // streak tier ladder among them. Without this glob the JIT compiler never
+    // sees those classes and silently emits nothing for them, so a tier's
+    // colour fell back to the inherited foreground unless some component
+    // happened to use the very same class.
+    './src/lib/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     container: {
