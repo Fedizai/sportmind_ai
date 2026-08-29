@@ -115,6 +115,62 @@ export const exercises = [
     { id: 'ex79', name: 'Face Pulls', bodyPartId: 'traps', equipment: 'Cable', gifUrl: '/exercises/ex79.svg' },
     { id: 'ex80', name: 'Rack Pulls', bodyPartId: 'traps', equipment: 'Barbell', gifUrl: '/exercises/ex80.svg' },
     { id: 'ex81', name: 'Farmer’s Carry', bodyPartId: 'traps', equipment: 'Dumbbell or Trap Bar', gifUrl: '/exercises/ex81.svg' },
-    { id: 'ex82', name: 'Barbell High Pull', bodyPartId: 'traps', equipment: 'Barbell', gifUrl: '/exercises/ex82.svg' }
+    { id: 'ex82', name: 'Barbell High Pull', bodyPartId: 'traps', equipment: 'Barbell', gifUrl: '/exercises/ex82.svg' },
+
+    // ---------------------------------------------------------------------
+    // Real photographic demonstrations, from the exerciseDB sample dataset.
+    // Everything above is a generated stick-figure SVG (scripts/gen-exercise-
+    // images.mjs); these 30 are actual GIFs, hosted in Firebase Storage —
+    // see scripts/upload-exercise-gifs.mjs. Ids are prefixed 'edb-' so they
+    // never collide with the ex1..ex82 placeholder ids above.
+    // ---------------------------------------------------------------------
+
+    // -- chest (exerciseDB demo GIFs) --
+    { id: 'edb-3TZduzM', name: 'Barbell Incline Bench Press', bodyPartId: 'chest', equipment: 'Barbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F3TZduzM.gif?alt=media&token=c31bd612-5e07-422e-b5b2-4af90d914bb7' },
+    { id: 'edb-5v7KYld', name: 'Smith Incline Bench Press', bodyPartId: 'chest', equipment: 'Machine', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F5v7KYld.gif?alt=media&token=5f8f8374-eeb7-4e50-823c-920f3f945ec3' },
+    { id: 'edb-7saC5zz', name: 'Cable Decline Fly', bodyPartId: 'chest', equipment: 'Cable', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F7saC5zz.gif?alt=media&token=6a604396-1d1c-48af-bdf3-9758068184da' },
+
+    // -- shoulders (exerciseDB demo GIFs) --
+    { id: 'edb-3eGE2JC', name: 'Dumbbell Front Raise', bodyPartId: 'shoulders', equipment: 'Dumbbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F3eGE2JC.gif?alt=media&token=047cb8f4-2e64-40c9-a5f8-52eb490a97b9' },
+    { id: 'edb-6cKQC5E', name: 'Dumbbell One Arm Upright Row', bodyPartId: 'shoulders', equipment: 'Dumbbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F6cKQC5E.gif?alt=media&token=b0f81533-fe9f-465e-b639-226c0e05f9f6' },
+
+    // -- biceps (exerciseDB demo GIFs) --
+    { id: 'edb-3XFdb1Z', name: 'Cable Squatting Curl', bodyPartId: 'biceps', equipment: 'Cable', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F3XFdb1Z.gif?alt=media&token=c5fcdbea-1b50-4e47-9ca5-c2c645941080' },
+    { id: 'edb-4dF3maG', name: 'Dumbbell One Arm Hammer Preacher Curl', bodyPartId: 'biceps', equipment: 'Dumbbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F4dF3maG.gif?alt=media&token=e423783c-2670-43f5-9a7b-30656e25e976' },
+    { id: 'edb-4dUn2iv', name: 'Barbell Standing Close Grip Curl', bodyPartId: 'biceps', equipment: 'Barbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F4dUn2iv.gif?alt=media&token=b43d73d1-8126-411a-ade8-1242f3f0b253' },
+    { id: 'edb-6sMAmNv', name: 'Dumbbell Reverse Spider Curl', bodyPartId: 'biceps', equipment: 'Dumbbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F6sMAmNv.gif?alt=media&token=2f1a59fd-cd7d-4532-aeac-8506ae3f53b3' },
+    { id: 'edb-7inpWch', name: 'Dumbbell Standing Concentration Curl', bodyPartId: 'biceps', equipment: 'Dumbbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F7inpWch.gif?alt=media&token=b0df9259-0d9d-45d3-9a9c-72f798acaeef' },
+    { id: 'edb-8oYqOt9', name: 'Cable Seated Curl', bodyPartId: 'biceps', equipment: 'Cable', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F8oYqOt9.gif?alt=media&token=900bfbda-8620-4465-945d-8cc3333c092b' },
+
+    // -- back (exerciseDB demo GIFs) --
+    { id: 'edb-7F1DVzn', name: 'Lever Front Pulldown', bodyPartId: 'back', equipment: 'Machine', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F7F1DVzn.gif?alt=media&token=0aff4b54-da55-47b0-8e3d-07c82e455b92' },
+    { id: 'edb-7I6LNUG', name: 'Lever Seated Row', bodyPartId: 'back', equipment: 'Machine', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F7I6LNUG.gif?alt=media&token=a4117132-91e2-44b1-b647-25dfd8cdab85' },
+    { id: 'edb-8urJS9b', name: 'Weighted Hyperextension (on Stability Ball)', bodyPartId: 'back', equipment: 'Weight Plate', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F8urJS9b.gif?alt=media&token=1c6ca9d4-c534-48fc-8cb1-6723f573d326' },
+
+    // -- triceps (exerciseDB demo GIFs) --
+    { id: 'edb-05Cf2v8', name: 'Impossible Dips', bodyPartId: 'triceps', equipment: 'Bodyweight', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F05Cf2v8.gif?alt=media&token=a270e413-e99c-40ae-8827-84e48faaabae' },
+    { id: 'edb-5uFK1xr', name: 'Barbell Seated Overhead Triceps Extension', bodyPartId: 'triceps', equipment: 'Barbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F5uFK1xr.gif?alt=media&token=a8f6715e-16eb-44e8-a466-671079fb1109' },
+    { id: 'edb-6MfS53i', name: 'Dumbbell Lying Single Extension', bodyPartId: 'triceps', equipment: 'Dumbbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F6MfS53i.gif?alt=media&token=3d21a050-4741-4bb8-bd75-22f0be7b0db5' },
+    { id: 'edb-8eqjhOl', name: 'Dumbbell Palms in Incline Bench Press', bodyPartId: 'triceps', equipment: 'Dumbbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F8eqjhOl.gif?alt=media&token=39804ebd-8994-407b-bf68-8fd363580dd4' },
+
+    // -- abs (exerciseDB demo GIFs) --
+    { id: 'edb-6bOA1Oi', name: 'Weighted Side Bend (on Stability Ball)', bodyPartId: 'abs', equipment: 'Weight Plate', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F6bOA1Oi.gif?alt=media&token=32511175-b8a3-49c7-a094-1cd3e4d6b20f' },
+    { id: 'edb-8K0w2yA', name: 'Assisted Hanging Knee Raise With Throw Down', bodyPartId: 'abs', equipment: 'Assisted Machine', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F8K0w2yA.gif?alt=media&token=f18a9ddf-b50f-4f96-8ba9-b19422800e8f' },
+    { id: 'edb-8xUv4J7', name: 'Cable Seated Crunch', bodyPartId: 'abs', equipment: 'Cable', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F8xUv4J7.gif?alt=media&token=793de681-39ff-473f-b691-b2650bba464e' },
+
+    // -- forearms (exerciseDB demo GIFs) --
+    { id: 'edb-3tAXPQ6', name: 'Dumbbell Over Bench Revers Wrist Curl', bodyPartId: 'forearms', equipment: 'Dumbbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F3tAXPQ6.gif?alt=media&token=3691c2d9-2aa8-4af6-b04e-9603fb938798' },
+    { id: 'edb-6kSxYnw', name: 'Barbell Wrist Curl v. 2', bodyPartId: 'forearms', equipment: 'Barbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F6kSxYnw.gif?alt=media&token=9350c5d5-60b7-4147-a597-f3835a3cdafe' },
+
+    // -- glutes (exerciseDB demo GIFs) --
+    { id: 'edb-2Qh2J1e', name: 'Sled 45° Leg Press (side pov)', bodyPartId: 'glutes', equipment: 'Machine', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F2Qh2J1e.gif?alt=media&token=7f5ba84a-2c53-43fd-9ee9-0d951b28a054' },
+    { id: 'edb-5bpPTHv', name: 'Kettlebell Pistol Squat', bodyPartId: 'glutes', equipment: 'Kettlebell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F5bpPTHv.gif?alt=media&token=95cfb4ac-989c-4817-bc00-d45abdd976b6' },
+    { id: 'edb-6sYyrRX', name: 'Bent Knee Lying Twist (male)', bodyPartId: 'glutes', equipment: 'Bodyweight', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F6sYyrRX.gif?alt=media&token=b5400bb7-318d-49ca-a792-a52cbae93d7b' },
+    { id: 'edb-7zdxRTl', name: 'Smith Leg Press', bodyPartId: 'glutes', equipment: 'Machine', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F7zdxRTl.gif?alt=media&token=f1552806-c578-4573-9d74-21f8ab7fcd5d' },
+
+    // -- hamstrings (exerciseDB demo GIFs) --
+    { id: 'edb-2ORFMoR', name: 'Hack Calf Raise', bodyPartId: 'hamstrings', equipment: 'Machine', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F2ORFMoR.gif?alt=media&token=97324e20-c740-421d-ac5f-62f5b72b1597' },
+    { id: 'edb-6HiHHe0', name: 'Barbell Standing Rocking Leg Calf Raise', bodyPartId: 'hamstrings', equipment: 'Barbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F6HiHHe0.gif?alt=media&token=a945b81e-0d32-4e5f-9cef-690861dbaf13' },
+    { id: 'edb-8ozhUIZ', name: 'Barbell Standing Calf Raise', bodyPartId: 'hamstrings', equipment: 'Barbell', gifUrl: 'https://firebasestorage.googleapis.com/v0/b/sportmind-ai-lo721.firebasestorage.app/o/exerciseMedia%2F8ozhUIZ.gif?alt=media&token=0fcbf745-015c-4d07-894e-0efbe10f05db' },
   ];
   
