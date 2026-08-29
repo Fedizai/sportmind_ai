@@ -25,7 +25,7 @@ import { useTheme } from "next-themes";
 import { useTranslation } from "@/hooks/use-translation";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { doc, updateDoc } from "firebase/firestore";
-import { updateProfile } from "firebase/auth";
+import { getAuth, updateProfile } from "firebase/auth";
 import { auth, db, storage } from "@/lib/firebase";
 
 const settingsSchema = z.object({
@@ -42,7 +42,7 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 export default function SettingsPage() {
     const { toast } = useToast();
     const router = useRouter();
-    const { user, isLoading: isUserLoading } = useUser();
+    const { user, isLoading: isUserLoading , logout } = useUser();
     const { setTheme } = useTheme();
     const { t } = useTranslation();
 
@@ -122,6 +122,8 @@ export default function SettingsPage() {
     const photoInputRef = useRef<HTMLInputElement>(null);
     const importInputRef = useRef<HTMLInputElement>(null);
     const [isImporting, setIsImporting] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -153,10 +155,21 @@ export default function SettingsPage() {
         }
     };
 
+    /**
+     * The server actions take an ID token, not a uid. A uid in the request body
+     * is whatever the caller types; the token is proof of who they are, and the
+     * server uses the uid inside it.
+     */
+    const idToken = async () => {
+        const current = getAuth().currentUser;
+        if (!current) throw new Error(t('notSignedIn'));
+        return current.getIdToken();
+    };
+
     const handleExportData = async () => {
         if (!user) return;
         try {
-            const result = await exportUserData(user.uid);
+            const result = await exportUserData(await idToken());
             if (result.success && result.data) {
                 const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -186,7 +199,7 @@ export default function SettingsPage() {
         try {
             const text = await file.text();
             const parsed = JSON.parse(text);
-            const result = await importUserData(user.uid, parsed);
+            const result = await importUserData(await idToken(), parsed);
             toast({
                 title: result.success ? t('genericSuccess') : t('genericError'),
                 description: result.message,
@@ -354,7 +367,7 @@ export default function SettingsPage() {
                                     <Label className="text-destructive">{t('deleteAccountLabel')}</Label>
                                     <p className="text-xs text-muted-foreground mt-0.5">{t('deleteAccountDescription')}</p>
                                 </div>
-                                 <AlertDialog>
+                                 <AlertDialog onOpenChange={(open) => !open && setDeleteConfirm('')}>
                                     <AlertDialogTrigger asChild>
                                         <Button type="button" variant="destructive" size="sm" className="shrink-0">{t('deleteAccountLabel')}</Button>
                                     </AlertDialogTrigger>
@@ -363,10 +376,46 @@ export default function SettingsPage() {
                                             <AlertDialogTitle>{t('areYouSure')}</AlertDialogTitle>
                                             <AlertDialogDescription>{t('deleteAccountConfirm')}</AlertDialogDescription>
                                         </AlertDialogHeader>
+                                        {/* Deletion is irreversible and now actually happens, so it
+                                            asks for the word to be typed rather than one stray click
+                                            on a confirm button. */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="delete-confirm">
+                                                {t('deleteAccountTypeToConfirm', { word: t('deleteAccountKeyword') })}
+                                            </Label>
+                                            <Input
+                                                id="delete-confirm"
+                                                value={deleteConfirm}
+                                                onChange={(e) => setDeleteConfirm(e.target.value)}
+                                                autoComplete="off"
+                                                placeholder={t('deleteAccountKeyword')}
+                                            />
+                                        </div>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleActionClick(() => deleteUserAccount(user!.uid))}>
-                                                {t('continueLabel')}
+                                            <AlertDialogAction
+                                                disabled={deleteConfirm.trim().toUpperCase() !== t('deleteAccountKeyword') || isDeleting}
+                                                onClick={async (e) => {
+                                                    e.preventDefault();
+                                                    setIsDeleting(true);
+                                                    try {
+                                                        const result = await deleteUserAccount(await idToken());
+                                                        toast({
+                                                            title: result.success ? t('genericSuccess') : t('genericError'),
+                                                            description: result.message,
+                                                            variant: result.success ? 'default' : 'destructive',
+                                                        });
+                                                        // The account is gone; there is nothing left to sign in to.
+                                                        if (result.success) { await logout(); }
+                                                    } catch (err: any) {
+                                                        toast({ title: t('genericError'), description: err?.message || t('unexpectedError'), variant: 'destructive' });
+                                                    } finally {
+                                                        setIsDeleting(false);
+                                                    }
+                                                }}
+                                            >
+                                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                                {t('deleteAccountLabel')}
                                             </AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
