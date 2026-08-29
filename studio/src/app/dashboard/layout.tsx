@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useStreakStore } from '@/stores/streak-store';
+import { useConversations } from '@/hooks/use-conversations';
 
 
 import { UserProvider, useUser } from "@/hooks/use-user";
@@ -116,6 +117,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const [isNavVisible, setIsNavVisible] = useState(true);
   const lastScrollY = useRef(0);
   const calculateStreak = useStreakStore((s) => s.calculateStreak);
+  const { unreadCount } = useConversations(user?.uid);
   const { t } = useTranslation();
 
   const isDashboardRoot = ['/dashboard', '/dashboard/insights', '/dashboard/messages'].includes(pathname);
@@ -354,10 +356,19 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   className="flex flex-col items-center justify-center gap-[3px] h-[62px] w-full"
                 >
-                  <item.icon className={cn(
-                    "h-5 w-5 transition-colors duration-200",
-                    isActive ? "text-primary dark:text-white" : "text-foreground/35 dark:text-white/35"
-                  )} />
+                  <span className="relative">
+                    <item.icon className={cn(
+                      "h-5 w-5 transition-colors duration-200",
+                      isActive ? "text-primary dark:text-white" : "text-foreground/35 dark:text-white/35"
+                    )} />
+                    {/* Unread messages have to be visible from every page, not
+                        only once you are already inside the messages screen. */}
+                    {item.href === "/dashboard/messages" && unreadCount > 0 && (
+                      <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-primary-foreground">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </span>
                   <span className={cn(
                     "text-[9px] leading-none font-medium tracking-wide transition-colors duration-200",
                     isActive ? "text-foreground dark:text-white/90" : "text-foreground/30 dark:text-white/30"

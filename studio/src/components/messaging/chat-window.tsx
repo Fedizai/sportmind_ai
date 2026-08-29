@@ -35,9 +35,16 @@ const initials = (name?: string | null) =>
 
 export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) {
   const [inputMessage, setInputMessage] = React.useState("");
-  const { messages, isLoading, sendMessage } = useMessages(currentUser.uid, otherUser.uid);
+  const { messages, isLoading, sendMessage, markAsRead } = useMessages(currentUser.uid, otherUser.uid);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
+
+  // Opening the thread, and every message that lands while it is open, clears
+  // the unread badge for this side of the conversation.
+  useEffect(() => {
+    if (messages.length > 0) markAsRead();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length, currentUser.uid, otherUser.uid]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {

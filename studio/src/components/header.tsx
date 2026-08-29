@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { StreakCounter } from "./streak-counter";
+import { MessagesBell } from "./messages-bell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -77,6 +78,7 @@ export function Header() {
                 <span className="font-bold text-lg whitespace-nowrap">SportMind AI</span>
             </Link>
             <StreakCounter />
+            <MessagesBell />
              <div className="hidden md:flex items-center gap-2">
                 {(user?.role === 'admin' || user?.role === 'coach') && (
                     <Button variant="outline" size="sm" asChild>

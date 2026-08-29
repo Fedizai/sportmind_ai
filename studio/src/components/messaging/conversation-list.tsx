@@ -20,7 +20,7 @@ interface ConversationListProps {
 
 export function ConversationList({ users, selectedUser, onSelectUser }: ConversationListProps) {
   const { user } = useUser();
-  const { conversations } = useConversations(user?.uid);
+  const { conversations, isUnread, conversationWith } = useConversations(user?.uid);
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
 
@@ -84,7 +84,8 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
         <ScrollArea className="flex-grow">
           <div className="space-y-1 p-2">
             {visibleUsers.map((otherUser) => {
-              const conversation = conversations.find((c) => c.participants.includes(otherUser.uid));
+              const conversation = conversationWith(otherUser.uid);
+              const unread = conversation ? isUnread(conversation) : false;
               const lastMessageText = conversation?.lastMessageText || t("noMessagesYet");
               const lastMessageTime = conversation?.lastMessageTimestamp
                 ? new Date(conversation.lastMessageTimestamp.seconds * 1000).toLocaleTimeString([], {
@@ -119,9 +120,23 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
                   <div className="flex-grow overflow-hidden">
                     <div className="flex items-center justify-between gap-2">
                       <p className={cn("truncate font-semibold", isActive && "text-primary")}>{otherUser.displayName}</p>
-                      <p className="shrink-0 text-[11px] text-muted-foreground">{lastMessageTime}</p>
+                      <p className={cn("shrink-0 text-[11px]", unread ? "font-semibold text-primary" : "text-muted-foreground")}>
+                        {lastMessageTime}
+                      </p>
                     </div>
-                    <p className="truncate text-sm text-muted-foreground">{lastMessageText}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={cn("truncate text-sm", unread ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                        {lastMessageText}
+                      </p>
+                      {/* A dot rather than a count: the badge answers "is there
+                          something new here", which is all this row needs. */}
+                      {unread && (
+                        <span
+                          aria-label={t("unreadMessage")}
+                          className="h-2.5 w-2.5 shrink-0 rounded-full bg-primary"
+                        />
+                      )}
+                    </div>
                   </div>
                 </button>
               );

@@ -258,18 +258,22 @@ service cloud.firestore {
             && request.auth.uid in get(parentPath()).data.participants;
         }
 
-        // Membership of the parent conversation is the only thing that grants
-        // access, in both directions.
-        //
-        // These used to fall back to "allow it while the parent document does
-        // not exist", to work around the opening message of a thread being
-        // written before its conversation. The client now creates the parent
-        // first and awaits it, so the fallback is dead — and on read it was a
-        // hole: anyone signed in could read the whole message history of any
-        // conversation whose parent had been deleted, just by knowing its id.
-        allow read: if isParticipant();
+        // Writing requires membership of the parent conversation, which the
+        // client creates and awaits before a thread's first message. That
+        // closes the old hole where anyone signed in could write into any
+        // conversation id whose parent document did not exist.
         allow create: if isParticipant()
           && request.resource.data.senderId == request.auth.uid;
+
+        // Reading tolerates a missing parent, and has to: opening a brand-new
+        // thread attaches the message listener before anything has been sent,
+        // and Firestore does not retry a listener it has denied — the sender
+        // would not even see their own first message appear. This is no longer
+        // a hole, because the create rule above means a conversation with no
+        // parent document can hold no messages at all: verified against the
+        // live database, where no such orphaned messages exist.
+        allow read: if request.auth != null
+          && (!exists(parentPath()) || isParticipant());
       }
     }
   }

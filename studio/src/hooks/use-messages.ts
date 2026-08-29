@@ -93,5 +93,30 @@ export function useMessages(userId1: string | undefined, userId2: string | undef
     }
   };
 
-  return { messages, isLoading, error, sendMessage };
+  /**
+   * Record that this thread has been opened, so it stops counting as unread.
+   *
+   * Only written once a message exists: the conversation document is created
+   * by the first send, and a merge that carried only `lastReadBy` would fail
+   * the create rule, which requires the writer to be listed in `participants`.
+   * Sending those along keeps the write valid either way.
+   */
+  const markAsRead = async () => {
+    if (!conversationId || !userId1 || !userId2 || messages.length === 0) return;
+    try {
+      await setDoc(
+        doc(db, 'conversations', conversationId),
+        {
+          participants: [userId1, userId2],
+          lastReadBy: { [userId1]: serverTimestamp() },
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      // Never surfaced: failing to clear a badge must not interrupt reading.
+      console.error('Could not mark the conversation as read:', err);
+    }
+  };
+
+  return { messages, isLoading, error, sendMessage, markAsRead };
 }

@@ -12,6 +12,8 @@ export interface Conversation {
   /** Null while a just-sent message's serverTimestamp is still pending. */
   lastMessageTimestamp: Timestamp | null;
   lastMessageSenderId: string;
+  /** When each participant last opened this thread, keyed by uid. */
+  lastReadBy?: Record<string, Timestamp | null>;
 }
 
 export function useConversations(userId: string | undefined) {
@@ -59,5 +61,26 @@ export function useConversations(userId: string | undefined) {
     return () => unsubscribe();
   }, [userId]);
 
-  return { conversations, isLoading, error };
+  /**
+   * Has someone written here since you last opened it?
+   *
+   * A pending timestamp means the write is still your own, in flight, so it is
+   * never unread. Your own messages are never unread either.
+   */
+  const isUnread = (conversation: Conversation) => {
+    if (!userId) return false;
+    const last = conversation.lastMessageTimestamp;
+    if (!last) return false;
+    if (conversation.lastMessageSenderId === userId) return false;
+    const read = conversation.lastReadBy?.[userId];
+    return !read || read.seconds < last.seconds;
+  };
+
+  /** Conversation with this person, if one has been started. */
+  const conversationWith = (otherUid: string) =>
+    conversations.find((c) => c.participants.includes(otherUid));
+
+  const unreadCount = conversations.filter(isUnread).length;
+
+  return { conversations, isLoading, error, isUnread, conversationWith, unreadCount };
 }
