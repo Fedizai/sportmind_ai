@@ -41,6 +41,12 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
   ];
 
   const isAdminPage = pathname === '/admin';
+
+  // Each coach section is titled here, once, beside the navigation.
+  const heading =
+    pathname.startsWith('/coach/sports') ? { title: t('sports'), subtitle: t('coachSportsDescription') }
+    : pathname.startsWith('/coach/chat') ? { title: t('messages'), subtitle: t('communicationDescription') }
+    : { title: t('coachDashboard'), subtitle: t('coachDashboardDescription') };
   const tabsContainerRef = useRef<HTMLElement>(null);
   const tabsRef = useRef<(HTMLAnchorElement | null)[]>([]);
   const [isNavVisible, setIsNavVisible] = useState(true);
@@ -216,8 +222,16 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
       <Header />
 
       <main className="flex flex-1 flex-col p-4 md:p-8 pb-20 md:pb-8 overflow-hidden h-full">
+        {/* Title on the left, navigation on the right, one row. The pill used
+            to sit alone above the content, which left a wide empty band beside
+            it and pushed each page's own title underneath. */}
         {!isAdminPage && (
-          <div className="hidden md:flex justify-center md:justify-end mb-6 flex-shrink-0">
+          <div className="mb-6 flex flex-shrink-0 flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="min-w-0">
+              <h1 className="font-headline text-2xl font-bold tracking-tight sm:text-3xl">{heading.title}</h1>
+              <p className="text-muted-foreground">{heading.subtitle}</p>
+            </div>
+            <div className="hidden md:flex justify-end">
             <nav
               ref={tabsContainerRef}
               className="relative inline-flex items-center rounded-lg p-1.5 ring-1 ring-white/[0.08] bg-white/[0.04] dark:bg-white/[0.03] backdrop-blur-xl shadow-card"
@@ -238,7 +252,7 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
                       }}
                       aria-selected={isActive}
                       className={cn(
-                        "relative z-10 flex-1 flex items-center justify-center px-6 py-2 transition-colors",
+                        "relative z-10 flex-1 flex items-center justify-center whitespace-nowrap px-4 py-2 text-sm transition-colors",
                         isActive ? "font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"
                       )}
                     >
@@ -248,6 +262,7 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
                 )
               })}
             </nav>
+            </div>
           </div>
         )}
         <PageTransition>{children}</PageTransition>

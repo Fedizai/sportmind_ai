@@ -236,14 +236,6 @@ export default function CoachDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight font-headline flex items-center gap-3">
-          <Home className="h-8 w-8 text-primary" />
-          {t("coachDashboard")}
-        </h1>
-        <p className="text-muted-foreground">{t("coachDashboardDescription")}</p>
-      </div>
-
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard icon={<Users className="h-5 w-5" />} label={t("totalPlayers")} value={players.length} />
         <KpiCard
