@@ -8,14 +8,15 @@ import type { Bi } from '@/lib/bilingual';
  * Higher tiers are harder to reach, so they also grant more ways back from a
  * missed day — that is what makes a long streak feel worth protecting.
  *
- * The colours run as one continuous heat scale — gold, orange, red, pink,
- * magenta, violet — so the badge row reads as a temperature climbing. An
- * earlier ramp jumped from violet to cyan to yellow, which looked like seven
- * unrelated colours rather than one thing getting hotter.
+ * The first two days are blue: the streak has started but has not caught yet.
+ * From day three it ignites and runs as one continuous heat scale — amber,
+ * orange, red, pink, magenta, violet, indigo — so the badge row reads as a
+ * temperature climbing rather than as eight unrelated colours.
  */
 
 export type StreakTierId =
-  | 'none' | 'spark' | 'ember' | 'blaze' | 'inferno' | 'molten' | 'diamond' | 'legend';
+  | 'none' | 'spark' | 'ember' | 'blaze' | 'inferno'
+  | 'molten' | 'diamond' | 'legend' | 'eternal';
 
 export interface StreakTier {
   id: StreakTierId;
@@ -46,18 +47,20 @@ export const STREAK_TIERS: StreakTier[] = [
     perks: [],
   },
   {
+    // Days 1-2. Blue, not yet fire: the streak exists but has not caught.
     id: 'spark', minDays: 1,
     name: { en: 'Spark', fr: 'Étincelle' },
-    text: 'text-amber-500', bg: 'bg-amber-400/15', ring: 'ring-amber-400/35', hex: '#fbbf24',
-    gradient: ['#f59e0b', '#fde68a'],
+    text: 'text-blue-500', bg: 'bg-blue-500/15', ring: 'ring-blue-400/35', hex: '#3b82f6',
+    gradient: ['#2563eb', '#93c5fd'],
     freezes: 0,
     perks: [{ en: 'Daily streak tracking', fr: 'Suivi quotidien de la série' }],
   },
   {
+    // Day 3: it catches. This is where the heat scale starts.
     id: 'ember', minDays: 3,
     name: { en: 'Ember', fr: 'Braise' },
-    text: 'text-orange-500', bg: 'bg-orange-400/15', ring: 'ring-orange-400/35', hex: '#fb923c',
-    gradient: ['#f97316', '#fdba74'],
+    text: 'text-amber-500', bg: 'bg-amber-400/15', ring: 'ring-amber-400/35', hex: '#f59e0b',
+    gradient: ['#d97706', '#fcd34d'],
     freezes: 1,
     perks: [{ en: '1 streak freeze', fr: '1 gel de série' }],
   },
@@ -73,7 +76,7 @@ export const STREAK_TIERS: StreakTier[] = [
     ],
   },
   {
-    id: 'inferno', minDays: 14,
+    id: 'inferno', minDays: 30,
     name: { en: 'Inferno', fr: 'Brasier' },
     text: 'text-red-500', bg: 'bg-red-500/15', ring: 'ring-red-400/35', hex: '#ef4444',
     gradient: ['#dc2626', '#f87171'],
@@ -84,7 +87,7 @@ export const STREAK_TIERS: StreakTier[] = [
     ],
   },
   {
-    id: 'molten', minDays: 30,
+    id: 'molten', minDays: 60,
     name: { en: 'Molten', fr: 'Incandescent' },
     text: 'text-pink-500', bg: 'bg-pink-500/15', ring: 'ring-pink-400/35', hex: '#ec4899',
     gradient: ['#db2777', '#f472b6'],
@@ -95,7 +98,7 @@ export const STREAK_TIERS: StreakTier[] = [
     ],
   },
   {
-    id: 'diamond', minDays: 60,
+    id: 'diamond', minDays: 100,
     name: { en: 'Diamond', fr: 'Diamant' },
     text: 'text-fuchsia-500', bg: 'bg-fuchsia-500/15', ring: 'ring-fuchsia-400/35', hex: '#d946ef',
     gradient: ['#c026d3', '#e879f9'],
@@ -106,7 +109,7 @@ export const STREAK_TIERS: StreakTier[] = [
     ],
   },
   {
-    id: 'legend', minDays: 100,
+    id: 'legend', minDays: 200,
     name: { en: 'Legend', fr: 'Légende' },
     text: 'text-violet-500', bg: 'bg-violet-500/15', ring: 'ring-violet-400/40', hex: '#8b5cf6',
     gradient: ['#7c3aed', '#a78bfa'],
@@ -114,6 +117,17 @@ export const STREAK_TIERS: StreakTier[] = [
     perks: [
       { en: '6 streak freezes', fr: '6 gels de série' },
       { en: 'Legend badge on your profile', fr: 'Badge Légende sur votre profil' },
+    ],
+  },
+  {
+    id: 'eternal', minDays: 365,
+    name: { en: 'Eternal', fr: 'Éternel' },
+    text: 'text-indigo-500', bg: 'bg-indigo-500/15', ring: 'ring-indigo-400/40', hex: '#6366f1',
+    gradient: ['#3730a3', '#818cf8'],
+    freezes: 7,
+    perks: [
+      { en: '7 streak freezes', fr: '7 gels de série' },
+      { en: 'A full year, unbroken', fr: 'Une année entière, sans rupture' },
     ],
   },
 ];
@@ -132,7 +146,7 @@ export function tierIndex(id: StreakTierId): number {
   return STREAK_TIERS.findIndex((t) => t.id === id);
 }
 
-/** The next tier up, or null once the athlete is at Legend. */
+/** The next tier up, or null once the athlete is at Eternal. */
 export function nextTier(days: number): StreakTier | null {
   return STREAK_TIERS.find((t) => t.minDays > days) ?? null;
 }

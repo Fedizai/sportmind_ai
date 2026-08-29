@@ -1,5 +1,7 @@
 "use client";
 
+import Link from 'next/link';
+
 import { useStreakStore } from '@/stores/streak-store';
 import { useTranslation } from '@/hooks/use-translation';
 import { tierForStreak } from '@/lib/streak-tiers';
@@ -12,7 +14,8 @@ import { cn } from '@/lib/utils';
  *
  * The flame takes the colour of the athlete's current tier and is only filled
  * once today is logged, so a glance says both "how far have I come" and
- * "is today already banked".
+ * "is today already banked". Tapping it opens the streak page — it used to be
+ * a dead end that showed a number with nothing behind it.
  */
 export function StreakCounter() {
   const { current, activeToday, isLoading } = useStreakStore();
@@ -23,9 +26,11 @@ export function StreakCounter() {
   const tier = tierForStreak(current);
 
   return (
-    <div
+    <Link
+      href="/dashboard/streak"
       className={cn(
         'flex items-center gap-1.5 rounded-md px-3 py-1.5 ring-1 transition-colors',
+        'hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         activeToday ? tier.bg : 'bg-muted',
         activeToday ? tier.ring : 'ring-transparent'
       )}
@@ -35,6 +40,6 @@ export function StreakCounter() {
       <span className={cn('text-sm font-bold tabular-nums', activeToday ? tier.text : 'text-muted-foreground')}>
         {current}
       </span>
-    </div>
+    </Link>
   );
 }

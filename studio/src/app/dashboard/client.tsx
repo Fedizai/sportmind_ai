@@ -201,6 +201,7 @@ const motivationalMessages: TranslationKey[] = [
 const StreakCard = () => {
     const { current: streak } = useStreakStore();
     const { t } = useTranslation();
+    const router = useRouter();
     const [message, setMessage] = useState(t('streakMessage1'));
 
     useEffect(() => {
@@ -208,9 +209,23 @@ const StreakCard = () => {
         setMessage(t(randomKey));
     }, [streak, t]);
 
+    // Opens the streak page. This card used to be inert — a big number with
+    // no way through to the tiers, perks or recovery behind it.
     return (
-        <motion.div variants={itemVariants} className="md:col-span-1">
-            <Card className="h-full flex flex-col items-center justify-center text-center bg-gradient-to-br from-primary/10 to-transparent">
+        <motion.div
+            variants={itemVariants}
+            className="md:col-span-1"
+            role="link"
+            tabIndex={0}
+            onClick={() => router.push('/dashboard/streak')}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    router.push('/dashboard/streak');
+                }
+            }}
+        >
+            <Card className="h-full flex flex-col items-center justify-center text-center bg-gradient-to-br from-primary/10 to-transparent cursor-pointer transition-shadow hover:shadow-float">
                 <CardContent className="p-6">
                     <motion.div
                         animate={{
@@ -244,8 +259,6 @@ const StreakCard = () => {
  * per macro lets it be read on its own.
  */
 const RING_RADIUS = 45;
-/** Separator between adjacent arcs, as a fraction of the circumference. */
-const RING_GAP = 0.01;
 /** Thinner than this and the arc is under a pixel — noise rather than data. */
 const MIN_VISIBLE_ARC = 0.006;
 
@@ -314,14 +327,13 @@ const NutritionChart = () => {
                             <circle cx="50" cy="50" r={RING_RADIUS} stroke="hsl(var(--muted))" strokeWidth="10" fill="none" />
                             {arcs.map((arc, index) => {
                                 // Butt caps, not round: a round cap overhangs the
-                                // arc by half the stroke (5 units against a 2.8
-                                // unit gap), so on a lightly-logged day the three
-                                // macros merged into one blob and the ring read as
-                                // far fuller than it was. The gap shrinks with the
-                                // arc so a small macro is still separated without
-                                // being erased.
-                                const gap = Math.min(RING_GAP, arc.length * 0.3);
-                                const drawn = arc.length - gap;
+                                // arc by half the stroke, so on a lightly-logged
+                                // day the three macros merged into one blob and
+                                // the ring read as far fuller than it was. Butt
+                                // caps also let the segments meet exactly, with
+                                // no separator, so the ring reads as one bar
+                                // divided into three rather than three bars.
+                                const drawn = arc.length;
                                 return (
                                     <motion.circle
                                         key={arc.name}
