@@ -86,6 +86,7 @@ const moreLinks = [
     { titleKey: 'myReportsCardTitle', subtitleKey: 'myReportsCardSubtitle', icon: BarChart2, path: '/dashboard/progress' },
     { titleKey: 'mentalCoachCardTitle', subtitleKey: 'mentalCoachCardSubtitle', icon: BrainCircuit, path: '/dashboard/mental-coach' },
     { titleKey: 'myGoalsCardTitle', subtitleKey: 'myGoalsCardSubtitle', icon: Target, path: '/dashboard/goals' },
+    { titleKey: 'friendsTitle', subtitleKey: 'friendsSubtitle', icon: Users, path: '/dashboard/friends' },
     { titleKey: 'bodyScanCardTitle', subtitleKey: 'bodyScanCardSubtitle', icon: ScanLine, path: '/dashboard/body-scan' },
     { titleKey: 'supportHelpTitle', subtitleKey: 'supportHelpSubtitle', icon: LifeBuoy, path: '/dashboard/help' },
     { titleKey: 'supportReportTitle', subtitleKey: 'supportReportSubtitle', icon: Flag, path: '/dashboard/report-problem' },

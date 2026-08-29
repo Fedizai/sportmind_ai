@@ -9,16 +9,18 @@ import { Card } from "@/components/ui/card";
 import { Loader2, MessageSquare } from "lucide-react";
 import { useUser, type AppUser } from "@/hooks/use-user";
 import { useAllUsers } from "@/hooks/use-all-users";
+import { useFriends } from "@/hooks/use-friends";
 import { useTranslation } from "@/hooks/use-translation";
 
 export function DesktopMessaging() {
   const { user, isLoading: isUserLoading } = useUser();
   const { users: allUsers, isLoading: areUsersLoading } = useAllUsers();
+  const { friendUids, isLoading: areFriendsLoading } = useFriends(user?.uid);
   const { t } = useTranslation();
 
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
 
-  if (isUserLoading || areUsersLoading) {
+  if (isUserLoading || areUsersLoading || areFriendsLoading) {
       return (
           <div className="flex h-full items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin"/>
@@ -26,12 +28,11 @@ export function DesktopMessaging() {
       )
   }
 
-  // Everyone signed in can reach everyone else. Players talk to each other as
-  // well as to their coaches, and staff are reachable rather than hidden:
-  // filtering admins out of a non-admin's list left the only player on the
-  // platform staring at an empty list, since every other account was an admin.
+  // Accepted friends only. The Firestore rules enforce the same thing on every
+  // write, so this list is the convenience half of the restriction rather than
+  // the restriction itself.
   const usersToShow: AppUser[] = user
-    ? allUsers.filter(u => u.uid !== user.uid)
+    ? allUsers.filter(u => u.uid !== user.uid && friendUids.has(u.uid))
     : [];
 
   return (

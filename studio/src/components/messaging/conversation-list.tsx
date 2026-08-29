@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 
 import { type AppUser } from "@/hooks/use-user";
 import { cn } from "@/lib/utils";
-import { Search, Users } from "lucide-react";
+import { Search, Users, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { ScrollArea } from "../ui/scroll-area";
@@ -25,10 +27,9 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
 
-  // The empty state is no longer about coaches: every signed-in account can
-  // reach every other one, so an empty list means there is genuinely nobody
-  // else on the platform yet, whatever role you hold.
-  const emptyState = { icon: Users, title: t("noUsersToMessageTitle"), description: t("noUsersToMessageDescription") };
+  // An empty list now means "no friends yet", not "nobody is here" — so it
+  // points at the thing that fixes it rather than leaving a dead end.
+  const emptyState = { icon: UserPlus, title: t("friendsOnlyTitle"), description: t("friendsOnlyBody") };
 
   /** Most recent message with this person, 0 when they have never written. */
   const lastSeconds = (uid: string) =>
@@ -80,6 +81,14 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
           <p className="mt-1 max-w-xs text-sm text-muted-foreground">
             {search ? t("searchNoResultsHint") : emptyState.description}
           </p>
+          {!search && (
+            <Button asChild size="sm" className="mt-4">
+              <Link href="/dashboard/friends">
+                <UserPlus className="mr-2 h-4 w-4" />
+                {t("friendsFindCta")}
+              </Link>
+            </Button>
+          )}
         </div>
       ) : (
         <ScrollArea className="flex-grow">

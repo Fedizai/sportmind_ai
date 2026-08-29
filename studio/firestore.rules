@@ -243,10 +243,63 @@ service cloud.firestore {
       allow write: if isAdminOrCoach();
     }
 
+    // FRIENDSHIPS
+    // One document per pair, named `uidA_uidB` with the uids sorted. The same
+    // id is used for that pair's conversation, so the messaging rules below can
+    // check the friendship directly instead of keeping a second copy of who is
+    // allowed to talk to whom.
+    match /friendships/{friendshipId} {
+      function pair() { return resource.data.users; }
+
+      allow read: if request.auth != null && request.auth.uid in pair();
+
+      // Sending a request: you must be in the pair, you must be the one asking,
+      // it starts pending, and the id must be the sorted pair — otherwise two
+      // documents could describe the same friendship in different states.
+      allow create: if request.auth != null
+        && request.auth.uid in request.resource.data.users
+        && request.resource.data.users.size() == 2
+        && request.resource.data.requestedBy == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && friendshipId == request.resource.data.users[0] + '_' + request.resource.data.users[1]
+        && request.resource.data.users[0] < request.resource.data.users[1];
+
+      // Only the person who was asked can accept, and only into 'accepted'.
+      // Without the requestedBy check a sender could befriend themselves to
+      // anyone simply by updating their own pending request.
+      allow update: if request.auth != null
+        && request.auth.uid in pair()
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'accepted'
+        && resource.data.requestedBy != request.auth.uid
+        && request.resource.data.users == resource.data.users
+        && request.resource.data.requestedBy == resource.data.requestedBy;
+
+      // Decline, cancel and unfriend are all the same write.
+      allow delete: if request.auth != null && request.auth.uid in pair();
+    }
+
     // MESSAGING
+    function areFriends(conversationId) {
+      return exists(/databases/$(database)/documents/friendships/$(conversationId))
+        && get(/databases/$(database)/documents/friendships/$(conversationId)).data.status == 'accepted';
+    }
+
     match /conversations/{conversationId} {
-      allow read, update: if request.auth != null && request.auth.uid in resource.data.participants;
-      allow create: if request.auth != null && request.auth.uid in request.resource.data.participants;
+      // Reading an existing thread only needs membership: an accepted
+      // friendship that is later removed should not lock someone out of
+      // messages they have already exchanged.
+      allow read: if request.auth != null && request.auth.uid in resource.data.participants;
+
+      // Writing needs an accepted friendship. This is where the privacy rule
+      // actually lives — a contact list filtered in the client is a
+      // suggestion, not a restriction.
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.participants
+        && areFriends(conversationId);
+      allow create: if request.auth != null
+        && request.auth.uid in request.resource.data.participants
+        && areFriends(conversationId);
 
       match /messages/{messageId} {
         function parentPath() {
@@ -263,7 +316,8 @@ service cloud.firestore {
         // closes the old hole where anyone signed in could write into any
         // conversation id whose parent document did not exist.
         allow create: if isParticipant()
-          && request.resource.data.senderId == request.auth.uid;
+          && request.resource.data.senderId == request.auth.uid
+          && areFriends(conversationId);
 
         // Reading tolerates a missing parent, and has to: opening a brand-new
         // thread attaches the message listener before anything has been sent,
