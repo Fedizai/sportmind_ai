@@ -54,6 +54,38 @@ export function useMessages(userId1: string | undefined, userId2: string | undef
     return () => unsubscribe();
   }, [conversationId]);
 
+  /**
+   * The other person's delivery and read marks for this thread.
+   *
+   * A single document listener rather than reusing useConversations: that one
+   * watches every thread the athlete has, and this screen only needs the one
+   * it is showing.
+   */
+  const [otherMarks, setOtherMarks] = useState<{
+    deliveredAt: Timestamp | null;
+    readAt: Timestamp | null;
+  }>({ deliveredAt: null, readAt: null });
+
+  useEffect(() => {
+    if (!conversationId || !userId2) {
+      setOtherMarks({ deliveredAt: null, readAt: null });
+      return;
+    }
+    const unsub = onSnapshot(
+      doc(db, 'conversations', conversationId),
+      (snap) => {
+        const data = snap.data();
+        setOtherMarks({
+          deliveredAt: data?.lastDeliveredTo?.[userId2] ?? null,
+          readAt: data?.lastReadBy?.[userId2] ?? null,
+        });
+      },
+      // A brand-new thread has no parent document yet; that is not an error.
+      () => setOtherMarks({ deliveredAt: null, readAt: null })
+    );
+    return () => unsub();
+  }, [conversationId, userId2]);
+
   const sendMessage = async (text: string) => {
     if (!conversationId || !userId1) {
       toast({
@@ -127,5 +159,5 @@ export function useMessages(userId1: string | undefined, userId2: string | undef
     }
   };
 
-  return { messages, isLoading, error, sendMessage, markAsRead };
+  return { messages, isLoading, error, sendMessage, markAsRead, otherMarks };
 }

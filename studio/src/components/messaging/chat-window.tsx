@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { ArrowLeft, MessageCircle, MoreVertical, Phone, Send, Video } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, MessageCircle, MoreVertical, Phone, Send, Video } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -37,7 +37,7 @@ const initials = (name?: string | null) =>
 
 export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) {
   const [inputMessage, setInputMessage] = React.useState("");
-  const { messages, isLoading, sendMessage, markAsRead } = useMessages(currentUser.uid, otherUser.uid);
+  const { messages, isLoading, sendMessage, markAsRead, otherMarks } = useMessages(currentUser.uid, otherUser.uid);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { t, language } = useTranslation();
 
@@ -71,6 +71,25 @@ export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) 
       return { msg, mine, isFirstOfGroup, isLastOfGroup, daySeparator };
     });
   }, [messages, currentUser.uid]);
+
+  /**
+   * Delivery state of one of your own messages.
+   *
+   * 'sent'      — written to the server, nothing more known yet
+   * 'delivered' — their device has received it
+   * 'read'      — they have opened the thread since it arrived
+   *
+   * Compared on the message's own timestamp, so an older message stays read
+   * even after they receive a newer one they have not opened.
+   */
+  const statusOf = (msg: Message): 'sent' | 'delivered' | 'read' => {
+    const at = msg.timestamp?.seconds;
+    // No server timestamp yet means the write is still in flight.
+    if (!at) return 'sent';
+    if (otherMarks.readAt && otherMarks.readAt.seconds >= at) return 'read';
+    if (otherMarks.deliveredAt && otherMarks.deliveredAt.seconds >= at) return 'delivered';
+    return 'sent';
+  };
 
   // Presence, read from the other person's heartbeat rather than assumed.
   const online = isOnline(otherUser.lastSeenAt);
@@ -202,6 +221,35 @@ export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) 
                           )}
                         >
                           {format(msg.timestamp.toDate(), "HH:mm")}
+                          {/* Ticks only on your own messages: they report what
+                              happened to something you sent. */}
+                          {mine && (() => {
+                            const status = statusOf(msg);
+                            const label = t(
+                              status === 'read' ? 'msgRead'
+                              : status === 'delivered' ? 'msgDelivered'
+                              : 'msgSent'
+                            );
+                            return (
+                              <span className="ml-1 inline-flex align-middle" title={label} aria-label={label}>
+                                {status === 'sent' ? (
+                                  <Check className="h-3 w-3 text-primary-foreground/60" />
+                                ) : (
+                                  <CheckCheck
+                                    className={cn(
+                                      "h-3 w-3",
+                                      // Read is the only state that brightens:
+                                      // grey double ticks mean it arrived,
+                                      // light ones mean they looked.
+                                      status === 'read'
+                                        ? "text-primary-foreground"
+                                        : "text-primary-foreground/60"
+                                    )}
+                                  />
+                                )}
+                              </span>
+                            );
+                          })()}
                         </span>
                       )}
                     </div>
