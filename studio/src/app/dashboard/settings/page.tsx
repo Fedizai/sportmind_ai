@@ -79,12 +79,22 @@ export default function SettingsPage() {
         toast({ title: t('saving'), description: t('savingSettingsDescription') });
 
         try {
-            await Promise.all([
-                updateAccountSettings(user.uid, { fullName: data.fullName }),
-                updatePreferences(user.uid, { theme: data.theme, units: data.units }),
-                updateNotifications(user.uid, { emailNotifications: data.emailNotifications, trainingReminders: data.trainingReminders }),
-                updatePrivacy(user.uid, { shareDataWithCoach: data.shareDataWithCoach }),
+            const token = await idToken();
+            const results = await Promise.all([
+                updateAccountSettings(token, { fullName: data.fullName }),
+                updatePreferences(token, { theme: data.theme, units: data.units }),
+                updateNotifications(token, { emailNotifications: data.emailNotifications, trainingReminders: data.trainingReminders }),
+                updatePrivacy(token, { shareDataWithCoach: data.shareDataWithCoach }),
             ]);
+
+            // These actions report failure by returning, not by throwing, so
+            // Promise.all resolves happily even when every one of them failed —
+            // and the form said "saved" while nothing had been.
+            const failed = results.find((r) => !r.success);
+            if (failed) {
+                toast({ title: t('genericError'), description: failed.message, variant: 'destructive' });
+                return;
+            }
 
             setTheme(data.theme);
 

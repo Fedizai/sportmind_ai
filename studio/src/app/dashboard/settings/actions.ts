@@ -28,79 +28,71 @@ const privacySchema = z.object({
 });
 
 
-export async function updateAccountSettings(userId: string, data: z.infer<typeof accountSchema>) {
-  if (!userId) throw new Error("User not authenticated.");
+/**
+ * Settings writes.
+ *
+ * These reached Firestore through the browser SDK from inside a 'use server'
+ * module, where nobody is signed in — so every write arrived unauthenticated
+ * and the rules refused it. Saving a name reported "Failed to update account
+ * settings" every time, because it genuinely had.
+ *
+ * They also called getAuth().currentUser to update the Firebase Auth profile.
+ * On the server that is always null, so the auth display name was never
+ * touched even when the Firestore write was expected to succeed. The Admin SDK
+ * updates both records.
+ */
 
+export async function updateAccountSettings(idToken: string, data: z.infer<typeof accountSchema>) {
   const validatedData = accountSchema.safeParse(data);
   if (!validatedData.success) {
-    throw new Error("Invalid data provided.");
+    return { success: false, message: 'Invalid data provided.' };
   }
-  
-  const currentUser = getAuth().currentUser;
 
   try {
-     // Update Firebase Auth profile
-    if (currentUser && currentUser.uid === userId) {
-        await updateProfile(currentUser, { displayName: validatedData.data.fullName });
-    }
-    
-    // Update Firestore document
-    const userDocRef = doc(db, 'users', userId);
-    await updateDoc(userDocRef, {
-      displayName: validatedData.data.fullName,
-    });
+    const uid = await requireCaller(idToken);
+    const { fullName } = validatedData.data;
+
+    // Both records, or the header and the auth account disagree about the name.
+    await admin.auth().updateUser(uid, { displayName: fullName });
+    await adminDb.collection('users').doc(uid).set({ displayName: fullName }, { merge: true });
 
     revalidatePath('/dashboard/settings');
     return { success: true, message: 'Account settings updated successfully.' };
   } catch (error) {
-    console.error("Error updating account settings:", error);
-    return { success: false, message: 'Failed to update account settings.' };
+    console.error('Error updating account settings:', error);
+    return { success: false, message: error instanceof Error ? error.message : 'Failed to update account settings.' };
   }
 }
 
-export async function updatePreferences(userId: string, data: z.infer<typeof preferencesSchema>) {
-    if (!userId) throw new Error("User not authenticated.");
-    const validatedData = preferencesSchema.safeParse(data);
-    if (!validatedData.success) throw new Error("Invalid data provided.");
-    
+/** One shape for the three settings groups that only write a single field. */
+async function writeSettingsField(idToken: string, field: string, value: unknown, label: string) {
     try {
-        const userDocRef = doc(db, 'users', userId);
-        await updateDoc(userDocRef, { preferences: validatedData.data });
+        const uid = await requireCaller(idToken);
+        await adminDb.collection('users').doc(uid).set({ [field]: value }, { merge: true });
         revalidatePath('/dashboard/settings');
-        return { success: true, message: 'Preferences updated.' };
+        return { success: true, message: `${label} updated.` };
     } catch (error) {
-        return { success: false, message: 'Failed to save preferences.' };
+        console.error(`Error updating ${field}:`, error);
+        return { success: false, message: error instanceof Error ? error.message : `Failed to save ${label.toLowerCase()}.` };
     }
 }
 
-export async function updateNotifications(userId: string, data: z.infer<typeof notificationsSchema>) {
-    if (!userId) throw new Error("User not authenticated.");
-    const validatedData = notificationsSchema.safeParse(data);
-    if (!validatedData.success) throw new Error("Invalid data provided.");
-    
-    try {
-        const userDocRef = doc(db, 'users', userId);
-        await updateDoc(userDocRef, { notifications: validatedData.data });
-        revalidatePath('/dashboard/settings');
-        return { success: true, message: 'Notification settings updated.' };
-    } catch (error) {
-        return { success: false, message: 'Failed to save notification settings.' };
-    }
+export async function updatePreferences(idToken: string, data: z.infer<typeof preferencesSchema>) {
+    const parsed = preferencesSchema.safeParse(data);
+    if (!parsed.success) return { success: false, message: 'Invalid data provided.' };
+    return writeSettingsField(idToken, 'preferences', parsed.data, 'Preferences');
 }
 
-export async function updatePrivacy(userId: string, data: z.infer<typeof privacySchema>) {
-    if (!userId) throw new Error("User not authenticated.");
-    const validatedData = privacySchema.safeParse(data);
-    if (!validatedData.success) throw new Error("Invalid data provided.");
-    
-    try {
-        const userDocRef = doc(db, 'users', userId);
-        await updateDoc(userDocRef, { privacy: validatedData.data });
-        revalidatePath('/dashboard/settings');
-        return { success: true, message: 'Privacy settings updated.' };
-    } catch (error) {
-        return { success: false, message: 'Failed to save privacy settings.' };
-    }
+export async function updateNotifications(idToken: string, data: z.infer<typeof notificationsSchema>) {
+    const parsed = notificationsSchema.safeParse(data);
+    if (!parsed.success) return { success: false, message: 'Invalid data provided.' };
+    return writeSettingsField(idToken, 'notifications', parsed.data, 'Notification settings');
+}
+
+export async function updatePrivacy(idToken: string, data: z.infer<typeof privacySchema>) {
+    const parsed = privacySchema.safeParse(data);
+    if (!parsed.success) return { success: false, message: 'Invalid data provided.' };
+    return writeSettingsField(idToken, 'privacy', parsed.data, 'Privacy settings');
 }
 
 const serializeDoc = (data: Record<string, any>) => {
