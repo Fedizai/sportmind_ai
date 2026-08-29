@@ -6,7 +6,7 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dumbbell, Utensils, Plus, Trash2, Loader2, Calendar as CalendarIcon, Target, Sparkles, CheckCircle, RefreshCw, Video, Upload, LineChart, BarChart2, CalendarDays, HeartPulse, Move, Eye, Camera, ImagePlus, Weight, FileImage, FileVideo, X, Lock } from "lucide-react";
+import { Dumbbell, Utensils, Plus, Trash2, Loader2, Calendar as CalendarIcon, Target, Sparkles, CheckCircle, RefreshCw, Video, Upload, LineChart, BarChart2, CalendarDays, HeartPulse, Move, Eye, Camera, ImagePlus, Weight, FileImage, FileVideo, X, Lock, Maximize2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { bodyParts, exercises as allExercises } from "@/lib/data";
 import Image from "next/image";
@@ -389,6 +389,11 @@ function WorkoutLogger() {
   const { t } = useTranslation();
   const [selectedBodyPartId, setSelectedBodyPartId] = useState<string | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  // The detail panel's own image: starts at gifUrl (360, the fast default),
+  // then swaps to hqUrl (720) once that has actually finished loading — a
+  // background upgrade rather than a flash of a bigger file blocking paint.
+  const [detailGifSrc, setDetailGifSrc] = useState<string | undefined>(undefined);
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [sets, setSets] = useState<LogSet[]>([{ reps: "10", weight: "60" }]);
 
   const handleSelectPart = (partId: string | null) => {
@@ -404,8 +409,22 @@ function WorkoutLogger() {
 
   const handleSelectExercise = (exercise: Exercise) => {
     setSelectedExercise(exercise);
+    setDetailGifSrc(exercise.gifUrl);
     setSets([{ reps: "10", weight: "60" }]);
   };
+
+  // Preload the 720 upgrade off-DOM; only swap detailGifSrc once it has
+  // actually decoded, so the panel never shows a half-rendered frame.
+  useEffect(() => {
+    if (!selectedExercise?.hqUrl) return;
+    let cancelled = false;
+    const img = new window.Image();
+    img.src = selectedExercise.hqUrl;
+    img.onload = () => {
+      if (!cancelled) setDetailGifSrc(selectedExercise.hqUrl);
+    };
+    return () => { cancelled = true; };
+  }, [selectedExercise]);
 
   const handleAddSet = () => {
     setSets([...sets, { reps: "", weight: "" }]);
@@ -453,10 +472,26 @@ function WorkoutLogger() {
                   <Button
                     key={ex.id}
                     variant={selectedExercise?.id === ex.id ? "secondary" : "ghost"}
-                    className="w-full justify-start"
+                    className="w-full justify-start gap-2.5 h-auto py-1.5"
                     onClick={() => handleSelectExercise(ex)}
                   >
-                    {ex.name}
+                    {/* 180x180 — the small end of the four sizes, sized for a
+                        scrollable list where every row loads one. */}
+                    {ex.thumbUrl ? (
+                      <Image
+                        src={ex.thumbUrl}
+                        alt=""
+                        width={32}
+                        height={32}
+                        unoptimized
+                        className="h-8 w-8 shrink-0 rounded-md object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                        <Dumbbell className="h-4 w-4" />
+                      </span>
+                    )}
+                    <span className="truncate">{ex.name}</span>
                   </Button>
                 ))
               ) : <p className="text-sm text-muted-foreground">No exercises found for this body part.</p>
@@ -486,16 +521,47 @@ function WorkoutLogger() {
           {selectedExercise ? (
             <>
               <CardContent className="space-y-6">
-                <div className="bg-muted rounded-lg p-4 flex justify-center">
+                {/* 360 shows the instant an exercise is picked; the effect
+                    above swaps this src to the 720 once it's actually loaded,
+                    so the panel never blocks on the bigger file. */}
+                <div className="relative bg-muted rounded-lg p-4 flex justify-center group">
                   <Image
-                    src={selectedExercise.gifUrl}
+                    src={detailGifSrc || selectedExercise.gifUrl}
                     alt={`${selectedExercise.name} GIF`}
                     data-ai-hint="exercise"
                     width={300}
                     height={300}
+                    unoptimized
                     className="rounded-md"
                   />
+                  {selectedExercise.xlUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setIsZoomOpen(true)}
+                      aria-label="Zoom"
+                      className="absolute bottom-6 right-6 flex h-9 w-9 items-center justify-center rounded-md bg-background/80 text-foreground opacity-0 shadow-card ring-1 ring-border backdrop-blur transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
+
+                {/* The 1080 — the largest of the four sizes — loads only here,
+                    on request, rather than by default in the small panel above. */}
+                <Dialog open={isZoomOpen} onOpenChange={setIsZoomOpen}>
+                  <DialogContent className="max-w-2xl p-2">
+                    {selectedExercise.xlUrl && (
+                      <Image
+                        src={selectedExercise.xlUrl}
+                        alt={`${selectedExercise.name} GIF — full size`}
+                        width={1080}
+                        height={1080}
+                        unoptimized
+                        className="w-full rounded-md"
+                      />
+                    )}
+                  </DialogContent>
+                </Dialog>
                 <div>
                   <h3 className="font-semibold mb-2">Workout Log</h3>
                   <Table>
