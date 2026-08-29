@@ -40,6 +40,25 @@
     --input: 214 32% 88%;
     --ring: 221 83% 53%;
 
+    /* Macronutrients — one hue per macro, not three opacities of the brand
+       blue. Three shades of one colour force the reader back to the legend on
+       every glance; three hues let the ring be read on its own. Protein keeps
+       the brand blue (it is the headline macro for an athlete) and the other
+       two sit far from it on the wheel so they never blur together. Each is
+       dark enough for >=3:1 against a white card, as graphical objects need. */
+    --macro-carbs: 32 92% 42%;
+    --macro-protein: 221 83% 50%;
+    --macro-fat: 295 62% 45%;
+
+    /* Generic chart ramp. Referenced across the sport dashboards but never
+       previously defined, so every `hsl(var(--chart-N))` resolved to an
+       invalid colour and the series rendered black. */
+    --chart-1: 221 83% 50%;
+    --chart-2: 32 92% 42%;
+    --chart-3: 295 62% 45%;
+    --chart-4: 173 65% 35%;
+    --chart-5: 340 72% 48%;
+
     /* iOS app-icon geometry: generously rounded corners (~22-25% of a control's
        height) without ever reaching a pill. One lever drives the whole scale. */
     --radius: 0.75rem;
@@ -129,6 +148,17 @@
     --border: 228 20% 15%;
     --input: 228 22% 13%;
     --ring: 217 91% 62%;
+
+    /* Same three hues, lifted well clear of the near-black card. */
+    --macro-carbs: 36 95% 58%;
+    --macro-protein: 217 91% 65%;
+    --macro-fat: 295 75% 68%;
+
+    --chart-1: 217 91% 65%;
+    --chart-2: 36 95% 58%;
+    --chart-3: 295 75% 68%;
+    --chart-4: 173 70% 55%;
+    --chart-5: 340 82% 66%;
 
     /* 3D shadow system – dark */
     --shadow-card:

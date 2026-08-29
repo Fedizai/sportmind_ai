@@ -12,6 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Shield, Mail, Cake, Dumbbell, Trophy, User as UserIcon, Eye, Search, Loader2, UserPlus, FileQuestion, Star, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -80,10 +81,19 @@ export default function AdminPage() {
         },
     });
 
-    const filteredUsers = users.filter(user =>
-        user.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Your own account sorts first so it is never buried in a long roster —
+    // it is the one you reach for most when adjusting a streak or checking a
+    // change landed. Everyone else keeps a stable alphabetical order.
+    const filteredUsers = users
+        .filter(user =>
+            user.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .sort((a, b) => {
+            if (a.uid === adminUser?.uid) return -1;
+            if (b.uid === adminUser?.uid) return 1;
+            return (a.displayName || '').localeCompare(b.displayName || '');
+        });
     
     const handleCreateUser = async (values: z.infer<typeof createUserSchema>) => {
         try {
@@ -252,15 +262,20 @@ export default function AdminPage() {
                                 <CardFooter className="grid grid-cols-2 gap-2 w-full"><Skeleton className="h-10 w-full"/><Skeleton className="h-10 w-full"/></CardFooter>
                             </Card>
                         ))}
-                        {!isLoading && filteredUsers.map(user => (
-                            <Card key={user.uid} className="flex flex-col">
+                        {!isLoading && filteredUsers.map(user => {
+                            const isSelf = user.uid === adminUser?.uid;
+                            return (
+                            <Card key={user.uid} className={cn("flex flex-col", isSelf && "ring-2 ring-primary/40")}>
                                 <CardHeader className="flex flex-row items-start gap-4">
                                     <Avatar className="h-16 w-16">
-                                        <AvatarImage src={`https://placehold.co/128x128.png`} alt={user.displayName || 'User'} data-ai-hint="user portrait" />
+                                        <AvatarImage src={user.photoUrl || `https://placehold.co/128x128.png`} alt={user.displayName || 'User'} data-ai-hint="user portrait" />
                                         <AvatarFallback>{user.displayName?.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                                     </Avatar>
                                     <div className="flex-grow">
-                                        <CardTitle className="text-xl">{user.displayName}</CardTitle>
+                                        <CardTitle className="text-xl flex items-center gap-2">
+                                            {user.displayName}
+                                            {isSelf && <Badge variant="outline" className="border-primary/50 text-primary">{t('adminYouBadge')}</Badge>}
+                                        </CardTitle>
                                         <CardDescription className="flex items-center gap-2"><Mail className="h-4 w-4"/>{user.email}</CardDescription>
                                     </div>
                                     <div className="flex flex-col gap-1 items-end">
@@ -367,7 +382,8 @@ export default function AdminPage() {
                                     </div>
                                 </CardFooter>
                             </Card>
-                        ))}
+                            );
+                        })}
                     </div>
                 </CardContent>
             </Card>

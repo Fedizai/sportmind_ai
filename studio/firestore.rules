@@ -17,10 +17,6 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    function isAdminOrCoach() {
-      return request.auth != null && getUserRole(request.auth.uid) in ['admin', 'coach'];
-    }
-
     // Admins are identified by the role on their user document OR by one of the
     // hard-coded owner addresses — the app grants admin by email, so a rule that
     // only trusted the stored role locked real admins out of admin-only data.
@@ -37,22 +33,46 @@ service cloud.firestore {
         (getUserRole(request.auth.uid) == 'admin' || isSuperAdminEmail());
     }
 
+    // Declared after isAdmin so the owner-by-email path applies here too:
+    // an owner with no user document has no stored role to match on.
+    function isAdminOrCoach() {
+      return isAdmin() || (request.auth != null && getUserRole(request.auth.uid) == 'coach');
+    }
+
     // USERS
     match /users/{userId} {
       // Any signed-in user can read profiles (needed for messaging/team directory)
       allow read: if request.auth != null;
 
-      // Create own
-      allow create: if isOwner(userId);
+      // Create own. The signup form builds this document on the client, so the
+      // role it carries is attacker-controlled: without the second clause any
+      // new account could simply declare itself an admin. Only the hard-coded
+      // owner addresses may create a document that already claims 'admin'.
+      allow create: if isOwner(userId) && (
+        request.resource.data.get('role', 'player') != 'admin' || isSuperAdminEmail()
+      );
 
       // Update: user can update own EXCEPT role/plan. Admin can update anything.
       // Exception: the two protected super-admin accounts can never have their
       // role changed away from 'admin', no matter who performs the update.
+      //
+      // This must use isAdmin(), not getUserRole() alone: an owner identified
+      // only by email has no stored role to read (and may have no user document
+      // at all), so the role-only check denied them every write — which is what
+      // silently blocked the admin streak editor on every athlete.
+      //
+      // The owner clause tests which keys the write *changes*, not which keys
+      // the resulting document *has*. On an update `request.resource.data` is
+      // the document as it will be after the write, so `'role' in ...` is true
+      // for any profile that already stores a role — which is every profile
+      // created at signup. That form would lock athletes out of editing their
+      // own settings, photo or streak, while still being no stricter about
+      // privilege escalation. Negating hasAny() says what was meant — the rules
+      // language has hasAll/hasAny/hasOnly and no hasNone.
       allow update: if request.auth != null && (
         (request.auth.uid == userId &&
-         !('role' in request.resource.data) &&
-         !('plan' in request.resource.data)) ||
-        getUserRole(request.auth.uid) == 'admin' ||
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'plan'])) ||
+        isAdmin() ||
         // Coach/admin can update a player's status (available/injured/suspended)
         // without touching any other field on the profile.
         (isAdminOrCoach() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
@@ -62,7 +82,7 @@ service cloud.firestore {
       );
 
       // Delete: admin only
-      allow delete: if request.auth != null && getUserRole(request.auth.uid) == 'admin';
+      allow delete: if isAdmin();
 
       // Coach-authored private notes about this player — coach/admin only,
       // not visible to or editable by the player themselves.
@@ -100,45 +120,45 @@ service cloud.firestore {
       );
 
       // DELETE: admin only
-      allow delete: if request.auth != null && getUserRole(request.auth.uid) == 'admin';
+      allow delete: if isAdmin();
     }
 
     // NUTRITION LOGS
     match /nutritionLogs/{logId} {
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || getUserRole(request.auth.uid) == 'admin');
+      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     // FOOTBALL MATCHES
     match /football_matches/{matchId} {
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || getUserRole(request.auth.uid) == 'admin');
+      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     // TENNIS MATCHES
     match /tennis_matches/{matchId} {
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || getUserRole(request.auth.uid) == 'admin');
+      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     // BASKETBALL / BOXING / SWIMMING (generic sport-module entries)
     match /basketball_games/{entryId} {
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || getUserRole(request.auth.uid) == 'admin');
+      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
     }
     match /boxing_bouts/{entryId} {
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || getUserRole(request.auth.uid) == 'admin');
+      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
     }
     match /swimming_sessions/{entryId} {
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || getUserRole(request.auth.uid) == 'admin');
+      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     // SUPPORT TICKETS (problem reports + help requests, incl. streak restores)
@@ -171,14 +191,14 @@ service cloud.firestore {
     match /goals/{goalId} {
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || getUserRole(request.auth.uid) == 'admin');
+      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     // BODY SCANS (athlete body-composition scans + AI analysis history)
     match /bodyScans/{scanId} {
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || getUserRole(request.auth.uid) == 'admin');
+      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     // COACH-MANAGED TEAM MATCHES (read-only for everyone signed in, managed by coach/admin)

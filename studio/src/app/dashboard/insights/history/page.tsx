@@ -113,9 +113,9 @@ const HistoricalNutritionChart = ({ data }: { data: HistoricalNutritionData | un
     ];
     const totalGrams = macros.reduce((sum, macro) => sum + macro.value, 0);
     const macroColors: {[key: string]: string} = {
-        Carbs: 'hsl(var(--chart-2))',
-        Protein: 'hsl(var(--chart-1))',
-        Fat: 'hsl(var(--chart-4))'
+        Carbs: 'hsl(var(--macro-carbs))',
+        Protein: 'hsl(var(--macro-protein))',
+        Fat: 'hsl(var(--macro-fat))'
     }
 
     let currentRotation = -90;

@@ -12,8 +12,15 @@ const nextConfig = {
   },
   // The food database is read from disk at runtime, so it must be traced into
   // the server bundle — Next cannot infer a plain fs.readFileSync path.
-  outputFileTracingIncludes: {
-    '/**': ['./data/**'],
+  //
+  // This key only became top-level in Next 15. On 14.x it must sit under
+  // `experimental`, and Next warns "Unrecognized key(s)" and ignores it
+  // otherwise — which silently left data/food-db.json out of the deployed
+  // bundle, so every food search fell through to the remote providers.
+  experimental: {
+    outputFileTracingIncludes: {
+      '/**': ['./data/**'],
+    },
   },
 };
 

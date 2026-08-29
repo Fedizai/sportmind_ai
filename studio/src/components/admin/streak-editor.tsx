@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Flame, RotateCcw } from 'lucide-react';
-import { doc, updateDoc, getDoc, deleteField } from 'firebase/firestore';
+import { doc, setDoc, getDoc, deleteField } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -63,18 +63,31 @@ export function StreakEditor({
   const parsedDays = Math.max(0, Number(days) || 0);
   const resultingTier = tierForStreak(parsedDays);
 
+  // setDoc-with-merge rather than updateDoc: updateDoc rejects outright when the
+  // profile document does not exist yet, which is exactly the case for accounts
+  // that never went through the checkout signup flow.
   const save = async () => {
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'users', uid), {
-        'streak.overrideDays': parsedDays,
-        'streak.freezesUsed': Math.max(0, Number(freezesUsed) || 0),
-      });
+      await setDoc(
+        doc(db, 'users', uid),
+        {
+          streak: {
+            overrideDays: parsedDays,
+            freezesUsed: Math.max(0, Number(freezesUsed) || 0),
+          },
+        },
+        { merge: true }
+      );
       toast({ title: t('adminStreakSaved') });
       setOpen(false);
     } catch (err) {
       console.error('Streak update failed:', err);
-      toast({ variant: 'destructive', title: t('supportSendFailed') });
+      toast({
+        variant: 'destructive',
+        title: t('supportSendFailed'),
+        description: err instanceof Error ? err.message : undefined,
+      });
     } finally {
       setSaving(false);
     }
@@ -83,14 +96,20 @@ export function StreakEditor({
   const clearOverride = async () => {
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'users', uid), {
-        'streak.overrideDays': deleteField(),
-      });
+      await setDoc(
+        doc(db, 'users', uid),
+        { streak: { overrideDays: deleteField() } },
+        { merge: true }
+      );
       toast({ title: t('adminStreakSaved') });
       setOpen(false);
     } catch (err) {
       console.error('Streak reset failed:', err);
-      toast({ variant: 'destructive', title: t('supportSendFailed') });
+      toast({
+        variant: 'destructive',
+        title: t('supportSendFailed'),
+        description: err instanceof Error ? err.message : undefined,
+      });
     } finally {
       setSaving(false);
     }

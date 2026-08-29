@@ -43,10 +43,11 @@ export const NutritionChart = ({ nutritionData }: NutritionChartProps) => {
         );
     }
     
+    // One hue per macro, matching the dashboard ring.
     const macros = [
-        { name: "Carbs", value: nutritionData.carbs || 0, color: 'hsl(var(--chart-2))' },
-        { name: "Protein", value: nutritionData.protein || 0, color: 'hsl(var(--chart-1))' },
-        { name: "Fat", value: nutritionData.fat || 0, color: 'hsl(var(--chart-4))' },
+        { name: "Carbs", value: nutritionData.carbs || 0, color: 'hsl(var(--macro-carbs))' },
+        { name: "Protein", value: nutritionData.protein || 0, color: 'hsl(var(--macro-protein))' },
+        { name: "Fat", value: nutritionData.fat || 0, color: 'hsl(var(--macro-fat))' },
     ];
 
     const totalGrams = macros.reduce((sum, macro) => sum + macro.value, 0);

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { collection, query, where, getDocs, Timestamp, doc, getDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, doc, getDoc, setDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { startOfDay, format } from 'date-fns';
 import { usePlanStore } from './plan-store';
@@ -181,12 +181,20 @@ export const useStreakStore = create<StreakState>()(
         }
 
         try {
-          await updateDoc(doc(db, 'users', userId), {
-            'streak.bonusDays': increment(days),
-            ...(method === 'freeze' ? { 'streak.freezesUsed': increment(1) } : {}),
-            'streak.lastRestoreAt': serverTimestamp(),
-            'streak.lastRestoreMethod': method,
-          });
+          // setDoc-with-merge, not updateDoc: an athlete whose profile document
+          // was never created would otherwise get a hard failure here.
+          await setDoc(
+            doc(db, 'users', userId),
+            {
+              streak: {
+                bonusDays: increment(days),
+                ...(method === 'freeze' ? { freezesUsed: increment(1) } : {}),
+                lastRestoreAt: serverTimestamp(),
+                lastRestoreMethod: method,
+              },
+            },
+            { merge: true }
+          );
           set({
             bonusDays: bonusDays + days,
             freezesUsed: method === 'freeze' ? freezesUsed + 1 : freezesUsed,

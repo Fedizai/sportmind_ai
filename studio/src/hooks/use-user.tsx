@@ -7,6 +7,7 @@ import { ADMIN_EMAILS } from '@/lib/admin-emails';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from '@/lib/firebase';
+import { ensureUserProfile } from '@/lib/profile-actions';
 import { usePathname, useRouter } from 'next/navigation';
 import { useNutritionStore } from '@/stores/nutrition-store';
 import { type GymPlan } from '@/stores/plan-store';
@@ -67,6 +68,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const { startListener, stopListener } = useNutritionStore.getState();
   const previewUser = useAdminPreviewStore((state) => state.previewUser);
   const prevPreviewUidRef = useRef<string | null>(null);
+  // One backfill attempt per account per session. The snapshot listener below
+  // fires again as soon as the document lands, so retrying would loop.
+  const backfilledUidRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!auth) {
@@ -97,9 +101,22 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
               notifications: userData.notifications || {},
               privacy: userData.privacy || {},
             });
+
+            // An owner whose stored role says otherwise is treated as an admin
+            // by the app but not by the Firestore rules, which read the stored
+            // role — so admin-only writes fail. Reconcile the document once.
+            if (isAdmin && userData.role !== 'admin' && backfilledUidRef.current !== firebaseUser.uid) {
+              backfilledUidRef.current = firebaseUser.uid;
+              ensureUserProfile(firebaseUser.uid).catch((err) => {
+                console.error('Could not reconcile the admin profile:', err);
+              });
+            }
           } else {
-             // This case handles users that are authenticated but don't have a document in Firestore yet.
-             // This might happen during signup before the doc is created.
+             // Authenticated but no Firestore profile. Show sensible defaults
+             // immediately, then create the missing document: without one the
+             // account is invisible in admin user management and every profile
+             // write (streaks included) fails, since updateDoc needs the doc to
+             // exist. The listener re-fires once it lands.
              const isAdmin = firebaseUser.email ? ADMIN_EMAILS.includes(firebaseUser.email) : false;
              setUser({
                 uid: firebaseUser.uid,
@@ -108,6 +125,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                 role: isAdmin ? 'admin' : 'player', // Default to player if no doc, unless they are admin
                 plan: isAdmin ? 'pro' : 'athlete'
             });
+
+             if (backfilledUidRef.current !== firebaseUser.uid) {
+               backfilledUidRef.current = firebaseUser.uid;
+               ensureUserProfile(firebaseUser.uid).catch((err) => {
+                 // Non-fatal: the app keeps working off the defaults above.
+                 console.error('Could not create the missing user profile:', err);
+               });
+             }
           }
           setIsLoading(false);
         }, (error) => {

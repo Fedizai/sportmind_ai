@@ -66,6 +66,11 @@ export default {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        macro: {
+          carbs: 'hsl(var(--macro-carbs))',
+          protein: 'hsl(var(--macro-protein))',
+          fat: 'hsl(var(--macro-fat))',
+        },
         chart: {
           '1': 'hsl(var(--chart-1))',
           '2': 'hsl(var(--chart-2))',
