@@ -82,6 +82,57 @@ const NutritionItemSchema = z.object({
 });
 export type NutritionItem = z.infer<typeof NutritionItemSchema>;
 
+// --- Food photo recognition (vision) ---
+
+/**
+ * What the vision model is asked for, and only that: which foods are visible
+ * and how much of each. Nutritional values are looked up afterwards against a
+ * real food database — a language model's calorie figures are a guess dressed
+ * up as data, and they are what the athlete ends up logging.
+ */
+export const DetectedFoodSchema = z.object({
+  name: z.string().describe('The food, in plain English, as specific as the image allows — "grilled chicken breast", not "meat".'),
+  estimatedGrams: z.number().describe('Estimated edible weight of this food on the plate, in grams.'),
+  confidence: z.number().min(0).max(1).describe('How sure you are this food is present and correctly identified, from 0 to 1.'),
+});
+export type DetectedFood = z.infer<typeof DetectedFoodSchema>;
+
+export const FoodVisionOutputSchema = z.object({
+  foods: z.array(DetectedFoodSchema).describe('Every distinct food visible. Empty when the image contains no food at all.'),
+});
+export type FoodVisionOutput = z.infer<typeof FoodVisionOutputSchema>;
+
+/** Where a scanned item's nutrition figures actually came from. */
+export const NutritionSourceSchema = z.enum(['database', 'estimate']);
+export type NutritionSource = z.infer<typeof NutritionSourceSchema>;
+
+export const ScannedFoodSchema = z.object({
+  name: z.string(),
+  /** The database entry matched, when one was found. */
+  matchedName: z.string().optional(),
+  grams: z.number(),
+  confidence: z.number(),
+  source: NutritionSourceSchema,
+  /** Per 100 g, so the client can rescale when the athlete edits the grams. */
+  per100g: z.object({
+    calories: z.number(),
+    protein: z.number(),
+    carbs: z.number(),
+    fat: z.number(),
+    fiber: z.number(),
+    sugar: z.number(),
+    sodium: z.number(),
+  }),
+});
+export type ScannedFood = z.infer<typeof ScannedFoodSchema>;
+
+export const ScanMealOutputSchema = z.object({
+  foods: z.array(ScannedFoodSchema),
+  /** Set when the image was readable but held no recognisable food. */
+  noFoodDetected: z.boolean(),
+});
+export type ScanMealOutput = z.infer<typeof ScanMealOutputSchema>;
+
 export const NutritionInfoOutputSchema = z.object({
   items: z.array(NutritionItemSchema).describe('A list of food items identified from the input.'),
 });

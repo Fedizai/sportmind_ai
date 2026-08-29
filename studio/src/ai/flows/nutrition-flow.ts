@@ -17,6 +17,14 @@ import {
 } from '@/ai/schemas';
 import { z } from 'zod';
 
+/**
+ * Text description of a meal -> nutrition estimate.
+ *
+ * Photos no longer come through here: they go to scanMeal, which uses a vision
+ * model and looks the macros up in the food database instead of taking the
+ * model's word for them. This path stays for typed queries, where there is no
+ * image to look at and the description is all there is to work from.
+ */
 const nutritionPrompt = ai.definePrompt(
   {
     name: 'nutritionPrompt',

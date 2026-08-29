@@ -68,6 +68,11 @@ export function isLocalDbAvailable(): boolean {
   return load().length > 0;
 }
 
+/** The parsed dataset, for callers that need to rank it their own way. */
+export function getLocalFoods(): LocalFood[] {
+  return load();
+}
+
 /**
  * Rank matches so the most useful result is first:
  * exact name > name starts with > word starts with > contains.

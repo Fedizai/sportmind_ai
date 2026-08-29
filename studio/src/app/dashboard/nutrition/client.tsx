@@ -10,7 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/hooks/use-translation';
 import { getNutritionInfo } from '@/ai/flows/nutrition-flow';
+import { scanMeal } from '@/ai/flows/food-scan-flow';
 import { searchFood } from '@/ai/flows/nutrition-search-flow';
 import { generateNutritionPlan } from '@/ai/flows/nutrition-plan-flow';
 import { logPlannedMeal } from '@/ai/flows/log-planned-meal-flow';
@@ -43,6 +45,7 @@ type Goal = "fat_loss" | "muscle_gain" | "maintenance";
 
 export function NutritionClient() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const { user } = useUser();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -67,6 +70,7 @@ export function NutritionClient() {
   const [textInput, setTextInput] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [nutritionData, setNutritionData] = useState<NutritionInfoOutput | null>(null);
+  const [scanNotice, setScanNotice] = useState<{ kind: 'ok' | 'none' | 'unsure' | 'unmatched'; text: string } | null>(null);
   const [mealType, setMealType] = useState<MealType>("snack");
   
   const [currentMeal, setCurrentMeal] = useState<ManualMealItem[]>([]);
@@ -158,57 +162,123 @@ export function NutritionClient() {
     }
   };
 
+  /**
+   * Photo -> foods on the plate -> nutrition from the food database.
+   *
+   * Photos go through scanMeal, which asks a vision model only what it can
+   * actually see (which foods, how many grams) and then looks the macros up.
+   * Typed descriptions still go to the text flow, where there is no image and
+   * the description is all there is to work from.
+   *
+   * The old path multiplied every value by portion/100 on the way in. The
+   * schema it consumed describes calories "for the item" — already for that
+   * portion — so a 160 g item had its numbers scaled by 1.6 a second time.
+   * scanMeal returns explicit per-100g figures, which is what that maths needs.
+   */
   const performAiAnalysis = async (type: 'scan' | 'text' | 'upload', photoUri?: string) => {
-      let analysisInput: {query?: string, photoDataUri?: string} = {};
+      let dataUri: string | undefined;
+
       if (type === 'scan') {
         if (!videoRef.current || !canvasRef.current) return;
         const video = videoRef.current;
+        if (!video.videoWidth || !video.videoHeight) {
+          toast({ variant: 'destructive', title: t('scanCameraNotReadyTitle'), description: t('scanCameraNotReadyBody') });
+          return;
+        }
         const canvas = canvasRef.current;
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const context = canvas.getContext('2d');
         if (!context) return;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        analysisInput = { photoDataUri: canvas.toDataURL('image/jpeg') };
+        dataUri = canvas.toDataURL('image/jpeg', 0.85);
       } else if (type === 'upload') {
-          if (!photoUri) return;
-          analysisInput = { photoDataUri: photoUri };
-      } else {
-          if (!textInput.trim()) return;
-          analysisInput = { query: textInput };
+        if (!photoUri) return;
+        dataUri = photoUri;
       }
 
       setIsAiLoading(true);
       setNutritionData(null);
+      setScanNotice(null);
+
       try {
-        const result = await getNutritionInfo(analysisInput);
+        if (dataUri) {
+          const result = await scanMeal({ photoDataUri: dataUri });
+
+          if (result.noFoodDetected || result.foods.length === 0) {
+            // Never fabricate a meal from an image the model could not read.
+            setScanNotice({ kind: 'none', text: t('scanNoFoodDetected') });
+            return;
+          }
+
+          const mealItems = result.foods.map(food => {
+            const m = food.grams / 100;
+            return {
+              id: Math.random().toString(),
+              name: food.matchedName || food.name,
+              portion: food.grams,
+              calories: food.per100g.calories * m,
+              protein: food.per100g.protein * m,
+              carbs: food.per100g.carbs * m,
+              fat: food.per100g.fat * m,
+              sugar: food.per100g.sugar * m,
+              sodium: food.per100g.sodium * m,
+              iron: 0,
+              potassium: 0,
+            };
+          });
+          setCurrentMeal(mealItems);
+
+          const unmatched = result.foods.filter(f => f.source === 'estimate').map(f => f.name);
+          const unsure = result.foods.filter(f => f.confidence < 0.6).map(f => f.name);
+          if (unmatched.length > 0) {
+            setScanNotice({ kind: 'unmatched', text: t('scanUnmatched', { foods: unmatched.join(', ') }) });
+          } else if (unsure.length > 0) {
+            setScanNotice({ kind: 'unsure', text: t('scanLowConfidence', { foods: unsure.join(', ') }) });
+          } else {
+            setScanNotice({ kind: 'ok', text: t('scanVerifyPortions') });
+          }
+          return;
+        }
+
+        if (!textInput.trim()) return;
+        const result = await getNutritionInfo({ query: textInput });
         setNutritionData(result);
         if (result.items.length > 0) {
-            const mealItems = result.items.map(item => {
-                const multiplier = item.portion / 100;
-                return {
-                    ...item,
-                    id: Math.random().toString(),
-                    calories: item.calories * multiplier,
-                    protein: item.protein * multiplier,
-                    carbs: item.carbs * multiplier,
-                    fat: item.fat * multiplier,
-                    sugar: item.sugar * multiplier,
-                    sodium: item.sodium * multiplier,
-                    iron: item.iron * multiplier,
-                    potassium: item.potassium * multiplier,
-                    portion: item.portion,
-                };
-            });
-            setCurrentMeal(mealItems);
+          setCurrentMeal(result.items.map(item => ({
+            ...item,
+            id: Math.random().toString(),
+          })));
         }
       } catch (error) {
         console.error(error);
-        toast({ variant: 'destructive', title: 'AI Error', description: 'Could not analyze input.' });
+        const detail = error instanceof Error ? error.message : undefined;
+        toast({ variant: 'destructive', title: t('scanFailedTitle'), description: detail || t('scanFailedBody') });
       } finally {
         setIsAiLoading(false);
       }
   }
+
+  /** Rescale an item's macros when the athlete corrects the grams. */
+  const updateItemGrams = (index: number, grams: number) => {
+    setCurrentMeal(meal => meal.map((item, i) => {
+      if (i !== index) return item;
+      const previous = item.portion > 0 ? item.portion : 100;
+      const factor = grams / previous;
+      return {
+        ...item,
+        portion: grams,
+        calories: item.calories * factor,
+        protein: item.protein * factor,
+        carbs: item.carbs * factor,
+        fat: item.fat * factor,
+        sugar: item.sugar * factor,
+        sodium: item.sodium * factor,
+        iron: item.iron * factor,
+        potassium: item.potassium * factor,
+      };
+    }));
+  };
   
     const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -345,6 +415,7 @@ export function NutritionClient() {
           setNutritionData(null);
           setTextInput('');
           setCurrentMeal([]);
+          setScanNotice(null);
       } catch (error) {
           console.error(error);
           // Show what actually went wrong; Next redacts real server errors in
@@ -909,6 +980,15 @@ export function NutritionClient() {
                         <CardDescription>Review items below and log them.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {/* What the scan is and is not sure about. Silence
+                                here would present estimated portions and
+                                unmatched foods as settled figures. */}
+                            {scanNotice && (
+                                <Alert variant={scanNotice.kind === 'unmatched' || scanNotice.kind === 'none' ? 'destructive' : 'default'}>
+                                    <Sparkles className="h-4 w-4" />
+                                    <AlertDescription>{scanNotice.text}</AlertDescription>
+                                </Alert>
+                            )}
                             <div className="text-center bg-primary/10 p-4 rounded-lg">
                                 <p className="text-muted-foreground">Total Estimated Calories</p>
                                 <p className="text-4xl font-bold text-primary">{currentMeal.reduce((sum, item) => sum + item.calories, 0).toFixed(0)} kcal</p>
@@ -923,9 +1003,20 @@ export function NutritionClient() {
                                     </Button>
                                     </CardHeader>
                                     <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm p-3 pt-0">
+                                    {/* Editable: the grams are the model's
+                                        estimate, and every macro below is
+                                        derived from them, so correcting the
+                                        weight has to recompute the row. */}
                                     <div className="bg-background/50 p-2 rounded-md text-center">
-                                        <p className="font-bold">{item.portion}g</p>
-                                        <p className="text-xs text-muted-foreground">Portion</p>
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            value={Math.round(item.portion)}
+                                            onChange={(e) => updateItemGrams(index, Math.max(0, Number(e.target.value) || 0))}
+                                            className="h-7 border-0 bg-transparent p-0 text-center font-bold focus-visible:ring-1"
+                                            aria-label={`${t('scanEditGrams')} — ${item.name}`}
+                                        />
+                                        <p className="text-xs text-muted-foreground">{t('scanEditGrams')}</p>
                                     </div>
                                     <div className="bg-background/50 p-2 rounded-md text-center">
                                         <p className="font-bold">{item.calories.toFixed(0)}</p>
