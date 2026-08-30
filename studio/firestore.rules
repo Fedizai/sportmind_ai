@@ -155,6 +155,16 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
     }
+    // An athlete's own planned sessions, per sport. Same ownership shape as
+    // the match collections above: you write your own, a coach or admin may
+    // read them. Distinct from `trainingSessions`, which is the coach's
+    // team-wide schedule.
+    match /athlete_sessions/{sessionId} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
     match /swimming_sessions/{entryId} {
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;

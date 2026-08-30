@@ -15,6 +15,7 @@ import { getTacticalAdvice } from "@/ai/flows/sports-flows";
 import type { TacticalAdviceOutput, TennisDrillOutput } from "@/ai/schemas";
 import { deleteMatch } from "./actions";
 import { useTranslation } from "@/hooks/use-translation";
+import { useAthleteSessions, type AthleteSession } from '@/hooks/use-athlete-sessions';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis, RadarChart, PolarGrid, PolarAngleAxis, Radar, Legend, Line, LineChart, ResponsiveContainer } from "recharts";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -71,7 +72,8 @@ const sessionSchema = z.object({
     notes: z.string().optional(),
 });
 type SessionInput = z.infer<typeof sessionSchema>;
-type ScheduleItem = SessionInput & { id: number; completed: boolean; date: Date | null };
+// Sessions live in Firestore now; the row shape comes from the shared hook.
+type ScheduleItem = AthleteSession;
 
 // Video Upload Types
 type UploadStatus = "Pending Review" | "Reviewed" | "AI is reviewing..." | "Failed";
@@ -175,7 +177,14 @@ export default function FootballModuleClient() {
 
     const [currentStep, setCurrentStep] = useState(1);
 
-    const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
+    // Persisted per athlete and per sport, so a planned session survives a
+    // refresh instead of living only in this component's memory.
+    const {
+        sessions: schedule,
+        addSession,
+        toggleSession,
+        removeSession,
+    } = useAthleteSessions(user?.uid, 'football');
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
 
@@ -379,35 +388,42 @@ export default function FootballModuleClient() {
     };
 
 
-    const handleAddSession = (values: SessionInput) => {
-        const newSession: ScheduleItem = {
-            id: Date.now(),
-            ...values,
-            date: values.date,
-            completed: false,
-        };
-        setSchedule(prev => [...prev, newSession].sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0)));
-        setIsAddSessionOpen(false);
-        addSessionForm.reset();
-        toast({
-            title: t('sessionAdded'),
-            description: t('sessionAddedDescription', { title: newSession.title }),
-        });
+    const handleAddSession = async (values: SessionInput) => {
+        try {
+            await addSession(values);
+            setIsAddSessionOpen(false);
+            addSessionForm.reset();
+            toast({
+                title: t('sessionAdded'),
+                description: t('sessionAddedDescription', { title: values.title }),
+            });
+        } catch (error) {
+            console.error('Could not save session:', error);
+            toast({ variant: 'destructive', title: t('sessionSaveFailed') });
+        }
     }
 
-    const handleDeleteSession = (sessionId: number) => {
-        setSchedule(prev => prev.filter(session => session.id !== sessionId));
-        toast({
-            title: t('sessionRemoved'),
-            description: t('sessionRemovedDescription'),
-        });
+    const handleDeleteSession = async (sessionId: string) => {
+        try {
+            await removeSession(sessionId);
+            toast({
+                title: t('sessionRemoved'),
+                description: t('sessionRemovedDescription'),
+            });
+        } catch (error) {
+            console.error('Could not remove session:', error);
+            toast({ variant: 'destructive', title: t('sessionSaveFailed') });
+        }
     }
 
-    const handleToggleSession = (sessionId: number) => {
-        setSchedule(prev => prev.map(session =>
-            session.id === sessionId ? { ...session, completed: !session.completed } : session
-        ));
-        toast({ title: t('sessionStatusUpdated') });
+    const handleToggleSession = async (sessionId: string) => {
+        try {
+            await toggleSession(sessionId);
+            toast({ title: t('sessionStatusUpdated') });
+        } catch (error) {
+            console.error('Could not update session:', error);
+            toast({ variant: 'destructive', title: t('sessionSaveFailed') });
+        }
     };
 
 

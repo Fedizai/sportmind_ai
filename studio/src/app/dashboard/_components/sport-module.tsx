@@ -10,6 +10,7 @@ import { collection, query, where, orderBy, onSnapshot, Timestamp } from "fireba
 import { db } from "@/lib/firebase";
 import { useUser } from "@/hooks/use-user";
 import { useTranslation } from "@/hooks/use-translation";
+import { useAthleteSessions, type AthleteSession } from '@/hooks/use-athlete-sessions';
 import { saveSportEntry, deleteSportEntry } from "./sport-actions";
 import { type SportConfig, type Bi, type RecapKind, type Exercise, type ExerciseLevel, pick } from "@/lib/sport-configs";
 
@@ -50,15 +51,8 @@ type SportEntry = {
     date: Date;
 };
 
-type ScheduleItem = {
-    id: number;
-    title: string;
-    type: "technical" | "tactical" | "physical" | "other";
-    duration: number;
-    notes?: string;
-    date: Date | null;
-    completed: boolean;
-};
+// Sessions live in Firestore now; the row shape comes from the shared hook.
+type ScheduleItem = AthleteSession;
 
 // --- Local bilingual strings (keeps the module fully EN/FR without bloating i18n.ts) ---
 const S = {
@@ -142,6 +136,7 @@ const S = {
     entryDeleted: { en: "Entry deleted", fr: "Entrée supprimée" },
     sessionAdded: { en: "Session added", fr: "Séance ajoutée" },
     sessionRemoved: { en: "Session removed", fr: "Séance supprimée" },
+    sessionSaveFailed: { en: "Could not save the session. Check your connection and try again.", fr: "Impossible d'enregistrer la séance. Vérifiez votre connexion et réessayez." },
     error: { en: "Something went wrong", fr: "Une erreur est survenue" },
     loginRequired: { en: "You must be logged in.", fr: "Tu dois être connecté." },
     athlete: { en: "Athlete", fr: "Athlète" },
@@ -222,7 +217,14 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const searchParams = useSearchParams();
 
-    const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
+    // Persisted per athlete and per sport — `config.collection` already names
+    // the sport uniquely, so it doubles as the discriminator.
+    const {
+        sessions: schedule,
+        addSession,
+        toggleSession,
+        removeSession,
+    } = useAthleteSessions(user?.uid, config.collection);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
 
@@ -360,19 +362,33 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
     };
 
     // --- Session handlers ---
-    const handleAddSession = (values: z.infer<typeof sessionSchema>) => {
-        setSchedule((prev) => [...prev, { id: Date.now(), ...values, date: values.date, completed: false }]
-            .sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0)));
-        setIsAddSessionOpen(false);
-        addSessionForm.reset({ title: "", type: "technical", date: new Date(), duration: 60, notes: "" });
-        toast({ title: tr(S.sessionAdded) });
+    const handleAddSession = async (values: z.infer<typeof sessionSchema>) => {
+        try {
+            await addSession(values);
+            setIsAddSessionOpen(false);
+            addSessionForm.reset({ title: "", type: "technical", date: new Date(), duration: 60, notes: "" });
+            toast({ title: tr(S.sessionAdded) });
+        } catch (error) {
+            console.error("Could not save session:", error);
+            toast({ variant: "destructive", title: tr(S.sessionSaveFailed) });
+        }
     };
-    const handleDeleteSession = (id: number) => {
-        setSchedule((prev) => prev.filter((s) => s.id !== id));
-        toast({ title: tr(S.sessionRemoved) });
+    const handleDeleteSession = async (id: string) => {
+        try {
+            await removeSession(id);
+            toast({ title: tr(S.sessionRemoved) });
+        } catch (error) {
+            console.error("Could not remove session:", error);
+            toast({ variant: "destructive", title: tr(S.sessionSaveFailed) });
+        }
     };
-    const handleToggleSession = (id: number) => {
-        setSchedule((prev) => prev.map((s) => (s.id === id ? { ...s, completed: !s.completed } : s)));
+    const handleToggleSession = async (id: string) => {
+        try {
+            await toggleSession(id);
+        } catch (error) {
+            console.error("Could not update session:", error);
+            toast({ variant: "destructive", title: tr(S.sessionSaveFailed) });
+        }
     };
 
     // --- Goal handlers ---
