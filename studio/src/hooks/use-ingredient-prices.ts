@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { foodKey, type Ingredient } from '@/lib/ingredients';
+import { costOf } from '@/lib/price-basis';
 import type { ShoppingRegion } from '@/stores/shopping-region-store';
 
 /**
@@ -58,27 +59,14 @@ function keyFor(item: Ingredient, region: ShoppingRegion | null): string {
 
 /**
  * The server returns one entry per distinct food+unit; the cost inside it is
- * for the quantity that was asked about, so scaling for a different quantity
- * of the same food is done here rather than by asking again.
+ * for the quantity that was asked about, so a different quantity of the same
+ * food is scaled here rather than by asking again.
+ *
+ * `costOf` is the shared one, so a rate whose basis cannot price this unit
+ * comes back null here exactly as it does on the server.
  */
-function rescale(cached: IngredientPrice, quantity: number): IngredientPrice {
-  const { estimate } = cached;
-  const multiplier =
-    estimate.basis === 'kg' ? quantity / 1000
-    : estimate.basis === 'l' ? quantity / 1000
-    : quantity;
-
-  if (!Number.isFinite(quantity) || quantity <= 0) return { estimate, cost: null };
-
-  return {
-    estimate,
-    cost: {
-      value: estimate.value * multiplier,
-      low: estimate.low * multiplier,
-      high: estimate.high * multiplier,
-      currency: estimate.currency,
-    },
-  };
+function rescale(cached: IngredientPrice, item: Ingredient): IngredientPrice {
+  return { estimate: cached.estimate, cost: costOf(cached.estimate, item.quantity, item.unit) };
 }
 
 export function useIngredientPrices(
@@ -179,7 +167,7 @@ export function useIngredientPrices(
     if (!region) return null;
     const hit = cache.get(keyFor(item, region));
     if (!hit || Date.now() - hit.at >= TTL_MS || !hit.value) return null;
-    return rescale(hit.value, item.quantity);
+    return rescale(hit.value, item);
   };
 
   /**

@@ -18,7 +18,10 @@
  * there are too few of them the answer is null and the UI says so.
  */
 
-export type PriceBasis = 'kg' | 'l' | 'unit';
+import { basisForUnit, costOf, type PriceBasis } from '@/lib/price-basis';
+
+export { basisForUnit, costOf };
+export type { PriceBasis };
 export type PriceConfidence = 'low' | 'medium' | 'high';
 export type PriceScope = 'nearby' | 'country' | 'global';
 
@@ -444,13 +447,6 @@ function summarise(
 
 // --- Public entry point -----------------------------------------------------
 
-/** Which basis a recipe quantity wants priced. */
-export function basisForUnit(unit: 'g' | 'ml' | 'piece'): PriceBasis {
-  if (unit === 'g') return 'kg';
-  if (unit === 'ml') return 'l';
-  return 'unit';
-}
-
 /**
  * The regional price for one food, or null when the data does not support one.
  *
@@ -498,32 +494,4 @@ export async function estimatePrice(
   }
 
   return mismatched;
-}
-
-/**
- * What a specific quantity of a food costs, given its regional price.
- *
- * Returns null when the estimate prices a basis the quantity cannot be
- * converted to — a per-piece price says nothing about 80 grams.
- */
-export function costOf(
-  estimate: PriceEstimate,
-  quantity: number,
-  unit: 'g' | 'ml' | 'piece'
-): { value: number; low: number; high: number; currency: string } | null {
-  if (!Number.isFinite(quantity) || quantity <= 0) return null;
-
-  let multiplier: number | null = null;
-  if (estimate.basis === 'kg' && unit === 'g') multiplier = quantity / 1000;
-  else if (estimate.basis === 'l' && unit === 'ml') multiplier = quantity / 1000;
-  else if (estimate.basis === 'unit' && unit === 'piece') multiplier = quantity;
-
-  if (multiplier === null) return null;
-
-  return {
-    value: estimate.value * multiplier,
-    low: estimate.low * multiplier,
-    high: estimate.high * multiplier,
-    currency: estimate.currency,
-  };
 }
