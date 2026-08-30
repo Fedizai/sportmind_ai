@@ -40,7 +40,6 @@ type Bi = { en: string; fr: string };
 const L = {
   navProduct: { en: 'Product', fr: 'Produit' },
   navAudience: { en: 'Who it is for', fr: 'Pour qui' },
-  navPricing: { en: 'Pricing', fr: 'Tarifs' },
   login: { en: 'Log in', fr: 'Connexion' },
   start: { en: 'Start training', fr: 'Commencer' },
   menu: { en: 'Menu', fr: 'Menu' },
@@ -51,7 +50,7 @@ const L = {
     en: 'SportMind turns your training, nutrition and match data into one clear plan — and rewrites it every week as you change.',
     fr: 'SportMind transforme vos données d’entraînement, de nutrition et de match en un plan clair — réécrit chaque semaine à mesure que vous évoluez.',
   },
-  heroPricing: { en: 'See pricing', fr: 'Voir les tarifs' },
+  heroSignUp: { en: 'Create an account', fr: 'Créer un compte' },
   railSports: { en: 'Six sport modules', fr: 'Six modules sportifs' },
   railPlans: { en: 'Plans that adapt weekly', fr: 'Des plans réajustés chaque semaine' },
   railCoach: { en: 'Coach-ready from day one', fr: 'Prêt pour le coach dès le premier jour' },
@@ -115,8 +114,6 @@ const L = {
     fr: 'Entraînement d’équipe sous les projecteurs, de nuit',
   },
 
-  pricingTitle: { en: 'Pick your tier', fr: 'Choisissez votre formule' },
-  pricingSub: { en: 'Monthly. Cancel whenever you want.', fr: 'Mensuel. Annulable à tout moment.' },
   perMonth: { en: '/month', fr: '/mois' },
   choose: { en: 'Choose', fr: 'Choisir' },
   popular: { en: 'Most chosen', fr: 'Le plus choisi' },
@@ -171,62 +168,7 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const handleGetStarted = (checkoutUrl: string) => {
-    if (user) {
-      window.location.href = checkoutUrl;
-    } else {
-      toast({
-        title: language === 'fr' ? 'Compte requis' : 'Account required',
-        description:
-          language === 'fr'
-            ? 'Créez un compte pour souscrire à une formule.'
-            : 'Please create an account to subscribe to a plan.',
-      });
-      router.push(`/signup?checkoutUrl=${encodeURIComponent(checkoutUrl)}`);
-    }
-  };
 
-  const tiers = [
-    {
-      name: 'Athlete',
-      price: 40,
-      checkoutUrl: 'https://knct.me/9I6H_gEj-',
-      featured: false,
-      blurb: { en: 'Everything you need to train and track.', fr: 'Tout pour vous entraîner et suivre vos progrès.' },
-      features: [
-        { en: 'All six sport modules', fr: 'Les six modules sportifs' },
-        { en: 'AI training plans', fr: 'Plans d’entraînement IA' },
-        { en: 'Nutrition tracking', fr: 'Suivi nutritionnel' },
-        { en: 'Progress analytics', fr: 'Analyses de progression' },
-      ],
-    },
-    {
-      name: 'Pro',
-      price: 60,
-      checkoutUrl: 'https://knct.me/eGQSM5PVY',
-      featured: true,
-      blurb: { en: 'For athletes chasing a specific number.', fr: 'Pour les athlètes qui visent un chiffre précis.' },
-      features: [
-        { en: 'Everything in Athlete', fr: 'Tout le contenu Athlete' },
-        { en: 'Body scan and composition', fr: 'Scan corporel et composition' },
-        { en: 'Video form analysis', fr: 'Analyse vidéo de la technique' },
-        { en: 'Priority support', fr: 'Support prioritaire' },
-      ],
-    },
-    {
-      name: 'Coach',
-      price: 50,
-      checkoutUrl: 'https://knct.me/2nLmVs0pO',
-      featured: false,
-      blurb: { en: 'Run a roster without the spreadsheets.', fr: 'Gérez un effectif sans tableurs.' },
-      features: [
-        { en: 'Everything in Pro', fr: 'Tout le contenu Pro' },
-        { en: 'Team and roster management', fr: 'Gestion d’équipe et d’effectif' },
-        { en: 'Session planner', fr: 'Planificateur de séances' },
-        { en: 'Player messaging', fr: 'Messagerie joueurs' },
-      ],
-    },
-  ];
 
   const capabilities = [
     { photo: PHOTO.measure, title: L.cap1Title, body: L.cap1Body, alt: L.cap1Alt },
@@ -237,7 +179,6 @@ export default function LandingPage() {
   const navLinks = [
     { href: '#product', label: L.navProduct },
     { href: '#audience', label: L.navAudience },
-    { href: '#pricing', label: L.navPricing },
   ];
 
   const rise = {
@@ -379,7 +320,7 @@ export default function LandingPage() {
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="px-8 text-base">
-                  <a href="#pricing">{tr(L.heroPricing)}</a>
+                  <a href="/signup">{tr(L.heroSignUp)}</a>
                 </Button>
               </motion.div>
             </motion.div>
@@ -497,62 +438,6 @@ export default function LandingPage() {
                     </p>
                   </div>
                 </motion.article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ────────────────────────── Pricing ────────────────────────── */}
-        <section id="pricing" className="w-full scroll-mt-20 border-t border-white/10 py-20 md:py-28">
-          <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-            <h2 className="font-display text-[clamp(2.2rem,5.2vw,4.2rem)] font-bold uppercase leading-[0.96] tracking-[-0.015em]">
-              {tr(L.pricingTitle)}
-            </h2>
-            <p className="mt-4 text-base text-white/60">{tr(L.pricingSub)}</p>
-
-            <div className="mt-12 grid gap-px overflow-hidden rounded-sm border border-white/[0.12] bg-white/[0.12] md:grid-cols-3">
-              {tiers.map((tier) => (
-                <div
-                  key={tier.name}
-                  className={cn('flex flex-col bg-[#0A0A0C] p-7 md:p-9', tier.featured && 'bg-[#101218]')}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="font-display text-3xl font-bold uppercase tracking-[0.01em]">{tier.name}</h3>
-                    {tier.featured && (
-                      <span className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground">
-                        {tr(L.popular)}
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="mt-3 min-h-[3rem] max-w-[34ch] text-sm leading-relaxed text-white/60">
-                    {tr(tier.blurb)}
-                  </p>
-
-                  <p className="mt-6 flex items-baseline gap-1.5">
-                    <span className="font-display text-6xl font-extrabold leading-none tabular-nums">
-                      ${tier.price}
-                    </span>
-                    <span className="text-sm text-white/55">{tr(L.perMonth)}</span>
-                  </p>
-
-                  <ul className="mt-8 flex-1 space-y-3">
-                    {tier.features.map((f) => (
-                      <li key={f.en} className="flex items-start gap-2.5 text-sm text-white/80">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        <span>{tr(f)}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Button
-                    onClick={() => handleGetStarted(tier.checkoutUrl)}
-                    variant={tier.featured ? 'default' : 'outline'}
-                    className="mt-9 w-full"
-                  >
-                    {tr(L.choose)} {tier.name}
-                  </Button>
-                </div>
               ))}
             </div>
           </div>

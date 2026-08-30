@@ -151,7 +151,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         });
         return () => unsubscribeSnapshot();
       } else {
-        const publicRoutes = ['/', '/login', '/forgot-password', '/pricing-details'];
+        const publicRoutes = ['/', '/login', '/forgot-password'];
         const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith('/signup');
 
         if (!isPublicRoute) {

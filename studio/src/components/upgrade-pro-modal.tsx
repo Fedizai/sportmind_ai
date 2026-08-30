@@ -26,8 +26,14 @@ export function UpgradeProModal({
   const router = useRouter();
   const { t } = useTranslation();
 
+  /**
+   * There is no self-serve checkout any more, so this cannot send anyone to a
+   * price list. Pro is arranged directly, and the support page is the way to
+   * ask for it — which at least goes somewhere, unlike the pricing anchor
+   * this used to open.
+   */
   const handleUpgrade = () => {
-    router.push("/#pricing");
+    router.push("/dashboard/help");
   };
 
   const handleRefresh = () => {

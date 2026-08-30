@@ -32,6 +32,9 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "@/hooks/use-translation";
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db, isFirebaseConfigured } from "@/lib/firebase";
 
 const sports = [
     { id: 'football', label: 'Football' },
@@ -39,21 +42,28 @@ const sports = [
     { id: 'gym', label: 'Gym/Fitness' },
 ];
 
+const ADMIN_EMAILS = ['fedizayen12@gmail.com', 'khaled05062006@gmail.com', 'khaled050620062@gmail.com'];
+
+/**
+ * Resting burn plus an activity factor, used to seed the athlete's calorie
+ * target. Mifflin-St Jeor, as it was on the old post-checkout page.
+ */
+const calculateTDEE = (age: number, height: number, weight: number, trainingFrequency: string) => {
+    const bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+    let activityMultiplier = 1.375;
+    if (trainingFrequency === '3-4_per_week') activityMultiplier = 1.55;
+    else if (trainingFrequency === '5+_per_week') activityMultiplier = 1.725;
+    return Math.round(bmr * activityMultiplier);
+};
+
 export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const checkoutUrl = searchParams.get('checkoutUrl');
   const { theme, setTheme } = useTheme();
   const [currentStep, setCurrentStep] = useState(0);
-
-  useEffect(() => {
-    if (!checkoutUrl) {
-      router.replace('/#pricing');
-    }
-  }, [checkoutUrl, router]);
 
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
@@ -103,34 +113,92 @@ export default function SignupPage() {
     setCurrentStep(prev => prev - 1);
   }
 
+  /**
+   * Create the account here, directly.
+   *
+   * This used to stash the form in sessionStorage and hand off to an external
+   * checkout, with the real account being created on the page the payment
+   * provider returned to. With payments gone that page went too, so signing up
+   * has to finish where it starts — otherwise the form leads nowhere.
+   */
   async function onSubmit(values: z.infer<typeof signupSchema>) {
     setIsSubmitting(true);
-    
+
+    if (!isFirebaseConfigured()) {
+      toast({ variant: "destructive", title: t('signupFailedTitle'), description: t('signupNotConfigured') });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      if (!checkoutUrl) {
-        toast({ title: "No Plan Selected", description: "Please select a plan from the homepage.", variant: "destructive" });
-        router.push('/#pricing');
-        setIsSubmitting(false);
+      const {
+        fullName, username, email, password, role,
+        age, trainingFrequency, mainGoal, sports: chosenSports,
+        footballPosition, inClub,
+        tennisLevel, hasRanking, tennisRanking, dominantHand, playStyle,
+        gymHeight, gymWeight, gymGoal,
+      } = values;
+
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = credential.user;
+
+      const userRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : role;
+      const targetCalories = calculateTDEE(age, gymHeight || 175, gymWeight || 70, trainingFrequency);
+
+      await Promise.all([
+        updateProfile(user, { displayName: fullName }),
+        setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          email,
+          displayName: fullName,
+          // The public handle, chosen at signup. displayName stays the legal
+          // name and is only changed by an admin.
+          username,
+          role: userRole,
+          // Everyone starts on the free tier; Pro is arranged directly now.
+          plan: role === 'coach' ? 'pro' : 'athlete',
+          createdAt: serverTimestamp(),
+          onboardingComplete: true,
+          age,
+          trainingFrequency,
+          mainGoal,
+          sports: chosenSports,
+          ...(chosenSports.includes('football') && {
+            footballProfile: { position: footballPosition, inClub },
+          }),
+          ...(chosenSports.includes('tennis') && {
+            tennisProfile: {
+              level: tennisLevel, hasRanking, ranking: tennisRanking,
+              dominantHand, playStyle,
+            },
+          }),
+          ...(chosenSports.includes('gym') && {
+            gymProfile: { height: gymHeight, weight: gymWeight, goal: gymGoal },
+          }),
+          nutritionTarget: { calories: targetCalories },
+        }),
+        sendEmailVerification(user),
+      ]);
+
+      toast({ title: t('signupSuccessTitle'), description: t('signupSuccessBody') });
+      router.push('/login');
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      if (error?.code === "auth/email-already-in-use") {
+        toast({ variant: "destructive", title: t('signupEmailInUseTitle'), description: t('signupEmailInUseBody') });
+        router.push('/login');
         return;
       }
-      sessionStorage.setItem('pendingUser', JSON.stringify(values));
-      const stripeUrlWithEmail = `${checkoutUrl}?prefilled_email=${encodeURIComponent(values.email)}`;
-      window.location.href = stripeUrlWithEmail;
-    } catch (error: any) {
-      console.error("Signup to checkout error:", error);
-      toast({ title: "Error", description: "Could not proceed to checkout. Please try again.", variant: "destructive" });
+      toast({
+        variant: "destructive",
+        title: t('signupFailedTitle'),
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
       setIsSubmitting(false);
     }
   }
 
-  if (!checkoutUrl) {
-    return (
-        <div className="flex h-screen w-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-    );
-  }
-  
   const progressValue = ((currentStep + 1) / (steps.length + 1)) * 100;
 
   return (

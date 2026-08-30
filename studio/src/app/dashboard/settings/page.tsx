@@ -460,7 +460,7 @@ export default function SettingsPage() {
                                     <p className="font-semibold">{t('currentPlanLabel')} <span className="text-primary capitalize">{user?.role}</span></p>
                                     <p className="text-xs text-muted-foreground">{t('billingManagedVia')}</p>
                                 </div>
-                                <Button type="button" variant="default" className="mt-2 md:mt-0" onClick={() => router.push('/dashboard/settings/subscription')}>{t('manageSubscription')}</Button>
+
                             </div>
                         </CardContent>
                     </Card>
