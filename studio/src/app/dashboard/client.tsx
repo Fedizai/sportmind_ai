@@ -64,6 +64,7 @@ import FitnessAssistantChat from "../dashboard/fitness-assistant/page";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FootballInsightCard } from '@/components/insights/football-insight-card';
 import { useStreakStore } from '@/stores/streak-store';
+import { SportsActivitySection } from '@/components/insights/sports-activity-section';
 import { useFavorites } from '@/hooks/use-favorites';
 import { FavoriteStar } from '@/components/favorite-star';
 import { tierForStreak, nextTier, daysToNextTier } from '@/lib/streak-tiers';
@@ -932,9 +933,9 @@ export function InsightsGrid() {
     const footballRadarData = useMemo(() => {
         if (footballMatches.length === 0) {
             return [
-                { subject: "Speed", A: 0 }, { subject: "Endurance", A: 0 },
-                { subject: "Passing", A: 0 }, { subject: "Shooting", A: 0 },
-                { subject: "Defense", A: 0 },
+                { subject: "Endurance", A: 0 },
+                { subject: "Passing", A: 0 },
+                { subject: "Shooting", A: 0 },
             ];
         }
         const totalStamina = footballMatches.reduce((sum, m) => sum + m.stamina, 0);
@@ -945,12 +946,14 @@ export function InsightsGrid() {
         const shootingSkill = Math.min(100, (totalGoals / footballMatches.length) * 40);
         const passingSkill = Math.min(100, (totalAssists / footballMatches.length) * 50);
 
+        // Only axes that come from logged matches. "Speed" and "Defense"
+        // used to be the constants 75 and 65 — numbers nobody measured,
+        // rendered beside three that were real, which made the whole chart
+        // look like data.
         return [
-            { subject: "Speed", A: 75 },
             { subject: "Endurance", A: avgStamina },
             { subject: "Passing", A: passingSkill },
             { subject: "Shooting", A: shootingSkill },
-            { subject: "Defense", A: 65 },
         ].map(item => ({ ...item, fullMark: 100 }));
     }, [footballMatches]);
 
@@ -976,6 +979,15 @@ export function InsightsGrid() {
                         animate="visible"
                         className="space-y-6"
                     >
+                        {/* Every sport this athlete logs, not just the two
+                            that happened to be wired up. */}
+                        <SectionHeader
+                            icon={<Activity className="h-6 w-6" />}
+                            title={t('insightsYourSports')}
+                            subtitle={t('insightsYourSportsSub')}
+                        />
+                        <SportsActivitySection />
+
                         <SectionHeader
                             icon={<Activity className="h-6 w-6" />}
                             title={t('generalInsightsTitle')}
