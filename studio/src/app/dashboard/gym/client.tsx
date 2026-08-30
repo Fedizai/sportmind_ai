@@ -50,6 +50,7 @@ import { UpgradeProModal } from '@/components/upgrade-pro-modal';
 import { fr, enUS } from 'date-fns/locale';
 import NutritionTab from './nutrition-tab';
 import { useTranslation } from '@/hooks/use-translation';
+import { EditExerciseDialog } from '@/components/gym/edit-exercise-dialog';
 
 type BodyPart = typeof bodyParts[0];
 type Exercise = typeof allExercises[0];
@@ -915,6 +916,16 @@ function PlanViewer({ plan }: { plan: GymPlan }) {
                                                                 }}
                                                             />
                                                         )}
+                                                    </TableCell>
+                                                    <TableCell className="w-10 p-0 pr-2">
+                                                        {/* The plan was a printout: you could tick a set
+                                                            off and nudge the load, but not swap a movement
+                                                            you cannot do or fix a rep range. */}
+                                                        <EditExerciseDialog
+                                                            dayIndex={dayIndex}
+                                                            exerciseIndex={exerciseIndex}
+                                                            exercise={ex}
+                                                        />
                                                     </TableCell>
                                                 </TableRow>
                                             );

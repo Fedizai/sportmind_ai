@@ -13,6 +13,8 @@ export interface NutritionPlanState {
   /** Pass null to clear the current plan (options omitted). */
   setGeneratedPlan: (plan: NutritionPlanOutput | null, options?: NutritionPlanInput) => void;
   toggleMealCompleted: (mealIndex: number) => void;
+  /** Edit a planned meal — its name, calories, protein, or its ingredients. */
+  updateMeal: (mealIndex: number, patch: Partial<Meal>) => void;
   removePlan: () => void;
   resetDailyData: () => void;
 }
@@ -45,7 +47,25 @@ export const useNutritionPlanStore = create<NutritionPlanState>()(
         
         set({ generatedPlan: { ...currentPlan, meals: newMeals } });
       },
-      removePlan: () => {
+      /**
+       * Correct a generated meal.
+       *
+       * The plan is a proposal, not an instruction: an athlete who dislikes an
+       * ingredient, cannot get one, or eats a different amount could
+       * previously only regenerate the whole day and lose everything else in
+       * it. Editing one meal leaves the rest alone.
+       */
+      updateMeal: (mealIndex, patch) => {
+        const currentPlan = get().generatedPlan;
+        if (!currentPlan) return;
+        const meal = currentPlan.meals[mealIndex];
+        if (!meal) return;
+
+        const newMeals = [...currentPlan.meals];
+        newMeals[mealIndex] = { ...meal, ...patch };
+        set({ generatedPlan: { ...currentPlan, meals: newMeals } });
+      },
+            removePlan: () => {
         set({ generatedPlan: null });
       },
       resetDailyData: () => {

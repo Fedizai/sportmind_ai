@@ -86,6 +86,40 @@ export async function logNutrition(
   }
 }
 
+// --- UPDATE ---
+/**
+ * Correct a meal that was already logged.
+ *
+ * Logged meals could only be deleted and re-entered, which meant a single
+ * wrong portion cost the whole entry. The items are revalidated through the
+ * same schema the create path uses, so a correction cannot write values the
+ * original was not allowed to.
+ */
+export async function updateNutritionLog(
+  logId: string,
+  items: z.infer<typeof mealItemSchema>[]
+) {
+  try {
+    if (!logId) throw new Error("Log ID is required.");
+
+    const validated = z.array(mealItemSchema.omit({ id: true })).parse(items);
+    if (validated.length === 0) {
+      throw new Error("A meal needs at least one item.");
+    }
+
+    await adminDb.collection("nutritionLogs").doc(logId).update({ items: validated });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const first = error.issues[0];
+      const where = first?.path?.join('.') || 'meal';
+      throw new Error(`Invalid meal data (${where}): ${first?.message ?? 'unknown field'}`);
+    }
+    console.error("❌ Error updating nutrition log:", error);
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Could not update the meal: ${detail}`);
+  }
+}
+
 // --- DELETE ---
 export async function deleteNutritionLog(logId: string) {
   try {

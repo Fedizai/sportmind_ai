@@ -39,6 +39,7 @@ import { UpgradeProModal } from '@/components/upgrade-pro-modal';
 import { BarcodeScanTab, type ScannedFoodItem } from '@/components/nutrition/barcode-scan-tab';
 import { PlanMeals } from '@/components/nutrition/plan-meals';
 import { ShoppingListPanel } from '@/components/nutrition/shopping-list-panel';
+import { EditMealDialog } from '@/components/nutrition/edit-meal-dialog';
 import { formatQuantity, type Ingredient } from '@/lib/ingredients';
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
@@ -57,7 +58,7 @@ export function NutritionClient() {
   
   const searchParams = useSearchParams();
   const { dailyLogs, dailyTotals, isLoading: isLogLoading, startListener } = useNutritionStore();
-  const { generatedPlan, setGeneratedPlan, toggleMealCompleted, removePlan } = useNutritionPlanStore();
+  const { generatedPlan, setGeneratedPlan, toggleMealCompleted, updateMeal, removePlan } = useNutritionPlanStore();
   const shoppingListStore = useShoppingListStore();
 
   useEffect(() => {
@@ -578,9 +579,14 @@ export function NutritionClient() {
                     <AccordionTrigger className="text-sm py-2 hover:no-underline">
                         <div className="flex justify-between w-full items-center">
                              <span className="truncate pr-2">{log.items.map(i => i.name).join(', ')}</span>
-                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive flex-shrink-0" onClick={(e) => { e.stopPropagation(); handleDeleteLog(log.id); }}>
-                                <Trash2 className="h-4 w-4" />
-                             </Button>
+                             {/* A logged meal could only be deleted and re-entered,
+                                 so one wrong portion cost the whole entry. */}
+                             <div className="flex flex-shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
+                                <EditMealDialog logId={log.id} items={log.items as any} />
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteLog(log.id); }}>
+                                   <Trash2 className="h-4 w-4" />
+                                </Button>
+                             </div>
                         </div>
                     </AccordionTrigger>
                     <AccordionContent className="pb-4">
@@ -915,6 +921,7 @@ export function NutritionClient() {
                                     <PlanMeals
                                         meals={generatedPlan.meals}
                                         onToggleCompleted={toggleMealCompleted}
+                                        onUpdateMeal={updateMeal}
                                         onLogMeal={handleLogPlanMeal}
                                         onAddToShoppingList={handleAddItemToShoppingList}
                                         isLogging={isLogging}

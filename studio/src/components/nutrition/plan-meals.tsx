@@ -6,9 +6,10 @@ import { Loader2, Plus, ShoppingCart } from 'lucide-react';
 import { useTranslation } from '@/hooks/use-translation';
 import { useShoppingRegion } from '@/hooks/use-shopping-region';
 import { useIngredientPrices } from '@/hooks/use-ingredient-prices';
-import { formatQuantity, toIngredients, type Ingredient, type RawPlanItem } from '@/lib/ingredients';
+import { formatQuantity, toIngredients, type Ingredient, type IngredientUnit, type RawPlanItem } from '@/lib/ingredients';
 import { PriceTag, PriceTotal } from '@/components/nutrition/price-tag';
 import { RegionPicker } from '@/components/nutrition/region-picker';
+import { EditPlanMealDialog } from '@/components/nutrition/edit-plan-meal-dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -26,6 +27,13 @@ import { Checkbox } from '@/components/ui/checkbox';
  * summed from exactly the figures the rows show.
  */
 
+export interface PlanMealEdit {
+  name: string;
+  calories: number;
+  protein?: number;
+  items: Array<{ name: string; quantity: number; unit: IngredientUnit }>;
+}
+
 export interface PlanMeal {
   name: string;
   description: string;
@@ -38,13 +46,22 @@ export interface PlanMeal {
 interface PlanMealsProps {
   meals: PlanMeal[];
   onToggleCompleted: (index: number) => void;
+  /**
+   * Apply an edit to one meal, leaving the rest of the day alone.
+   *
+   * Typed as what the edit dialog actually produces — always structured
+   * ingredients — rather than PlanMeal's looser shape, which also admits the
+   * plain strings that plans generated before ingredients were structured
+   * still carry.
+   */
+  onUpdateMeal: (index: number, patch: PlanMealEdit) => void;
   onLogMeal: (meal: PlanMeal, ingredients: Ingredient[]) => void;
   onAddToShoppingList: (ingredient: Ingredient) => void;
   isLogging: boolean;
 }
 
 export function PlanMeals({
-  meals, onToggleCompleted, onLogMeal, onAddToShoppingList, isLogging,
+  meals, onToggleCompleted, onUpdateMeal, onLogMeal, onAddToShoppingList, isLogging,
 }: PlanMealsProps) {
   const { t } = useTranslation();
   const { region } = useShoppingRegion();
@@ -137,6 +154,13 @@ export function PlanMeals({
                 />
 
                 <div className="mt-4 flex flex-wrap gap-2">
+                  <EditPlanMealDialog
+                    mealName={meal.name}
+                    calories={meal.calories}
+                    protein={meal.protein}
+                    ingredients={ingredients}
+                    onSave={(patch) => onUpdateMeal(index, patch)}
+                  />
                   <Button size="sm" onClick={() => onLogMeal(meal, ingredients)} disabled={isLogging}>
                     {isLogging ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                     {t('addToLog')}

@@ -60,6 +60,14 @@ interface PlanState {
   markDayAsCompleted: (completed: boolean) => Promise<void>;
   toggleExerciseCompleted: (dayIndex: number, exerciseIndex: number) => Promise<void>;
   updateExerciseWeight: (dayIndex: number, exerciseIndex: number, newWeightKg: number) => Promise<void>;
+  /** Change what an exercise actually is — its name, sets, reps or load. */
+  updateExercise: (dayIndex: number, exerciseIndex: number, patch: Partial<Pick<Exercise, 'name' | 'sets' | 'reps' | 'weight'>>) => Promise<void>;
+  /** Drop an exercise from a day. */
+  removeExercise: (dayIndex: number, exerciseIndex: number) => Promise<void>;
+  /** Append an exercise to a day. */
+  addExercise: (dayIndex: number, exercise: Exercise) => Promise<void>;
+  /** Rename a day's focus, e.g. "Push" to "Upper body". */
+  updateDayFocus: (dayIndex: number, focus: string) => Promise<void>;
   _rehydrate: () => void;
 }
 
@@ -197,6 +205,66 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         await saveGymPlan(userId, newPlan);
     },
       
+    /**
+     * Edit an exercise in place.
+     *
+     * The plan was generated, not dictated: an athlete who cannot do the
+     * prescribed movement, or who knows their own working weight, could
+     * previously only change the load. Everything about the exercise is
+     * editable now, which is the difference between a plan and a printout.
+     */
+    updateExercise: async (dayIndex, exerciseIndex, patch) => {
+        const { userId, plan } = get();
+        if (!userId || !plan) return;
+
+        const newPlan: GymPlan = JSON.parse(JSON.stringify(plan));
+        const exercise = newPlan.days[dayIndex]?.exercises[exerciseIndex];
+        if (!exercise) return;
+
+        Object.assign(exercise, patch);
+        set({ plan: newPlan });
+        await saveGymPlan(userId, newPlan);
+    },
+
+    removeExercise: async (dayIndex, exerciseIndex) => {
+        const { userId, plan } = get();
+        if (!userId || !plan) return;
+
+        const newPlan: GymPlan = JSON.parse(JSON.stringify(plan));
+        const day = newPlan.days[dayIndex];
+        if (!day) return;
+
+        day.exercises.splice(exerciseIndex, 1);
+        set({ plan: newPlan });
+        await saveGymPlan(userId, newPlan);
+    },
+
+    addExercise: async (dayIndex, exercise) => {
+        const { userId, plan } = get();
+        if (!userId || !plan) return;
+
+        const newPlan: GymPlan = JSON.parse(JSON.stringify(plan));
+        const day = newPlan.days[dayIndex];
+        if (!day) return;
+
+        day.exercises.push(exercise);
+        set({ plan: newPlan });
+        await saveGymPlan(userId, newPlan);
+    },
+
+    updateDayFocus: async (dayIndex, focus) => {
+        const { userId, plan } = get();
+        if (!userId || !plan) return;
+
+        const newPlan: GymPlan = JSON.parse(JSON.stringify(plan));
+        const day = newPlan.days[dayIndex];
+        if (!day) return;
+
+        day.focus = focus;
+        set({ plan: newPlan });
+        await saveGymPlan(userId, newPlan);
+    },
+
     _rehydrate: () => {
         const { plan, currentDayIndex, lastCompletionDate } = get();
         if (!plan) {
