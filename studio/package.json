@@ -34,6 +34,8 @@
     "@react-three/postprocessing": "^2.16.3",
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/typography": "^0.5.10",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",

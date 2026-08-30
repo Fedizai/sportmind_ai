@@ -207,12 +207,33 @@ export const NutritionPlanInputSchema = z.object({
 });
 export type NutritionPlanInput = z.infer<typeof NutritionPlanInputSchema>;
 
+/**
+ * One ingredient of a planned meal, with its amount split out from its name.
+ *
+ * The amount used to be baked into a free-text line ("1 cup of oats (80g)").
+ * Pricing needs a number and a unit it can multiply a per-kilo observation by,
+ * and the shopping list needs them to add three chicken portions into one
+ * line, so the model is asked for the parts rather than a sentence.
+ *
+ * The model supplies the quantity because deciding how much food is in a meal
+ * is what generating a meal plan means. It is never asked what anything costs.
+ */
+export const PlanIngredientSchema = z.object({
+  name: z.string().describe("The food on its own, with no quantity in it, e.g. 'Rolled oats'."),
+  quantity: z.number().describe('How much of it, expressed in `unit`.'),
+  unit: z.enum(['g', 'ml', 'piece']).describe(
+    "Grams for solids, millilitres for liquids, or 'piece' for countable items like eggs or a banana."
+  ),
+});
+export type PlanIngredient = z.infer<typeof PlanIngredientSchema>;
+
 export const NutritionPlanOutputSchema = z.object({
   meals: z.array(z.object({
     name: z.string().describe("The name of the meal (e.g., 'Breakfast', 'Lunch')."),
     description: z.string().describe("A brief description of the meal."),
     calories: z.number().describe("Estimated calories for the meal."),
-    items: z.array(z.string()).describe("A list of food items in the meal."),
+    protein: z.number().optional().describe('Estimated grams of protein for the meal.'),
+    items: z.array(PlanIngredientSchema).describe("The ingredients of the meal, each with its amount."),
   })).describe("A list of meals for one day.")
 });
 export type NutritionPlanOutput = z.infer<typeof NutritionPlanOutputSchema>;

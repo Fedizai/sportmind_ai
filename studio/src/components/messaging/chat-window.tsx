@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Check, CheckCheck, MessageCircle, MoreVertical, Phone, Send, Video } from "lucide-react";
+import { ArrowLeft, MessageCircle, MoreVertical, Phone, Send, Video } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -15,6 +15,8 @@ import { useTranslation } from "@/hooks/use-translation";
 import { format, formatDistanceToNow, isSameDay } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import { isOnline } from "@/lib/presence";
+import { messageStatus } from "@/lib/message-status";
+import { MessageTicks } from "./message-ticks";
 
 interface ChatWindowProps {
   currentUser: AppUser;
@@ -82,14 +84,7 @@ export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) 
    * Compared on the message's own timestamp, so an older message stays read
    * even after they receive a newer one they have not opened.
    */
-  const statusOf = (msg: Message): 'sent' | 'delivered' | 'read' => {
-    const at = msg.timestamp?.seconds;
-    // No server timestamp yet means the write is still in flight.
-    if (!at) return 'sent';
-    if (otherMarks.readAt && otherMarks.readAt.seconds >= at) return 'read';
-    if (otherMarks.deliveredAt && otherMarks.deliveredAt.seconds >= at) return 'delivered';
-    return 'sent';
-  };
+  const statusOf = (msg: Message) => messageStatus(msg.timestamp?.seconds, otherMarks);
 
   // Presence, read from the other person's heartbeat rather than assumed.
   const online = isOnline(otherUser.lastSeenAt);
@@ -226,35 +221,7 @@ export function ChatWindow({ currentUser, otherUser, onBack }: ChatWindowProps) 
                           )}
                         >
                           {isLastOfGroup && msg.timestamp && format(msg.timestamp.toDate(), "HH:mm")}
-                          {mine && (() => {
-                            const status = statusOf(msg);
-                            const label = t(
-                              status === 'read' ? 'msgRead'
-                              : status === 'delivered' ? 'msgDelivered'
-                              : 'msgSent'
-                            );
-                            return (
-                              <span className="inline-flex" title={label} aria-label={label}>
-                                {status === 'sent' ? (
-                                  <Check className="h-3 w-3 text-primary-foreground/60" />
-                                ) : (
-                                  <CheckCheck
-                                    className={cn(
-                                      "h-3 w-3",
-                                      // Read is the only state that goes white.
-                                      // A tick is a graphical object, so 3:1 is
-                                      // its contrast bar, not the 4.5:1 that
-                                      // applies to text — white clears that on
-                                      // the blue bubble in both themes.
-                                      status === 'read'
-                                        ? "text-white"
-                                        : "text-primary-foreground/60"
-                                    )}
-                                  />
-                                )}
-                              </span>
-                            );
-                          })()}
+                          {mine && <MessageTicks status={statusOf(msg)} />}
                         </span>
                       )}
                     </div>

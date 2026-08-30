@@ -4,7 +4,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Camera, Send, Loader2, Bot, UtensilsCrossed, Zap, Trash2, Plus, PenSquare, Search, Drumstick, Sparkles, ShoppingCart, RefreshCw, CheckCircle, Check, ImagePlus, Lock } from 'lucide-react';
+import { Camera, Send, Loader2, Bot, UtensilsCrossed, Zap, Trash2, Plus, PenSquare, Search, Drumstick, Sparkles, ShoppingCart, RefreshCw, CheckCircle, Check, ImagePlus, Lock, Barcode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -36,6 +36,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { UpgradeProModal } from '@/components/upgrade-pro-modal';
+import { BarcodeScanTab, type ScannedFoodItem } from '@/components/nutrition/barcode-scan-tab';
+import { PlanMeals } from '@/components/nutrition/plan-meals';
+import { ShoppingListPanel } from '@/components/nutrition/shopping-list-panel';
+import { formatQuantity, type Ingredient } from '@/lib/ingredients';
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 type ManualMealItem = z.infer<typeof mealItemSchema>;
@@ -470,12 +474,18 @@ export function NutritionClient() {
         });
     };
     
-    const handleLogPlanMeal = async (meal: Meal) => {
+    const handleLogPlanMeal = async (meal: { name: string }, ingredients: Ingredient[]) => {
         if (!user) return;
         setIsLogging(true);
         try {
-            // Call the new AI flow to get nutritional data for the meal items.
-            const { items } = await logPlannedMeal({ items: meal.items });
+            // The plan now carries structured ingredients; the nutrition flow
+            // still reads food lines, so they are rendered back to text here
+            // ("80 g Rolled oats") rather than changing a working flow.
+            const lines = ingredients.map((i) => {
+                const quantity = formatQuantity(i);
+                return quantity ? `${quantity} ${i.name}` : i.name;
+            });
+            const { items } = await logPlannedMeal({ items: lines });
             
             // Log the meal with the data returned from the AI.
             await handleLogMeal(items, meal.name.toLowerCase() as MealType);
@@ -494,22 +504,36 @@ export function NutritionClient() {
         }
     };
     
-    const handleAddItemToShoppingList = (item: string) => {
-        // Remove quantities and units from the string, e.g., "4 oz", "1/2 cup"
-        const cleanedItem = item.replace(/^[0-9/.\s]+(oz|cup|cups|tbsp|tsp|g|kg|lbs|slice|slices)?\s*/i, '').trim();
-        shoppingListStore.addCustomItem(cleanedItem);
-        toast({
-            title: `Added to Shopping List`,
-            description: `"${cleanedItem}" has been added.`
-        })
+    /**
+     * Send one planned ingredient to the shopping list.
+     *
+     * The quantity travels with it now, so the list can add three chicken
+     * portions into one line and price it. This used to strip the amount out
+     * of the text with a regex and keep only the name.
+     */
+    const handleAddItemToShoppingList = (ingredient: Ingredient) => {
+        shoppingListStore.addIngredient(ingredient);
+    };
+
+    /** A scanned packaged product, logged through the same path as every other food. */
+    const handleAddScannedProduct = async (item: ScannedFoodItem) => {
+        await handleLogMeal([item], mealType);
     };
   
   const grandTotalCalories = dailyTotals.calories;
 
+  /**
+   * `scan` photographs a whole plate and asks a vision model what is on it.
+   * `barcode` reads a packaged product's barcode and looks the exact product
+   * up in Open Food Facts. They answer different questions, so both stay.
+   *
+   * Barcode Scan is not gated: it costs no model call, only a public lookup.
+   */
   const tabs = [
     { value: 'search', labelKey: 'Search', icon: Search, pro: false },
     { value: 'manual', labelKey: 'Manual Entry', icon: PenSquare, pro: false },
     { value: 'scan', labelKey: 'Scan', icon: Camera, pro: true },
+    { value: 'barcode', labelKey: t('barcodeScan'), icon: Barcode, pro: false },
     { value: 'analyze', labelKey: 'AI Analysis', icon: Send, pro: true },
     { value: 'generator', labelKey: 'Plan Generator', icon: Sparkles, pro: true },
     { value: 'list', labelKey: 'Shopping List', icon: ShoppingCart, pro: false },
@@ -645,6 +669,14 @@ export function NutritionClient() {
                             </Button>
                         </CardFooter>
                     </Card>
+                    </TabsContent>
+                    <TabsContent value="barcode" className="mt-4">
+                        <BarcodeScanTab
+                            onAddToToday={handleAddScannedProduct}
+                            isLogging={isLogging}
+                            onGoToSearch={(query) => { setSearchQuery(query); setActiveTab('search'); }}
+                            onGoToManual={() => setActiveTab('manual')}
+                        />
                     </TabsContent>
                     <TabsContent value="analyze" className="mt-4">
                     <Card>
@@ -876,94 +908,25 @@ export function NutritionClient() {
                                         </AlertDialog>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <Accordion type="single" collapsible className="w-full" defaultValue="item-0">
-                                        {generatedPlan.meals.map((meal, index) => (
-                                            <AccordionItem value={`item-${index}`} key={index}>
-                                                <AccordionTrigger className="capitalize">
-                                                    <div className="flex items-center gap-4">
-                                                        <Checkbox
-                                                            checked={meal.completed}
-                                                            onCheckedChange={() => toggleMealCompleted(index)}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        />
-                                                        {meal.name}
-                                                    </div>
-                                                </AccordionTrigger>
-                                                <AccordionContent>
-                                                    <p className="font-semibold mb-2">{meal.description}</p>
-                                                    <p className="text-sm text-muted-foreground">Calories: ~{meal.calories}</p>
-                                                    <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
-                                                        {meal.items.map((item, i) => (
-                                                            <li key={i} className="flex justify-between items-center">
-                                                                <span>{item}</span>
-                                                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleAddItemToShoppingList(item)}>
-                                                                    <ShoppingCart className="h-4 w-4 text-muted-foreground hover:text-primary"/>
-                                                                </Button>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                    <Button size="sm" className="mt-4" onClick={() => handleLogPlanMeal(meal)} disabled={isLogging}>
-                                                        {isLogging ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4"/>}
-                                                        Add to Log
-                                                    </Button>
-                                                </AccordionContent>
-                                            </AccordionItem>
-                                        ))}
-                                    </Accordion>
+                                <CardContent>
+                                    {/* Meals, ingredients and quantities come from the
+                                        generator; the price beside each one comes from
+                                        Open Prices observations, never from the model. */}
+                                    <PlanMeals
+                                        meals={generatedPlan.meals}
+                                        onToggleCompleted={toggleMealCompleted}
+                                        onLogMeal={handleLogPlanMeal}
+                                        onAddToShoppingList={handleAddItemToShoppingList}
+                                        isLogging={isLogging}
+                                    />
                                 </CardContent>
                             </Card>
                         )}
                     </TabsContent>
                     <TabsContent value="list" className="mt-4">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Shopping List</CardTitle>
-                                <CardDescription>Your grocery list based on your plan and custom items.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="flex gap-2">
-                                    <Input
-                                        placeholder="Add custom item..."
-                                        value={customShoppingItem}
-                                        onChange={e => setCustomShoppingItem(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && handleAddCustomShoppingItem()}
-                                    />
-                                    <Button onClick={handleAddCustomShoppingItem}><Plus className="h-4 w-4" /></Button>
-                                </div>
-                                <div className="space-y-2">
-                                    {shoppingListStore.items.map(item => (
-                                        <div key={item.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50">
-                                            <Checkbox
-                                                id={`item-${item.id}`}
-                                                checked={item.checked}
-                                                onCheckedChange={() => shoppingListStore.toggleItemChecked(item.id)}
-                                            />
-                                            <label
-                                                htmlFor={`item-${item.id}`}
-                                                className={cn("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70", item.checked && "line-through text-muted-foreground")}
-                                            >
-                                                {item.name}
-                                            </label>
-                                        </div>
-                                    ))}
-                                    {shoppingListStore.items.length === 0 && (
-                                        <p className="text-center text-muted-foreground text-sm pt-4">Your shopping list is empty.</p>
-                                    )}
-                                </div>
-                            </CardContent>
-                            <CardFooter className="flex-col sm:flex-row gap-2">
-                                <Button variant="outline" className="w-full sm:w-auto" onClick={handlePopulateListFromPlan}>
-                                <RefreshCw className="mr-2 h-4 w-4" /> Add from Plan
-                                </Button>
-                                <Button variant="secondary" className="w-full sm:w-auto" onClick={shoppingListStore.clearCompletedItems}>
-                                    <Trash2 className="mr-2 h-4 w-4" /> Clear Checked Items
-                                </Button>
-                                <Button variant="destructive" className="w-full sm:w-auto" onClick={shoppingListStore.clearList}>
-                                    <Trash2 className="mr-2 h-4 w-4" /> Clear Shopping List
-                                </Button>
-                            </CardFooter>
-                        </Card>
+                        {/* Aggregation, grouping and pricing live in the panel;
+                            the existing checkbox behaviour is unchanged. */}
+                        <ShoppingListPanel onPopulateFromPlan={handlePopulateListFromPlan} />
                     </TabsContent>
                 </Tabs>
                 <AnimatePresence>

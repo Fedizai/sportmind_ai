@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { Inbox, MessageSquare, Loader2, Trash2 } from 'lucide-react';
 
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/use-translation';
-import { useSupportTickets, type SupportTicket, type TicketStatus } from '@/hooks/use-support-tickets';
+import { useSupportTickets, type SupportTicket, type TicketStatus, type TicketKind } from '@/hooks/use-support-tickets';
 import { TicketThread } from '@/components/support/ticket-thread';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,31 +23,53 @@ const STATUS_STYLE: Record<TicketStatus, string> = {
 };
 
 /** Admin triage queue for every problem report, help request and restore appeal. */
-export default function AdminReportsPage() {
+function AdminReportsContent() {
   const { user, isAdmin } = useUser();
   const { t } = useTranslation();
   const { tickets, isLoading, updateTicket, deleteTicket, addReply } = useSupportTickets(user?.uid, { allForAdmin: isAdmin });
   const [filter, setFilter] = useState<'all' | TicketStatus>('all');
 
+  /**
+   * Which ticket kind to show, taken from ?kind= so the admin menu can offer
+   * "problem reports" and "help requests" as separate destinations without
+   * this becoming two pages that triage the same collection.
+   */
+  const searchParams = useSearchParams();
+  const kindParam = searchParams.get('kind');
+  const kind: 'all' | TicketKind =
+    kindParam === 'problem' || kindParam === 'help' || kindParam === 'streak_restore'
+      ? kindParam
+      : 'all';
+
   if (!isAdmin) {
     return <p className="py-16 text-center text-muted-foreground">403</p>;
   }
 
-  const shown = filter === 'all' ? tickets : tickets.filter((x) => x.status === filter);
+  const byKind = kind === 'all' ? tickets : tickets.filter((x) => x.kind === kind);
+  const shown = filter === 'all' ? byKind : byKind.filter((x) => x.status === filter);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="flex items-center gap-3 font-headline text-3xl font-bold tracking-tight">
           <Inbox className="h-7 w-7 text-primary" />
-          {t('adminReportsTitle')}
+          {kind === 'problem' ? t('supportReportTitle')
+            : kind === 'help' ? t('supportHelpTitle')
+            : t('adminReportsTitle')}
         </h1>
-        <p className="text-muted-foreground">{t('adminReportsSubtitle')}</p>
+        {/* The subtitle has to follow the filter too: on a page showing only
+            problem reports, "problems, help requests and streak restores"
+            describes a list the reader is not looking at. */}
+        <p className="text-muted-foreground">
+          {kind === 'problem' ? t('adminReportsProblemSubtitle')
+            : kind === 'help' ? t('adminReportsHelpSubtitle')
+            : t('adminReportsSubtitle')}
+        </p>
       </div>
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
         <TabsList className="grid w-full grid-cols-4 sm:w-auto sm:inline-flex">
-          <TabsTrigger value="all">All ({tickets.length})</TabsTrigger>
+          <TabsTrigger value="all">All ({byKind.length})</TabsTrigger>
           <TabsTrigger value="open">{t('supportStatusOpen')}</TabsTrigger>
           <TabsTrigger value="in_progress">{t('supportStatusProgress')}</TabsTrigger>
           <TabsTrigger value="resolved">{t('supportStatusResolved')}</TabsTrigger>
@@ -196,5 +219,17 @@ function TicketRow({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * useSearchParams opts the tree into client-side rendering, so the page needs
+ * a Suspense boundary or the build refuses to prerender it.
+ */
+export default function AdminReportsPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
+      <AdminReportsContent />
+    </Suspense>
   );
 }

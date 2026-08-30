@@ -34,10 +34,15 @@ const nutritionPlanPrompt = ai.definePrompt(
     Instructions:
     1. Create a balanced 1-day meal plan with 4 meals: Breakfast, Lunch, Dinner, and a Snack.
     2. The total calories for the day should be approximately {{calories}} kcal.
-    3. For each meal, provide a short description, an estimated calorie count, and a list of food items.
-    4. Ensure the plan is healthy, balanced, and considers the user's goal (e.g., higher protein for muscle gain).
-    5. Adhere strictly to the specified dietary needs.
-    6. The output must be a valid JSON object that strictly adheres to the provided schema.
+    3. For each meal, provide a short description, an estimated calorie count, estimated grams of protein, and its ingredients.
+    4. Give every ingredient as three separate fields: the food's name with no quantity in it, a numeric quantity, and a unit.
+       - Use "g" for solids and "ml" for liquids. Convert household measures yourself: "1 cup of rolled oats" becomes name "Rolled oats", quantity 80, unit "g".
+       - Use "piece" ONLY for items a shop sells one at a time and never weighs, such as eggs. Anything sold by weight — including fruit and vegetables like apples, bananas or broccoli — must be given in grams, using a realistic weight for one of them (a medium apple is about 180 g, a banana about 120 g).
+       - Name plain shopping ingredients ("Chicken breast", "Greek yogurt", "Olive oil"), not prepared dishes, so the ingredients can be bought.
+    5. Ensure the plan is healthy, balanced, and considers the user's goal (e.g., higher protein for muscle gain).
+    6. Adhere strictly to the specified dietary needs.
+    7. Never mention prices, costs or currency anywhere in the plan. Pricing is calculated separately from real market data.
+    8. The output must be a valid JSON object that strictly adheres to the provided schema.
     `
 );
 

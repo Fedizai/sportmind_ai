@@ -12,6 +12,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { ScrollArea } from "../ui/scroll-area";
 import { useConversations } from "@/hooks/use-conversations";
 import { isOnline } from "@/lib/presence";
+import { messageStatus } from "@/lib/message-status";
+import { MessageTicks } from "./message-ticks";
 import { useUser } from "@/hooks/use-user";
 import { useTranslation } from "@/hooks/use-translation";
 
@@ -101,6 +103,21 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
               // Whose message is sitting at the top of this thread — without
               // it, your own last message reads as if they wrote it.
               const sentByMe = !!conversation && conversation.lastMessageSenderId === user?.uid;
+              /**
+               * The same tick the last message carries inside the thread.
+               *
+               * It reads the other person's delivery and read marks off the
+               * conversation document — the very fields the open chat window
+               * uses — so the two are the same answer to the same question,
+               * and whether they have seen your message can be checked from
+               * the list without opening it.
+               */
+              const lastStatus = sentByMe
+                ? messageStatus(conversation?.lastMessageTimestamp?.seconds, {
+                    deliveredAt: conversation?.lastDeliveredTo?.[otherUser.uid] ?? null,
+                    readAt: conversation?.lastReadBy?.[otherUser.uid] ?? null,
+                  })
+                : null;
               const online = isOnline(otherUser.lastSeenAt);
               const lastMessageText = conversation?.lastMessageText
                 ? (sentByMe ? `${t("youPrefix")} ${conversation.lastMessageText}` : conversation.lastMessageText)
@@ -147,9 +164,12 @@ export function ConversationList({ users, selectedUser, onSelectUser }: Conversa
                   <div className="flex-grow overflow-hidden">
                     <div className="flex items-center justify-between gap-2">
                       <p className={cn("truncate font-semibold", isActive && "text-primary")}>{otherUser.displayName}</p>
-                      <p className={cn("shrink-0 text-[11px]", unread > 0 ? "font-semibold text-primary" : "text-muted-foreground")}>
-                        {lastMessageTime}
-                      </p>
+                      <div className="flex shrink-0 items-center gap-1">
+                        {lastStatus && <MessageTicks status={lastStatus} variant="onSurface" />}
+                        <p className={cn("text-[11px]", unread > 0 ? "font-semibold text-primary" : "text-muted-foreground")}>
+                          {lastMessageTime}
+                        </p>
+                      </div>
                     </div>
                     <div className="flex items-start justify-between gap-2">
                       {/* Two lines, not one: the point of a preview is to let

@@ -174,6 +174,17 @@ export function Header() {
                             <FileQuestion className="mr-2 h-4 w-4" />
                             <span>Signup Questions</span>
                         </DropdownMenuItem>
+                        {/* The two support queues. Same triage page, filtered by
+                            ?kind, so problem reports and help requests are two
+                            destinations rather than two implementations. */}
+                        <DropdownMenuItem className="pl-8" onClick={() => router.push('/admin/reports?kind=problem')}>
+                            <Flag className="mr-2 h-4 w-4" />
+                            <span>{t('supportReportTitle')}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="pl-8" onClick={() => router.push('/admin/reports?kind=help')}>
+                            <LifeBuoy className="mr-2 h-4 w-4" />
+                            <span>{t('supportHelpTitle')}</span>
+                        </DropdownMenuItem>
                         <DropdownMenuItem className="pl-8" onClick={() => router.push(isCoachView ? "/dashboard" : "/coach/dashboard")}>
                             {isCoachView ? <UserIcon className="mr-2 h-4 w-4" /> : <Users className="mr-2 h-4 w-4" />}
                             <span>{isCoachView ? "Player View" : "Coach View"}</span>
