@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { Clock, Loader2, MessageSquare, Send, Trash2, Video as VideoIcon } from 'lucide-react';
+import { AlertTriangle, Clock, Loader2, MessageSquare, Send, Trash2, Video as VideoIcon } from 'lucide-react';
 
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
@@ -33,7 +33,20 @@ export function PlayerVideoPanel({ sport }: { sport: 'football' | 'tennis' }) {
   const { user } = useUser();
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { videos, isLoading, submitVideo, removeVideo } = usePlayerVideos(user?.uid, sport);
+  const {
+    videos, isLoading, error, submitVideo, removeVideo, markFeedbackSeen,
+  } = usePlayerVideos(user?.uid, sport);
+
+  /**
+   * Looking at the reply is what marks it read, which clears the header
+   * badge. Runs whenever the list changes, so a reply that arrives while the
+   * tab is open is cleared too.
+   */
+  useEffect(() => {
+    for (const video of videos) {
+      if (video.status === 'reviewed' && !video.feedbackSeen) markFeedbackSeen(video.id);
+    }
+  }, [videos, markFeedbackSeen]);
 
   const [source, setSource] = useState<MediaSource>({ kind: 'none' });
   const [title, setTitle] = useState('');
@@ -137,6 +150,15 @@ export function PlayerVideoPanel({ sport }: { sport: 'football' | 'tennis' }) {
           <div className="flex justify-center py-10">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
+        ) : error ? (
+          /* Previously this failed into the empty state, so a broken listener
+             was indistinguishable from having sent nothing. */
+          <Card>
+            <CardContent className="py-10 text-center">
+              <AlertTriangle className="mx-auto mb-3 h-9 w-9 text-destructive" />
+              <p className="font-semibold">{t('videoListFailed')}</p>
+            </CardContent>
+          </Card>
         ) : videos.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
@@ -166,6 +188,11 @@ export function PlayerVideoPanel({ sport }: { sport: 'football' | 'tennis' }) {
                   >
                     {video.status === 'reviewed' ? t('videoReviewed') : t('videoAwaitingReview')}
                   </span>
+                  {video.status === 'reviewed' && !video.feedbackSeen && (
+                    <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
+                      {t('videoFeedbackNew')}
+                    </span>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"

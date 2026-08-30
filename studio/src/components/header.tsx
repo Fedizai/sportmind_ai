@@ -32,6 +32,7 @@ import {
 import { StreakCounter } from "./streak-counter";
 import { MessagesBell } from "./messages-bell";
 import { FriendsBell } from "./friends-bell";
+import { VideoFeedbackBell } from "./video-feedback-bell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -80,6 +81,7 @@ export function Header() {
             <StreakCounter />
             <MessagesBell />
             <FriendsBell />
+            <VideoFeedbackBell />
              <div className="hidden md:flex items-center gap-2">
                 {(user?.role === 'admin' || user?.role === 'coach') && (
                     <Button variant="outline" size="sm" asChild>

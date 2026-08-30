@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc,
   doc, Timestamp,
@@ -39,6 +39,8 @@ export interface PlayerVideo {
   coachName: string | null;
   reviewedAt: Date | null;
   createdAt: Date | null;
+  /** False once a coach has replied and the athlete has not yet looked. */
+  feedbackSeen: boolean;
 }
 
 export interface NewPlayerVideo {
@@ -62,39 +64,59 @@ function toVideo(id: string, data: any): PlayerVideo {
     coachName: data.coachName ?? null,
     reviewedAt: data.reviewedAt instanceof Timestamp ? data.reviewedAt.toDate() : null,
     createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : null,
+    feedbackSeen: data.feedbackSeen !== false,
   };
 }
 
-/** One athlete's own submissions for one sport. */
+/**
+ * One athlete's own submissions for one sport.
+ *
+ * Deliberately queried on `userId` alone, then narrowed and sorted in memory.
+ * Filtering on userId AND sport while ordering by createdAt needs a composite
+ * index, and when that index is missing Firestore rejects the whole
+ * subscription — which is exactly what happened: a player submitted a clip,
+ * the listener errored, the list stayed empty, and the "no videos yet" empty
+ * state sat there as though nothing had been sent. One athlete's clips number
+ * in the tens, so sorting them here costs nothing and removes a way for this
+ * to break silently again.
+ */
 export function usePlayerVideos(userId: string | undefined, sport: string) {
-  const [videos, setVideos] = useState<PlayerVideo[]>([]);
+  const [all, setAll] = useState<PlayerVideo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     if (!userId) {
-      setVideos([]);
+      setAll([]);
       setIsLoading(false);
       return;
     }
-    const q = query(
-      collection(db, 'player_videos'),
-      where('userId', '==', userId),
-      where('sport', '==', sport),
-      orderBy('createdAt', 'desc')
-    );
+    const q = query(collection(db, 'player_videos'), where('userId', '==', userId));
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setVideos(snap.docs.map((d) => toVideo(d.id, d.data())));
+        setAll(snap.docs.map((d) => toVideo(d.id, d.data())));
+        setError(null);
         setIsLoading(false);
       },
-      (error) => {
-        console.error('Could not read player videos:', error);
+      (err) => {
+        // Surfaced rather than swallowed. A console line is invisible to the
+        // person looking at an empty list wondering where their video went.
+        console.error('Could not read player videos:', err);
+        setError(err as Error);
         setIsLoading(false);
       }
     );
     return () => unsub();
-  }, [userId, sport]);
+  }, [userId]);
+
+  const videos = useMemo(
+    () =>
+      all
+        .filter((v) => v.sport === sport)
+        .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0)),
+    [all, sport]
+  );
 
   const submitVideo = useCallback(
     async (values: NewPlayerVideo) => {
@@ -110,6 +132,7 @@ export function usePlayerVideos(userId: string | undefined, sport: string) {
         coachFeedback: null,
         coachName: null,
         reviewedAt: null,
+        feedbackSeen: true,
         createdAt: Timestamp.now(),
       });
     },
@@ -122,7 +145,22 @@ export function usePlayerVideos(userId: string | undefined, sport: string) {
     await deleteStoredFile(video.storagePath);
   }, []);
 
-  return { videos, isLoading, submitVideo, removeVideo };
+  /**
+   * Mark a coach's reply as seen.
+   *
+   * Called when the athlete has the reviewed clip on screen, which is what
+   * clears the header badge — the same shape as a read receipt.
+   */
+  const markFeedbackSeen = useCallback(async (videoId: string) => {
+    try {
+      await updateDoc(doc(db, 'player_videos', videoId), { feedbackSeen: true });
+    } catch (err) {
+      // Cosmetic; a badge that lingers is better than a thrown error.
+      console.debug('Could not mark feedback seen:', err);
+    }
+  }, []);
+
+  return { videos, isLoading, error, submitVideo, removeVideo, markFeedbackSeen };
 }
 
 /**
@@ -163,10 +201,49 @@ export function useVideoReviewQueue(enabled: boolean) {
         coachName,
         status: feedback.trim() ? 'reviewed' : 'awaiting_review',
         reviewedAt: Timestamp.now(),
+        // Unread until the athlete opens it — this is what lights the badge.
+        feedbackSeen: false,
       });
     },
     []
   );
 
   return { videos, isLoading, saveFeedback };
+}
+
+/**
+ * Coach replies the athlete has not looked at yet.
+ *
+ * Backs the header badge. Queried on `userId` alone for the same reason as
+ * above — adding status and feedbackSeen to the filter would need another
+ * composite index, and a missing one fails the whole subscription rather than
+ * degrading.
+ */
+export function useUnseenVideoFeedback(userId: string | undefined) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!userId) {
+      setCount(0);
+      return;
+    }
+    const unsub = onSnapshot(
+      query(collection(db, 'player_videos'), where('userId', '==', userId)),
+      (snap) => {
+        setCount(
+          snap.docs.filter((d) => {
+            const data = d.data();
+            return data.status === 'reviewed' && data.feedbackSeen === false;
+          }).length
+        );
+      },
+      (err) => {
+        console.error('Could not read video feedback alerts:', err);
+        setCount(0);
+      }
+    );
+    return () => unsub();
+  }, [userId]);
+
+  return count;
 }
