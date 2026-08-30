@@ -9,6 +9,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Video, Upload, Search, MessageCircle, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MediaSourceField, type MediaSource } from "@/components/media-source-field";
+import { uploadVideoFile } from "@/lib/media-upload";
+import { useUser } from "@/hooks/use-user";
+import { CoachReviewList } from "@/components/video/coach-review-list";
+import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -45,7 +50,7 @@ import { cn } from "@/lib/utils";
 const videoFormSchema = z.object({
   title: z.string().min(1, "Required"),
   sport: z.enum(["football", "tennis", "gym", "all"]),
-  url: z.string().url("Invalid URL"),
+  url: z.string().optional(),
   description: z.string().optional(),
 });
 
@@ -97,6 +102,12 @@ export default function VideoReviewPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [librarySearch, setLibrarySearch] = useState("");
   const [uploadOpen, setUploadOpen] = useState(false);
+  // Coaches could only paste a link. They can now upload a clip from the
+  // device as well, which is what most match footage actually is.
+  const [source, setSource] = useState<MediaSource>({ kind: 'none' });
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const { user } = useUser();
+  const { toast } = useToast();
   const [deleteTarget, setDeleteTarget] = useState<Resource | null>(null);
   const [commentText, setCommentText] = useState("");
   const [timestampLabel, setTimestampLabel] = useState("");
@@ -122,14 +133,34 @@ export default function VideoReviewPage() {
   });
 
   const onSubmitVideo = async (values: VideoFormValues) => {
+    if (source.kind === 'none' || !user) return;
+
+    let url: string;
+    if (source.kind === 'file') {
+      setUploadProgress(0);
+      try {
+        const result = await uploadVideoFile(source.file, 'coachResources', user.uid, setUploadProgress);
+        url = result.url;
+      } catch (error) {
+        console.error('Coach video upload failed:', error);
+        toast({ variant: 'destructive', title: t('mediaUploadFailed') });
+        setUploadProgress(null);
+        return;
+      }
+      setUploadProgress(null);
+    } else {
+      url = source.url;
+    }
+
     await addResource({
       title: values.title,
       category: "video",
       sport: values.sport,
-      url: values.url,
+      url,
       description: values.description || undefined,
     });
     form.reset({ title: "", sport: "all", url: "", description: "" });
+    setSource({ kind: 'none' });
     setUploadOpen(false);
   };
 
@@ -149,6 +180,8 @@ export default function VideoReviewPage() {
 
   return (
     <div className="space-y-6">
+      <CoachReviewList enabled={!!user} />
+
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight font-headline flex items-center gap-3">
@@ -317,19 +350,15 @@ export default function VideoReviewPage() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("resourceUrl")}</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t("resourceUrlPlaceholder")} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-2">
+                <FormLabel>{t("video")}</FormLabel>
+                <MediaSourceField
+                  value={source}
+                  onChange={setSource}
+                  uploadProgress={uploadProgress}
+                  disabled={uploadProgress !== null}
+                />
+              </div>
 
               <FormField
                 control={form.control}

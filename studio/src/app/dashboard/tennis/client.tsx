@@ -11,6 +11,8 @@ import { collection, query, where, orderBy, onSnapshot, Timestamp } from "fireba
 import { db } from "@/lib/firebase";
 import { useUser } from "@/hooks/use-user";
 import { useAthleteSessions, type AthleteSession } from '@/hooks/use-athlete-sessions';
+import { PlayerVideoPanel } from '@/components/video/player-video-panel';
+import { SportCoachChat } from '@/components/sport-coach-chat';
 import { tennisMatchSchema } from "@/lib/schemas";
 import { getTacticalAdvice } from "@/ai/flows/sports-flows";
 import type { TacticalAdviceOutput, TennisDrillOutput, TennisMatch } from "@/ai/schemas";
@@ -897,30 +899,20 @@ export default function TennisModuleClient() {
                 </Card>
             </TabsContent>
           <TabsContent value="video" className="mt-6 space-y-6">
-              <div className="border-2 border-dashed border-muted rounded-lg p-12 text-center h-96 flex items-center justify-center">
-                <div>
-                    <Bot className="h-8 w-8 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-1">{t('featureComingSoon')}</h3>
-                    <p className="text-muted-foreground">{t('featureComingSoonDescription')}</p>
-                </div>
-              </div>
+              {/* Was a "coming soon" placeholder. Clips go to a coach rather
+                  than to a model, same as football. */}
+              <PlayerVideoPanel sport="tennis" />
           </TabsContent>
             <TabsContent value="coach" className="mt-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{t('aiTennisCoach')}</CardTitle>
-                        <CardDescription>{t('aiTennisCoachDescription')}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="border-2 border-dashed border-muted rounded-lg p-12 text-center h-96 flex items-center justify-center">
-                            <div>
-                                <Bot className="h-8 w-8 mx-auto text-muted-foreground mb-4" />
-                                <h3 className="text-lg font-semibold mb-1">{t('featureComingSoon')}</h3>
-                                <p className="text-muted-foreground">{t('featureComingSoonDescription')}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                {/* Was a "coming soon" placeholder. The tactical flow already
+                    took a sport, so tennis only ever needed a surface. */}
+                <SportCoachChat
+                    sport="tennis"
+                    title={t('aiTennisCoach')}
+                    description={t('aiTennisCoachDescription')}
+                    placeholder={t('tennisChatPlaceholder')}
+                    greeting={t('tennisCoachGreeting')}
+                />
             </TabsContent>
         </Tabs>
         <UpgradeProModal open={isUpgradeModalOpen} onOpenChange={setIsUpgradeModalOpen} />

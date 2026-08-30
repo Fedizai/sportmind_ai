@@ -159,6 +159,18 @@ service cloud.firestore {
     // the match collections above: you write your own, a coach or admin may
     // read them. Distinct from `trainingSessions`, which is the coach's
     // team-wide schedule.
+    // Clips an athlete submits for a coach to review. The athlete writes their
+    // own; a coach or admin may list every submission and is the only one who
+    // can write the feedback back onto it.
+    match /player_videos/{videoId} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
+      allow list: if isAdminOrCoach();
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdminOrCoach()
+                    || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
     match /athlete_sessions/{sessionId} {
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;

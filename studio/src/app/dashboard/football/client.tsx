@@ -14,6 +14,7 @@ import { footballMatchSchema, type NutritionLog } from "@/lib/schemas";
 import { getTacticalAdvice } from "@/ai/flows/sports-flows";
 import type { TacticalAdviceOutput, TennisDrillOutput } from "@/ai/schemas";
 import { deleteMatch } from "./actions";
+import { PlayerVideoPanel } from '@/components/video/player-video-panel';
 import { useTranslation } from "@/hooks/use-translation";
 import { useAthleteSessions, type AthleteSession } from '@/hooks/use-athlete-sessions';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -1249,122 +1250,10 @@ export default function FootballModuleClient() {
                     </div>
                 </TabsContent>
                 <TabsContent value="video" className="mt-6 space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>{t('videoReviewZone')}</CardTitle>
-                            <CardDescription>{t('videoReviewZoneDescriptionFootball')}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="video-prompt">{t("videoPrompt")}</Label>
-                                <Input
-                                    id="video-prompt"
-                                    placeholder={t("footballVideoPromptPlaceholder")}
-                                    value={videoAnalysisPrompt}
-                                    onChange={(e) => setVideoAnalysisPrompt(e.target.value)}
-                                    disabled={isUploading}
-                                />
-                            </div>
-                            {selectedFile ? (
-                                <div className="border rounded-lg p-4 space-y-4">
-                                    <div className="flex items-start gap-4">
-                                        <div className="bg-primary/10 text-primary p-3 rounded-lg"><FileVideo className="h-6 w-6" /></div>
-                                        <div className="flex-grow">
-                                            <p className="font-semibold">{selectedFile.name}</p>
-                                            <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                                        </div>
-                                        <Button variant="ghost" size="icon" onClick={() => setSelectedFile(null)} disabled={isUploading}><X className="h-4 w-4" /></Button>
-                                    </div>
-                                    {isUploading && (
-                                        <div className="space-y-2">
-                                            <Progress value={uploadProgress} />
-                                            <p className="text-xs text-muted-foreground text-center">{`${t("uploading")}... ${uploadProgress.toFixed(0)}%`}</p>
-                                        </div>
-                                    )}
-                                    <Button onClick={handleUpload} disabled={isUploading || !videoAnalysisPrompt.trim()} className="w-full">
-                                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                                        {isUploading ? t('analyzing') : t('uploadAndAnalyze')}
-                                    </Button>
-                                </div>
-                            ) : (
-                                <label
-                                    htmlFor="video-upload-football"
-                                    className="flex flex-col items-center justify-center border-2 border-dashed border-muted rounded-lg p-12 text-center group hover:border-primary/50 hover:bg-muted/50 cursor-pointer transition-colors"
-                                >
-                                    <Upload className="mx-auto h-12 w-12 text-muted-foreground group-hover:text-primary" />
-                                    <h3 className="mt-4 text-lg font-medium">{t("clickToSelectVideo")}</h3>
-                                    <p className="mt-1 text-sm text-muted-foreground">{t("maxFileSizeFootball")}</p>
-                                    <Input
-                                        id="video-upload-football"
-                                        type="file"
-                                        className="sr-only"
-                                        accept="video/*"
-                                        onChange={handleFileSelect}
-                                        disabled={isUploading}
-                                    />
-                                </label>
-                            )}
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>{t("submittedVideos")}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {uploadedVideos.length > 0 ? (
-                                uploadedVideos.map((video) => (
-                                    <Card key={video.id} className="flex flex-col md:flex-row gap-4 p-4">
-                                        <div className="w-full md:w-48 h-32 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                                            <Video className="w-10 h-10 text-muted-foreground" />
-                                        </div>
-                                        <div className="flex-grow">
-                                            <h4 className="font-semibold">{video.name}</h4>
-                                            <p className="text-xs text-muted-foreground">
-                                                Prompt: <span className="font-medium text-foreground">{video.prompt}</span>
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                Status: <span className={cn(
-                                                    video.status === "AI is reviewing..." && "text-primary animate-pulse",
-                                                    video.status === "Reviewed" && "text-success",
-                                                    video.status === "Failed" && "text-destructive"
-                                                )}>{video.status}</span>
-                                            </p>
-                                            <div className="mt-2 p-3 bg-muted/50 rounded-md">
-                                                <h5 className="text-sm font-semibold">AI Feedback</h5>
-                                                <p className="text-xs text-muted-foreground italic mt-1 whitespace-pre-wrap">
-                                                    {video.feedback || "No feedback yet."}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex-shrink-0">
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>{t("deleteVideo")}</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            {t("deleteVideoConfirmation", { fileName: video.name })}
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDeleteVideo(video)}>{t("delete")}</AlertDialogAction></AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                    </Card>
-                                ))
-                            ) : (
-                                <div className="text-center py-12 text-muted-foreground">
-                                    <p>{t("noVideosUploaded")}</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                    {/* Clips now go to a coach rather than to a vision model.
+                        The upload also accepts a link, which the old
+                        file-only control did not. */}
+                    <PlayerVideoPanel sport="football" />
                 </TabsContent>
                 <TabsContent value="coach" className="mt-6">
                     <Card className="h-[70vh] flex flex-col">
