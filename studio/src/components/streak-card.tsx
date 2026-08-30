@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import { Check, Lock, Sparkles, LifeBuoy, CreditCard, Trophy } from 'lucide-react';
+import Link from 'next/link';
+import { Check, Lock, Sparkles, LifeBuoy, CreditCard, Trophy, Info, Flame } from 'lucide-react';
 
 import { useStreakStore } from '@/stores/streak-store';
 import { useUser } from '@/hooks/use-user';
@@ -119,6 +120,53 @@ export function StreakCard() {
             </p>
           )}
         </div>
+
+        {/*
+          * At zero, the tier panel above is an empty scoreboard: it says
+          * "Spark, 0" and nothing about how to make it move. Someone arriving
+          * here with no streak needs to know what counts as a day and what
+          * breaks the chain, so that is what this says — and only when the
+          * count is actually zero, since it is noise to anyone mid-run.
+          */}
+        {current === 0 && (
+          <div className="space-y-3 rounded-lg border border-dashed p-4">
+            <div className="flex items-center gap-2">
+              <Info className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold">
+                {lapsed ? t('streakHowToRestartTitle') : t('streakHowToStartTitle')}
+              </p>
+            </div>
+
+            <ol className="space-y-2.5 text-sm text-muted-foreground">
+              <li className="flex gap-2.5">
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">1</span>
+                <span>{t('streakHowStep1')}</span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">2</span>
+                <span>{t('streakHowStep2')}</span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">3</span>
+                <span>{t('streakHowStep3')}</span>
+              </li>
+            </ol>
+
+            <div className="rounded-md bg-muted/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t('streakHowKeepTitle')}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{t('streakHowKeepBody')}</p>
+            </div>
+
+            <Button asChild size="sm" className="w-full sm:w-auto">
+              <Link href="/dashboard/sports">
+                <Flame className="mr-2 h-4 w-4" />
+                {t('streakHowCta')}
+              </Link>
+            </Button>
+          </div>
+        )}
 
         {/* Perks for this tier */}
         {tier.perks.length > 0 && (

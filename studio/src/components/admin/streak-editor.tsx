@@ -52,9 +52,13 @@ export function StreakEditor({
       try {
         const snap = await getDoc(doc(db, 'users', uid));
         const streak = snap.data()?.streak ?? {};
-        const override = streak.overrideDays;
-        setHasOverride(override !== undefined && override !== null);
-        setDays(override !== undefined && override !== null ? String(override) : '');
+        // Show whatever is in force: a request not yet applied, or the credit
+        // a previous adjustment left behind.
+        const requested = streak.pendingSetTo ?? streak.overrideDays;
+        const bonus = Number(streak.bonusDays) || 0;
+        const inForce = requested ?? (bonus > 0 ? bonus : null);
+        setHasOverride(inForce !== undefined && inForce !== null);
+        setDays(inForce !== undefined && inForce !== null ? String(inForce) : '');
         setFreezesUsed(String(Number(streak.freezesUsed) || 0));
       } catch (err) {
         console.error('Could not read streak state:', err);
@@ -75,7 +79,12 @@ export function StreakEditor({
         doc(db, 'users', uid),
         {
           streak: {
-            overrideDays: parsedDays,
+            // A request, not a pinned value. The athlete's own next
+            // recalculation converts this into the day-credit a restore uses,
+            // so their streak carries on growing from here instead of being
+            // frozen at this number for good.
+            pendingSetTo: parsedDays,
+            overrideDays: null,
             freezesUsed: Math.max(0, Number(freezesUsed) || 0),
           },
         },
@@ -100,7 +109,15 @@ export function StreakEditor({
     try {
       await setDoc(
         doc(db, 'users', uid),
-        { streak: { overrideDays: deleteField() } },
+        {
+          streak: {
+            pendingSetTo: deleteField(),
+            overrideDays: deleteField(),
+            // Clearing an adjustment has to drop the credit it created too,
+            // otherwise the streak keeps the days it was given.
+            bonusDays: 0,
+          },
+        },
         { merge: true }
       );
       toast({ title: t('adminStreakSaved') });

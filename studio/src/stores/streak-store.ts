@@ -32,8 +32,13 @@ export interface StreakState {
   activeDays: string[];
   /** Days credited on top of logged activity — from restores or an admin edit. */
   bonusDays: number;
-  /** Admin-imposed streak length. When set it replaces the computed value. */
-  overrideDays: number | null;
+  /**
+   * An admin's requested streak length, waiting to be applied.
+   *
+   * Not a value the athlete's streak is pinned to — see the calculation for
+   * why. Cleared as soon as it has been converted into `bonusDays`.
+   */
+  pendingSetTo: number | null;
   /** Recovery credits already spent at the current tier. */
   freezesUsed: number;
   /**
@@ -94,7 +99,7 @@ export const useStreakStore = create<StreakState>()(
       activeToday: false,
       activeDays: [],
       bonusDays: 0,
-      overrideDays: null,
+      pendingSetTo: null,
       freezesUsed: 0,
       celebratedTierId: null,
       pendingLevelUp: null,
@@ -152,26 +157,52 @@ export const useStreakStore = create<StreakState>()(
           // survive a new device and can be edited from the admin panel.
           let bonusDays = 0;
           let freezesUsed = 0;
-          let overrideDays: number | null = null;
+          let pendingSetTo: number | null = null;
           try {
             const userSnap = await getDoc(doc(db, 'users', userId));
             const streak = userSnap.data()?.streak ?? {};
             bonusDays = Number(streak.bonusDays) || 0;
             freezesUsed = Number(streak.freezesUsed) || 0;
-            overrideDays =
-              streak.overrideDays === null || streak.overrideDays === undefined
-                ? null
-                : Number(streak.overrideDays);
+
+            // `pendingSetTo` is what an admin asked the streak to become.
+            // `overrideDays` is the old field that pinned it there forever;
+            // any document still carrying one is treated as the same request
+            // so existing athletes migrate on their next visit.
+            const requested = streak.pendingSetTo ?? streak.overrideDays;
+            pendingSetTo =
+              requested === null || requested === undefined ? null : Number(requested);
           } catch (err) {
             console.warn('Streak: could not read saved streak state', err);
           }
 
           const summary = summariseStreak(dates);
-          // An admin override wins outright; otherwise activity plus any bonus.
-          const current =
-            overrideDays !== null && !Number.isNaN(overrideDays)
-              ? Math.max(0, overrideDays)
-              : summary.current + Math.max(0, bonusDays);
+
+          /**
+           * An admin adjustment is a restore, not a freeze.
+           *
+           * It used to replace the computed streak outright, which meant a
+           * streak an admin repaired stopped being a streak: it never grew
+           * when the athlete trained and never broke when they stopped. The
+           * requested number is converted once into the same `bonusDays`
+           * credit a normal restore uses, so the count carries on from there
+           * under its own steam.
+           */
+          if (pendingSetTo !== null && !Number.isNaN(pendingSetTo)) {
+            bonusDays = Math.max(0, pendingSetTo - summary.current);
+            try {
+              await setDoc(
+                doc(db, 'users', userId),
+                { streak: { bonusDays, pendingSetTo: null, overrideDays: null } },
+                { merge: true }
+              );
+            } catch (err) {
+              // Applying it again next time is harmless; the arithmetic is the
+              // same as long as the athlete has not logged in between.
+              console.warn('Streak: could not persist the admin adjustment', err);
+            }
+          }
+
+          const current = summary.current + Math.max(0, bonusDays);
           // Did this calculation move the athlete up the ladder?
           const reachedId = tierForStreak(current).id;
           const seenId = get().celebratedTierId;
@@ -195,7 +226,7 @@ export const useStreakStore = create<StreakState>()(
             activeToday: summary.activeToday,
             activeDays: summary.activeDays,
             bonusDays,
-            overrideDays,
+            pendingSetTo: null,
             freezesUsed,
             celebratedTierId,
             pendingLevelUp,
@@ -272,7 +303,6 @@ export const useStreakStore = create<StreakState>()(
         activeToday: state.activeToday,
         activeDays: state.activeDays,
         bonusDays: state.bonusDays,
-        overrideDays: state.overrideDays,
         freezesUsed: state.freezesUsed,
         celebratedTierId: state.celebratedTierId,
         // `pendingLevelUp` stays out on purpose: a celebration that was never
