@@ -64,7 +64,6 @@ import FitnessAssistantChat from "../dashboard/fitness-assistant/page";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FootballInsightCard } from '@/components/insights/football-insight-card';
 import { useStreakStore } from '@/stores/streak-store';
-import { SportsActivitySection } from '@/components/insights/sports-activity-section';
 import { useFavorites } from '@/hooks/use-favorites';
 import { FavoriteStar } from '@/components/favorite-star';
 import { tierForStreak, nextTier, daysToNextTier } from '@/lib/streak-tiers';
@@ -979,15 +978,6 @@ export function InsightsGrid() {
                         animate="visible"
                         className="space-y-6"
                     >
-                        {/* Every sport this athlete logs, not just the two
-                            that happened to be wired up. */}
-                        <SectionHeader
-                            icon={<Activity className="h-6 w-6" />}
-                            title={t('insightsYourSports')}
-                            subtitle={t('insightsYourSportsSub')}
-                        />
-                        <SportsActivitySection />
-
                         <SectionHeader
                             icon={<Activity className="h-6 w-6" />}
                             title={t('generalInsightsTitle')}

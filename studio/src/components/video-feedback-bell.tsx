@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
  */
 export function VideoFeedbackBell({ className }: { className?: string }) {
   const { user } = useUser();
-  const count = useUnseenVideoFeedback(user?.uid);
+  const { count, sport } = useUnseenVideoFeedback(user?.uid);
   const { t } = useTranslation();
 
   if (!user || count === 0) return null;
@@ -27,7 +27,7 @@ export function VideoFeedbackBell({ className }: { className?: string }) {
 
   return (
     <Link
-      href="/dashboard/sports"
+      href={sport ? `/dashboard/${sport}?tab=video` : '/dashboard/sports'}
       aria-label={label}
       title={label}
       className={cn(

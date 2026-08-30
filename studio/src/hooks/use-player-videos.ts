@@ -220,30 +220,38 @@ export function useVideoReviewQueue(enabled: boolean) {
  * degrading.
  */
 export function useUnseenVideoFeedback(userId: string | undefined) {
-  const [count, setCount] = useState(0);
+  const [unseen, setUnseen] = useState<PlayerVideo[]>([]);
 
   useEffect(() => {
     if (!userId) {
-      setCount(0);
+      setUnseen([]);
       return;
     }
     const unsub = onSnapshot(
       query(collection(db, 'player_videos'), where('userId', '==', userId)),
       (snap) => {
-        setCount(
-          snap.docs.filter((d) => {
-            const data = d.data();
-            return data.status === 'reviewed' && data.feedbackSeen === false;
-          }).length
-        );
+        const rows = snap.docs
+          .map((d) => toVideo(d.id, d.data()))
+          .filter((v) => v.status === 'reviewed' && !v.feedbackSeen)
+          // Newest reply first, so the badge points at the freshest one.
+          .sort((a, b) => (b.reviewedAt?.getTime() ?? 0) - (a.reviewedAt?.getTime() ?? 0));
+        setUnseen(rows);
       },
       (err) => {
         console.error('Could not read video feedback alerts:', err);
-        setCount(0);
+        setUnseen([]);
       }
     );
     return () => unsub();
   }, [userId]);
 
-  return count;
+  return {
+    count: unseen.length,
+    /**
+     * Which sport's video tab to open. The badge should land on the clip that
+     * was replied to, not on a sport picker the athlete then has to navigate
+     * from — they already chose their sports when they signed up.
+     */
+    sport: unseen[0]?.sport ?? null,
+  };
 }
