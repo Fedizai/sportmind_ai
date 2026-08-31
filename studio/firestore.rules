@@ -97,8 +97,13 @@ service cloud.firestore {
         // without touching any other field on the profile.
         (isAdminOrCoach() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
       ) && (
+        // Two accounts are protected from having their role changed. This used
+        // to demand the role BE 'admin' after any write, which is
+        // unsatisfiable for a protected account that is a player — so every
+        // edit to it was denied, streaks and usernames included, not just
+        // role changes. What it should say is that the role must not move.
         !(resource.data.get('email', '') in ['khaled05062006@gmail.com', 'fedizayen12@gmail.com']) ||
-        request.resource.data.get('role', 'admin') == 'admin'
+        request.resource.data.get('role', '') == resource.data.get('role', '')
       );
 
       // Delete: admin only
