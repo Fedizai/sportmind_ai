@@ -44,6 +44,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useTranslation } from "@/hooks/use-translation";
 import { useTeam } from "@/hooks/use-team";
 import { useReports, type Report, type ReportType } from "@/hooks/use-reports";
+import { AudiencePicker, type AudienceValue } from "@/components/coach/audience-picker";
+import { DEFAULT_SHARING } from "@/lib/sharing";
 
 const reportFormSchema = z.object({
   title: z.string().min(1, "Required"),
@@ -64,6 +66,8 @@ export default function ReportsPage() {
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  // Sharing lives outside the form: it is about the document, not its content.
+  const [sharing, setSharing] = useState<AudienceValue>({ ...DEFAULT_SHARING });
   const [viewTarget, setViewTarget] = useState<Report | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Report | null>(null);
 
@@ -102,8 +106,10 @@ export default function ReportsPage() {
       targetPlayerUid: values.targetPlayerUid === "team" ? null : values.targetPlayerUid,
       targetPlayerName,
       body: values.body,
+      ...sharing,
     });
     form.reset({ title: "", type: "weekly-summary", targetPlayerUid: "team", body: "" });
+    setSharing({ ...DEFAULT_SHARING });
     setDialogOpen(false);
   };
 
@@ -285,6 +291,13 @@ export default function ReportsPage() {
                   </FormItem>
                 )}
               />
+              {/* Who this reaches. The athlete a report names always sees it,
+                  and a whole-team report always reaches the team; this widens
+                  it beyond that. */}
+              <div className="rounded-lg border p-3">
+                <AudiencePicker value={sharing} onChange={setSharing} />
+              </div>
+
 
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setDialogOpen(false)}>

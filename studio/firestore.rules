@@ -280,10 +280,14 @@ service cloud.firestore {
     // PERFORMANCE REPORTS (coach-authored, player-targeted or whole-team)
     match /reports/{reportId} {
       // A report is also visible to the athlete it is about, whatever its
-      // sharing settings — it is their assessment.
+      // sharing settings — it is their assessment. A report addressed to the
+      // whole team stays readable by the team: "whole team" is already the
+      // coach's stated audience, and ownership defaults to private, which
+      // would otherwise have silently stopped those reaching anyone.
       allow read: if request.auth != null && (
         canReadShared() ||
-        resource.data.targetPlayerUid == request.auth.uid
+        resource.data.targetPlayerUid == request.auth.uid ||
+        resource.data.targetPlayerUid == null
       );
       allow create: if isAdminOrCoach() && request.resource.data.createdBy == request.auth.uid;
       allow update, delete: if isAdmin()
