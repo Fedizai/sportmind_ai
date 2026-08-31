@@ -30,6 +30,9 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: "/coach/dashboard", label: t('coachNavDashboard') },
     { href: "/coach/sports", label: t('sports') },
+    // Reports had no link anywhere except a feed item that only appears once a
+    // report exists, so a coach could not reach it to write their first.
+    { href: "/coach/reports", label: t('coachToolReports') },
     { href: "/coach/chat", label: t('messages') }
   ];
 

@@ -31,6 +31,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import type { TranslationKey } from "@/lib/i18n";
 import { useTeam } from "@/hooks/use-team";
 import { useTrainingSessions, type SessionType } from "@/hooks/use-training-sessions";
+import { CoachTools } from "@/components/coach/coach-tools";
 import { useCoachMatches } from "@/hooks/use-coach-matches";
 import { useResources } from "@/hooks/use-resources";
 import { useReports } from "@/hooks/use-reports";
@@ -236,6 +237,11 @@ export default function CoachDashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Most coach pages had no route in at all. Reports was the worst: its
+          only link was a recent-activity entry that appears once a report
+          exists, so there was no way to reach the page and write the first. */}
+      <CoachTools />
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard icon={<Users className="h-5 w-5" />} label={t("totalPlayers")} value={players.length} />
         <KpiCard
