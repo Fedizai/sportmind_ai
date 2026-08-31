@@ -65,6 +65,7 @@ import FitnessAssistantChat from "../dashboard/fitness-assistant/page";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FootballInsightCard } from '@/components/insights/football-insight-card';
 import { useStreakStore } from '@/stores/streak-store';
+import { ComingUpSection, type UpcomingFixture } from '@/components/insights/coming-up-section';
 import { useFavorites } from '@/hooks/use-favorites';
 import { FavoriteStar } from '@/components/favorite-star';
 import { tierForStreak, nextTier, daysToNextTier } from '@/lib/streak-tiers';
@@ -965,6 +966,27 @@ export function InsightsGrid() {
         })).reverse();
     }, [footballMatches]);
 
+    /**
+     * Fixtures across the sports insights already listens to.
+     *
+     * A scheduled match lived only on its own sport page; insights is where an
+     * athlete checks where they stand, so it belongs here too.
+     */
+    const upcomingFixtures = useMemo<UpcomingFixture[]>(() => {
+        const rows: UpcomingFixture[] = [];
+        footballMatches.forEach((m: any) => {
+            if (m.status === 'upcoming' && m.date) {
+                rows.push({ sport: 'football', opponent: m.opponent, date: m.date });
+            }
+        });
+        tennisMatches.forEach((m: any) => {
+            if (m.status === 'upcoming' && m.date) {
+                rows.push({ sport: 'tennis', opponent: m.opponent, date: m.date });
+            }
+        });
+        return rows;
+    }, [footballMatches, tennisMatches]);
+
     const nextTennisMatch = useMemo(() => {
         return tennisMatches.filter(m => m.status === 'upcoming' && m.date >= new Date()).sort((a, b) => a.date.getTime() - b.date.getTime())[0];
     }, [tennisMatches]);
@@ -979,6 +1001,8 @@ export function InsightsGrid() {
                         animate="visible"
                         className="space-y-6"
                     >
+                        <ComingUpSection fixtures={upcomingFixtures} />
+
                         <SectionHeader
                             icon={<Activity className="h-6 w-6" />}
                             title={t('generalInsightsTitle')}

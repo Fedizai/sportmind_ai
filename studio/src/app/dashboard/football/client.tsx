@@ -15,6 +15,7 @@ import { getTacticalAdvice } from "@/ai/flows/sports-flows";
 import type { TacticalAdviceOutput, TennisDrillOutput } from "@/ai/schemas";
 import { deleteMatch } from "./actions";
 import { PlayerVideoPanel } from '@/components/video/player-video-panel';
+import { NextUpCard } from '@/components/sports/next-up-card';
 import { useTranslation } from "@/hooks/use-translation";
 import { useAthleteSessions, type AthleteSession } from '@/hooks/use-athlete-sessions';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -441,6 +442,7 @@ export default function FootballModuleClient() {
             date: new Date(),
             notes: "",
             motm: false,
+            status: "completed",
         },
     });
 
@@ -459,6 +461,15 @@ export default function FootballModuleClient() {
         });
         return () => unsubscribe();
     }, [user]);
+
+    /** The soonest fixture still ahead of us. */
+    const nextFootballMatch = useMemo(
+        () =>
+            matches
+                .filter((m: any) => m.status === 'upcoming' && m.date && m.date >= new Date())
+                .sort((a: any, b: any) => a.date.getTime() - b.date.getTime())[0],
+        [matches]
+    );
 
     const handleLogMatchSubmit = async (values: FootballMatchInput) => {
         if (!user) {
@@ -699,6 +710,12 @@ export default function FootballModuleClient() {
                     ))}
                 </TabsList>
                 <TabsContent value="overview" className="mt-6">
+                    <NextUpCard
+                        sport="football"
+                        nextMatchLabel={nextFootballMatch?.opponent}
+                        nextMatchDate={nextFootballMatch?.date}
+                    />
+
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1 space-y-6">
                             <Card>
@@ -1002,6 +1019,20 @@ export default function FootballModuleClient() {
                                                     >
                                                         {currentStep === 1 && (
                                                             <div className="space-y-6">
+                                                                {/* Football could only record matches after the fact,
+                                                                    so a fixture could never be put in the diary. */}
+                                                                <FormField control={logMatchForm.control} name="status" render={({ field }) => (
+                                                                    <FormItem>
+                                                                        <FormLabel>{t('matchStatusLabel')}</FormLabel>
+                                                                        <Select onValueChange={field.onChange} value={field.value ?? 'completed'}>
+                                                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="completed">{t('matchStatusCompleted')}</SelectItem>
+                                                                                <SelectItem value="upcoming">{t('matchStatusUpcoming')}</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </FormItem>
+                                                                )} />
                                                                 <FormField control={logMatchForm.control} name="opponent" render={({ field }) => (<FormItem><FormLabel>{'Opponent'}</FormLabel><FormControl><Input placeholder={'Enter opponent name'} {...field} /></FormControl><FormMessage /></FormItem>)} />
                                                                 <FormField control={logMatchForm.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>{t('dateOfMatch')}</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>{t('pickADate')}</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                                                                 <FormField control={logMatchForm.control} name="result" render={({ field }) => (

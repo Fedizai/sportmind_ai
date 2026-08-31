@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc,
+  collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc,
   doc, Timestamp,
 } from 'firebase/firestore';
 
@@ -25,6 +25,8 @@ export type AthleteSessionType = 'technical' | 'tactical' | 'physical' | 'other'
 
 export interface AthleteSession {
   id: string;
+  /** Which sport this session belongs to. */
+  sport: string;
   title: string;
   type: AthleteSessionType;
   /** Null only for a malformed row; the form always supplies a date. */
@@ -54,12 +56,11 @@ export function useAthleteSessions(userId: string | undefined, sport: string) {
       return;
     }
 
-    const q = query(
-      collection(db, 'athlete_sessions'),
-      where('userId', '==', userId),
-      where('sport', '==', sport),
-      orderBy('date', 'asc')
-    );
+    // userId alone, ordered in memory. Filtering on userId while ordering by
+    // date needs its own composite index, and a missing one fails the entire
+    // subscription rather than degrading — which has already emptied two lists
+    // in this app. One athlete's sessions number in the tens.
+    const q = query(collection(db, 'athlete_sessions'), where('userId', '==', userId));
 
     const unsubscribe = onSnapshot(
       q,
@@ -69,6 +70,7 @@ export function useAthleteSessions(userId: string | undefined, sport: string) {
           const data = docSnap.data();
           rows.push({
             id: docSnap.id,
+            sport: data.sport ?? '',
             title: data.title ?? '',
             type: (data.type ?? 'other') as AthleteSessionType,
             date: data.date instanceof Timestamp ? data.date.toDate() : null,
@@ -77,7 +79,11 @@ export function useAthleteSessions(userId: string | undefined, sport: string) {
             completed: !!data.completed,
           });
         });
-        setSessions(rows);
+        // `sport` of 'all' is used by the insights view, which needs every
+        // sport's sessions rather than one page's.
+        const scoped = sport === 'all' ? rows : rows.filter((r) => r.sport === sport);
+        scoped.sort((a, b) => (a.date?.getTime() ?? 0) - (b.date?.getTime() ?? 0));
+        setSessions(scoped);
         setIsLoading(false);
       },
       (error) => {
