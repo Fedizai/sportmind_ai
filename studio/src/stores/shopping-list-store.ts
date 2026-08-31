@@ -26,6 +26,18 @@ export interface ShoppingListItem {
 
 interface ShoppingListState {
   items: ShoppingListItem[];
+  /**
+   * How many days of the plan to shop for.
+   *
+   * The plan is one day, so importing it produced one day of food — which
+   * meant shopping every day. Multiplying the quantities lets someone buy a
+   * week at a time, which is how people actually shop.
+   */
+  planDays: number;
+  setPlanDays: (days: number) => void;
+  /** Change a line's food name or amount after it was added. */
+  updateItem: (itemId: string, patch: Partial<Pick<ShoppingListItem, 'name' | 'quantity' | 'unit'>>) => void;
+  removeItem: (itemId: string) => void;
   addItemsFromPlan: (plan: NutritionPlanOutput) => void;
   addIngredient: (ingredient: Ingredient) => void;
   addCustomItem: (name: string) => void;
@@ -74,13 +86,27 @@ export const useShoppingListStore = create<ShoppingListState>()(
   persist(
     (set, get) => ({
       items: [],
+      planDays: 1,
+      setPlanDays: (days) => set({ planDays: Math.max(1, Math.min(30, Math.round(days) || 1)) }),
+      updateItem: (itemId, patch) => {
+        set({
+          items: get().items.map((item) =>
+            item.id === itemId ? { ...item, ...patch } : item
+          ),
+        });
+      },
+      removeItem: (itemId) => {
+        set({ items: get().items.filter((item) => item.id !== itemId) });
+      },
       addItemsFromPlan: (plan) => {
         // Importing the same plan twice must not double every quantity, so the
         // previous import is dropped first and the plan re-applied. Custom
         // lines, and their checked state, survive untouched.
+        // One plan day scaled to however many days the athlete is shopping for.
+        const days = get().planDays;
         const fromPlan = aggregateIngredients(
           plan.meals.flatMap((meal) => toIngredients(meal.items as any))
-        );
+        ).map((ingredient) => ({ ...ingredient, quantity: ingredient.quantity * days }));
         let items = get().items.filter((i) => i.source !== 'plan');
         for (const ingredient of fromPlan) items = merge(items, ingredient, 'plan');
         set({ items });
@@ -121,6 +147,7 @@ export const useShoppingListStore = create<ShoppingListState>()(
        */
       migrate: (persisted: any) => ({
         ...persisted,
+        planDays: typeof persisted?.planDays === 'number' ? persisted.planDays : 1,
         items: (persisted?.items ?? []).map((item: any) => ({
           ...item,
           quantity: typeof item?.quantity === 'number' ? item.quantity : 0,

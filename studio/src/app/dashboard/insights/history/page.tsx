@@ -6,6 +6,7 @@ import { format, subDays, addDays, parseISO, startOfDay, endOfDay, isSameDay } f
 import { fr, enUS } from "date-fns/locale";
 import { doc, onSnapshot, collection, query, where, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { describeIngredients } from '@/lib/ingredients';
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -210,7 +211,7 @@ const HistoricalMealPlanCard = ({ data }: { data: HistoricalNutritionData | unde
                                         <Checkbox id={`meal-${index}`} checked={meal.completed} disabled className="mt-1" />
                                         <div className="grid gap-0.5 text-left">
                                             <label htmlFor={`meal-${index}`} className="text-sm font-medium">{meal.name} <span className="text-xs text-muted-foreground">(~{meal.calories} kcal)</span></label>
-                                            <p className="text-sm text-muted-foreground">{meal.items.join(', ')}</p>
+                                            <p className="text-sm text-muted-foreground">{describeIngredients(meal.items as any)}</p>
                                         </div>
                                     </div>
                                 ))}

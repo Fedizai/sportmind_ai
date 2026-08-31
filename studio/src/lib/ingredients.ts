@@ -266,3 +266,20 @@ export function groupOf(name: string): FoodGroup {
   }
   return 'other';
 }
+
+/**
+ * A plan meal's ingredients as one readable line.
+ *
+ * Plan items became objects when quantities were split out from their names,
+ * and two summary views still joined the array as if it held strings — which
+ * rendered "[object Object], [object Object]". Anywhere that wants a one-line
+ * summary should call this rather than `.join()`.
+ */
+export function describeIngredients(items: RawPlanItem[] | undefined): string {
+  return toIngredients(items)
+    .map((item) => {
+      const quantity = formatQuantity(item);
+      return quantity ? `${item.name} (${quantity})` : item.name;
+    })
+    .join(', ');
+}

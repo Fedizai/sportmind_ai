@@ -171,3 +171,29 @@ export type RestoreMethod = 'freeze' | 'payment' | 'support';
 export function freezesRemaining(days: number, freezesUsed: number): number {
   return Math.max(0, tierForStreak(days).freezes - Math.max(0, freezesUsed));
 }
+
+// --- Monthly recovery allowance ---------------------------------------------
+
+/** Recoveries everyone gets, refreshed every calendar month. */
+export const MONTHLY_RESTORES_BASE = 3;
+/** Recoveries once a streak has proven itself past VETERAN_STREAK_DAYS. */
+export const MONTHLY_RESTORES_VETERAN = 5;
+/** The streak length that earns the larger allowance. */
+export const VETERAN_STREAK_DAYS = 200;
+
+/**
+ * How many recoveries this athlete gets per month.
+ *
+ * Deliberately a monthly allowance rather than a lifetime one tied to the
+ * tier: a recovery is for the week you were ill or travelling, and something
+ * you can only ever use a fixed number of times stops being useful the moment
+ * it runs out — which for a long-running streak was almost immediately.
+ */
+export function monthlyRestoreAllowance(longest: number): number {
+  return longest >= VETERAN_STREAK_DAYS ? MONTHLY_RESTORES_VETERAN : MONTHLY_RESTORES_BASE;
+}
+
+/** What is left this month. */
+export function restoresRemaining(longest: number, usedThisMonth: number): number {
+  return Math.max(0, monthlyRestoreAllowance(longest) - Math.max(0, usedThisMonth));
+}

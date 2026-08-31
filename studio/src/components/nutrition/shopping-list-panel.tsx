@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import { Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { CalendarDays, Check, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 
 import { useTranslation } from '@/hooks/use-translation';
 import { useShoppingRegion } from '@/hooks/use-shopping-region';
@@ -14,6 +14,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 /**
@@ -53,6 +57,10 @@ export function ShoppingListPanel({ onPopulateFromPlan }: ShoppingListPanelProps
   const { region } = useShoppingRegion();
   const store = useShoppingListStore();
   const [draft, setDraft] = useState('');
+  /** The row currently being edited inline, if any. */
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editQty, setEditQty] = useState('');
 
   const ingredients = useMemo(() => store.items.map(asIngredient), [store.items]);
   const { priceOf, totalOf, isLoading } = useIngredientPrices(ingredients, region);
@@ -92,6 +100,33 @@ export function ShoppingListPanel({ onPopulateFromPlan }: ShoppingListPanelProps
           <RegionPicker />
         </div>
 
+        {/* The plan is one day. Shopping for one day at a time means shopping
+            every day, so the import scales to however long you are buying for. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t('shoppingDaysLabel')}
+              </p>
+              <p className="text-sm">{t('shoppingDaysHint')}</p>
+            </div>
+          </div>
+          <Select
+            value={String(store.planDays)}
+            onValueChange={(v) => store.setPlanDays(Number(v))}
+          >
+            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {[1, 2, 3, 4, 5, 6, 7, 10, 14, 30].map((d) => (
+                <SelectItem key={d} value={String(d)}>
+                  {t('shoppingDaysValue', { count: d })}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="flex gap-2">
           <Input
             placeholder={t('shoppingAddCustom')}
@@ -118,39 +153,113 @@ export function ShoppingListPanel({ onPopulateFromPlan }: ShoppingListPanelProps
                     const ingredient = asIngredient(item);
                     const quantity = formatQuantity(ingredient);
                     return (
-                      <li
-                        key={item.id}
-                        className="flex items-start gap-3 border-b p-3 last:border-0"
-                      >
-                        <Checkbox
-                          id={`shopping-${item.id}`}
-                          checked={item.checked}
-                          onCheckedChange={() => store.toggleItemChecked(item.id)}
-                          className="mt-0.5"
-                        />
-                        <div className="min-w-0 flex-grow">
-                          <label
-                            htmlFor={`shopping-${item.id}`}
-                            className={cn(
-                              'block cursor-pointer text-sm font-medium leading-snug',
-                              item.checked && 'text-muted-foreground line-through'
-                            )}
-                          >
-                            {item.name}
-                          </label>
-                          {quantity && (
-                            <span className="text-xs text-muted-foreground tabular-nums">{quantity}</span>
-                          )}
-                        </div>
-                        <PriceTag
-                          price={priceOf(ingredient)}
-                          loading={isLoading}
-                          // A hand-typed item has no quantity, so it can never
-                          // be priced; saying "unavailable" on every one of
-                          // them would be noise rather than information.
-                          hideWhenUnknown={ingredient.quantity <= 0}
-                          className="mt-0.5 text-sm"
-                        />
+                      <li key={item.id} className="border-b last:border-0">
+                        {editingId === item.id ? (
+                          <div className="flex items-end gap-2 p-3">
+                            <div className="min-w-0 flex-grow space-y-1">
+                              <Label className="text-xs text-muted-foreground">{t('editMealFoodName')}</Label>
+                              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                            </div>
+                            <div className="w-24 space-y-1">
+                              <Label className="text-xs text-muted-foreground">{t('planColumnQuantity')}</Label>
+                              <Input
+                                type="number"
+                                inputMode="decimal"
+                                value={editQty}
+                                onChange={(e) => setEditQty(e.target.value)}
+                              />
+                            </div>
+                            <Button
+                              size="icon"
+                              aria-label={t('save')}
+                              onClick={() => {
+                                const q = parseFloat(editQty);
+                                store.updateItem(item.id, {
+                                  name: editName.trim() || item.name,
+                                  quantity: Number.isFinite(q) && q >= 0 ? q : item.quantity,
+                                });
+                                setEditingId(null);
+                              }}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              aria-label={t('cancel')}
+                              onClick={() => setEditingId(null)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-start gap-3 p-3">
+                            <Checkbox
+                              id={`shopping-${item.id}`}
+                              checked={item.checked}
+                              onCheckedChange={() => store.toggleItemChecked(item.id)}
+                              className="mt-0.5"
+                            />
+                            {/* The whole row crosses the item off. Aiming for a
+                                16px checkbox in a supermarket with one hand is
+                                the wrong thing to ask of anyone. */}
+                            <button
+                              type="button"
+                              onClick={() => store.toggleItemChecked(item.id)}
+                              className="min-w-0 flex-grow text-left"
+                            >
+                              <span
+                                className={cn(
+                                  'block text-sm font-medium leading-snug',
+                                  item.checked && 'text-muted-foreground line-through'
+                                )}
+                              >
+                                {item.name}
+                              </span>
+                              {quantity && (
+                                <span className={cn(
+                                  'text-xs text-muted-foreground tabular-nums',
+                                  item.checked && 'line-through'
+                                )}>
+                                  {quantity}
+                                </span>
+                              )}
+                            </button>
+                            <PriceTag
+                              price={priceOf(ingredient)}
+                              loading={isLoading}
+                              // A hand-typed item has no quantity, so it can
+                              // never be priced; saying "unavailable" on every
+                              // one of them would be noise.
+                              hideWhenUnknown={ingredient.quantity <= 0}
+                              className="mt-0.5 text-sm"
+                            />
+                            <div className="flex shrink-0 items-center">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                aria-label={t('shoppingEditItem')}
+                                onClick={() => {
+                                  setEditingId(item.id);
+                                  setEditName(item.name);
+                                  setEditQty(String(item.quantity ?? 0));
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                aria-label={t('shoppingRemoveItem')}
+                                onClick={() => store.removeItem(item.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </li>
                     );
                   })}

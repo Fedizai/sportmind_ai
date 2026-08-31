@@ -6,7 +6,7 @@ import { startOfDay, format } from 'date-fns';
 import { usePlanStore } from './plan-store';
 import { summariseStreak } from '@/lib/streak-math';
 import {
-  freezesRemaining, tierForStreak, tierIndex,
+  monthlyRestoreAllowance, restoresRemaining, tierForStreak, tierIndex,
   type RestoreMethod, type StreakTierId,
 } from '@/lib/streak-tiers';
 
@@ -69,15 +69,20 @@ const MIN_INTERVAL_MS = 20_000;
 
 const dayKey = (d: Date) => format(d, 'yyyy-MM-dd');
 const todayKey = () => dayKey(new Date());
+/** yyyy-MM, the bucket the monthly recovery allowance is counted in. */
+const currentMonthKey = () => format(new Date(), 'yyyy-MM');
 
 /** Collections keyed by the field holding the activity date. */
-const SPORT_SOURCES: { path: string; dateField: string }[] = [
+const SPORT_SOURCES: { path: string; dateField: string; completedOnly?: boolean }[] = [
   { path: 'football_matches', dateField: 'date' },
   { path: 'tennis_matches', dateField: 'date' },
   { path: 'basketball_games', dateField: 'date' },
   { path: 'boxing_bouts', dateField: 'date' },
   { path: 'swimming_sessions', dateField: 'date' },
   { path: 'nutritionLogs', dateField: 'createdAt' },
+  // A planned session the athlete ticked off is training like any other.
+  // Counted on the session's own date, and only when completed.
+  { path: 'athlete_sessions', dateField: 'date', completedOnly: true },
 ];
 
 function toDate(value: unknown): Date | null {
@@ -136,8 +141,13 @@ export const useStreakStore = create<StreakState>()(
               console.warn(`Streak: skipped ${SPORT_SOURCES[i].path}`, res.reason);
               return;
             }
+            const source = SPORT_SOURCES[i];
             res.value.docs.forEach((docSnap) => {
-              const parsed = toDate(docSnap.data()[SPORT_SOURCES[i].dateField]);
+              const data = docSnap.data();
+              // A planned session only counts once it has been ticked off;
+              // scheduling one for next Tuesday is not training.
+              if (source.completedOnly && data.completed !== true) return;
+              const parsed = toDate(data[source.dateField]);
               if (parsed) dates.push(startOfDay(parsed));
             });
           });
@@ -162,7 +172,14 @@ export const useStreakStore = create<StreakState>()(
             const userSnap = await getDoc(doc(db, 'users', userId));
             const streak = userSnap.data()?.streak ?? {};
             bonusDays = Number(streak.bonusDays) || 0;
-            freezesUsed = Number(streak.freezesUsed) || 0;
+
+            // The allowance refreshes each calendar month, so a counter
+            // stamped with an earlier month starts again at zero rather than
+            // following the athlete around for good.
+            const storedMonth = typeof streak.freezeMonth === 'string' ? streak.freezeMonth : null;
+            freezesUsed = storedMonth === currentMonthKey()
+              ? Number(streak.freezesUsed) || 0
+              : 0;
 
             // `pendingSetTo` is what an admin asked the streak to become.
             // `overrideDays` is the old field that pinned it there forever;
@@ -246,7 +263,7 @@ export const useStreakStore = create<StreakState>()(
         // A free recovery spends one of the tier's credits; paid and
         // support-granted restores don't.
         if (method === 'freeze') {
-          if (freezesRemaining(longest, freezesUsed) <= 0) return false;
+          if (restoresRemaining(longest, freezesUsed) <= 0) return false;
         }
 
         try {
@@ -257,7 +274,9 @@ export const useStreakStore = create<StreakState>()(
             {
               streak: {
                 bonusDays: increment(days),
-                ...(method === 'freeze' ? { freezesUsed: increment(1) } : {}),
+                ...(method === 'freeze'
+                  ? { freezesUsed: increment(1), freezeMonth: currentMonthKey() }
+                  : {}),
                 lastRestoreAt: serverTimestamp(),
                 lastRestoreMethod: method,
               },

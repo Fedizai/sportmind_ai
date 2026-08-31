@@ -10,6 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { format, startOfDay, endOfDay, differenceInCalendarDays, subDays } from "date-fns";
 import { collection, addDoc, query, where, orderBy, onSnapshot, Timestamp, updateDoc, doc } from "firebase/firestore";
 import { db, storage } from "@/lib/firebase";
+import { describeIngredients } from '@/lib/ingredients';
 import { useUser } from "@/hooks/use-user";
 import { footballMatchSchema, type NutritionLog } from "@/lib/schemas";
 import { getTacticalAdvice } from "@/ai/flows/sports-flows";
@@ -457,7 +458,7 @@ const MealPlanCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
                                             {t(meal.name.toLowerCase() as TranslationKey)} <span className="text-xs text-muted-foreground">(~{meal.calories} {t('kcal')})</span>
                                         </label>
                                         <p className="text-sm text-muted-foreground">
-                                            {meal.items.join(', ')}
+                                            {describeIngredients(meal.items as any)}
                                         </p>
                                     </div>
                                 </div>

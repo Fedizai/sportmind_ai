@@ -11,7 +11,7 @@ import { useTranslation } from '@/hooks/use-translation';
 import { useSupportTickets } from '@/hooks/use-support-tickets';
 import { pick } from '@/lib/bilingual';
 import {
-  tierForStreak, nextTier, daysToNextTier, freezesRemaining,
+  tierForStreak, nextTier, daysToNextTier, restoresRemaining, monthlyRestoreAllowance,
   type RestoreMethod,
 } from '@/lib/streak-tiers';
 import { StreakBadgeRail } from '@/components/streak-badge-rail';
@@ -40,7 +40,8 @@ export function StreakCard() {
   const tier = tierForStreak(current);
   const next = nextTier(current);
   const toGo = daysToNextTier(current);
-  const restoresLeft = freezesRemaining(longest, freezesUsed);
+  const restoresLeft = restoresRemaining(longest, freezesUsed);
+  const restoreAllowance = monthlyRestoreAllowance(longest);
 
   // How much of the current tier band has been covered.
   const progress = next
@@ -168,6 +169,21 @@ export function StreakCard() {
           </div>
         )}
 
+        {/* Recoveries. Outside the perks block on purpose: that block only
+            renders at tiers that have perks, which hid the count from exactly
+            the people most likely to need it. */}
+        <div className="flex items-start gap-2 rounded-lg border p-3">
+          <LifeBuoy className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div>
+            <p className="text-sm font-medium">
+              {t('streakRestoresThisMonth', { left: restoresLeft, total: restoreAllowance })}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t('streakRestoreAllowanceNote', { total: restoreAllowance })}
+            </p>
+          </div>
+        </div>
+
         {/* Perks for this tier */}
         {tier.perks.length > 0 && (
           <div className="space-y-2">
@@ -180,9 +196,7 @@ export function StreakCard() {
                 </li>
               ))}
             </ul>
-            <p className="pt-1 text-xs text-muted-foreground">
-              {t('streakFreezesLeft', { count: restoresLeft })}
-            </p>
+
           </div>
         )}
 
