@@ -38,7 +38,9 @@ export function NextUpCard({
     .sort((a, b) => (a.date?.getTime() ?? 0) - (b.date?.getTime() ?? 0))[0];
 
   const hasMatch = !!nextMatchLabel && !!nextMatchDate;
-  if (!nextSession && !hasMatch) return null;
+  // Renders even when both are empty. Hiding it entirely meant an athlete with
+  // nothing scheduled saw no trace of the feature and no hint that planning a
+  // session or a fixture would fill it in.
 
   return (
     <Card>
