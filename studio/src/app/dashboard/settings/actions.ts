@@ -37,6 +37,13 @@ const notificationsSchema = z.object({
 
 const privacySchema = z.object({
     shareDataWithCoach: z.boolean(),
+    /**
+     * Whether this athlete appears on the team leaderboard.
+     *
+     * Off unless they say otherwise: a ranking someone did not ask to be on is
+     * a different thing from one they joined.
+     */
+    rankingPublic: z.boolean().default(false),
 });
 
 

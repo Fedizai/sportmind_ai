@@ -41,6 +41,8 @@ export interface AppUser {
   };
   privacy?: {
     shareDataWithCoach?: boolean;
+    /** Opt-in to the team leaderboard. Absent means not on it. */
+    rankingPublic?: boolean;
   };
   /** Sport profile captured during onboarding. Shape mirrors use-all-users.AppUser. */
   tennisProfile?: {

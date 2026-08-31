@@ -15,10 +15,11 @@ import {
 import { db, auth } from '@/lib/firebase';
 import { stripUndefined } from '@/lib/utils';
 import { useToast } from './use-toast';
+import { canView, DEFAULT_SHARING, type SharedFields } from '@/lib/sharing';
 
 export type ReportType = 'weekly-summary' | 'match-review' | 'progress-note';
 
-export interface Report {
+export interface Report extends Partial<SharedFields> {
   id: string;
   title: string;
   type: ReportType;
@@ -29,7 +30,7 @@ export interface Report {
   createdAt: Timestamp;
 }
 
-export interface ReportInput {
+export interface ReportInput extends Partial<Omit<SharedFields, 'ownerId'>> {
   title: string;
   type: ReportType;
   targetPlayerUid: string | null;
@@ -69,7 +70,10 @@ export function useReports() {
     if (!uid) return;
     try {
       await addDoc(collection(db, 'reports'), {
+        ...DEFAULT_SHARING,
         ...stripUndefined(input),
+        // The coach who made it owns it; the rules read this field.
+        ownerId: uid,
         createdBy: uid,
         createdAt: serverTimestamp(),
       });
@@ -90,5 +94,15 @@ export function useReports() {
     }
   };
 
-  return { reports, isLoading, error, createReport, deleteReport };
+  /**
+   * The subset this viewer may see, mirroring the Firestore rule.
+   *
+   * The rules already refuse the rest, so this is about not rendering an
+   * empty shell for material the reader has no access to.
+   */
+  const visibleTo = (uid: string | undefined, role?: string | null) =>
+    reports.filter((item) => canView(item, uid, role));
+
+  return { reports, isLoading, error, createReport, deleteReport , visibleTo };
 }
+

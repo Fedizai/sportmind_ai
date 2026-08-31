@@ -15,11 +15,12 @@ import {
 import { db, auth } from '@/lib/firebase';
 import { stripUndefined } from '@/lib/utils';
 import { useToast } from './use-toast';
+import { canView, DEFAULT_SHARING, type SharedFields } from '@/lib/sharing';
 
 export type ResourceCategory = 'video' | 'document' | 'link';
 export type ResourceSport = 'football' | 'tennis' | 'gym' | 'all';
 
-export interface Resource {
+export interface Resource extends Partial<SharedFields> {
   id: string;
   title: string;
   category: ResourceCategory;
@@ -30,7 +31,7 @@ export interface Resource {
   createdAt: Timestamp;
 }
 
-export interface ResourceInput {
+export interface ResourceInput extends Partial<Omit<SharedFields, 'ownerId'>> {
   title: string;
   category: ResourceCategory;
   sport: ResourceSport;
@@ -80,7 +81,10 @@ export function useResources(category?: ResourceCategory) {
     if (!uid) return;
     try {
       await addDoc(collection(db, 'resources'), {
+        ...DEFAULT_SHARING,
         ...stripUndefined(input),
+        // The coach who made it owns it; the rules read this field.
+        ownerId: uid,
         createdBy: uid,
         createdAt: serverTimestamp(),
       });
@@ -103,8 +107,18 @@ export function useResources(category?: ResourceCategory) {
 
   const filtered = category ? resources.filter((r) => r.category === category) : resources;
 
-  return { resources: filtered, isLoading, error, addResource, deleteResource };
+  /**
+   * The subset this viewer may see, mirroring the Firestore rule.
+   *
+   * The rules already refuse the rest, so this is about not rendering an
+   * empty shell for material the reader has no access to.
+   */
+  const visibleTo = (uid: string | undefined, role?: string | null) =>
+    resources.filter((item) => canView(item, uid, role));
+
+  return { resources: filtered, isLoading, error, addResource, deleteResource , visibleTo };
 }
+
 
 export interface ResourceComment {
   id: string;

@@ -39,6 +39,7 @@ const settingsSchema = z.object({
     emailNotifications: z.boolean(),
     trainingReminders: z.boolean(),
     shareDataWithCoach: z.boolean(),
+    rankingPublic: z.boolean(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -59,6 +60,7 @@ export default function SettingsPage() {
             emailNotifications: true,
             trainingReminders: true,
             shareDataWithCoach: true,
+            rankingPublic: false,
         },
     });
 
@@ -71,6 +73,8 @@ export default function SettingsPage() {
                 emailNotifications: user.notifications?.emailNotifications ?? true,
                 trainingReminders: user.notifications?.trainingReminders ?? true,
                 shareDataWithCoach: user.privacy?.shareDataWithCoach ?? true,
+                // Off unless they have said otherwise.
+                rankingPublic: user.privacy?.rankingPublic ?? false,
             });
         }
     }, [user, form]);
@@ -88,7 +92,7 @@ export default function SettingsPage() {
                 updateAccountSettings(token, { username: data.username }),
                 updatePreferences(token, { theme: data.theme, units: data.units }),
                 updateNotifications(token, { emailNotifications: data.emailNotifications, trainingReminders: data.trainingReminders }),
-                updatePrivacy(token, { shareDataWithCoach: data.shareDataWithCoach }),
+                updatePrivacy(token, { shareDataWithCoach: data.shareDataWithCoach, rankingPublic: data.rankingPublic }),
             ]);
 
             // These actions report failure by returning, not by throwing, so
@@ -347,6 +351,21 @@ export default function SettingsPage() {
                                   <div className="space-y-0.5">
                                     <FormLabel>{t('shareDataWithCoachLabel')}</FormLabel>
                                     <FormDescription className="text-xs">{t('shareDataWithCoachDescription')}</FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}/>
+
+                             <FormField control={form.control} name="rankingPublic" render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-xl border border-white/[0.09] bg-white/[0.02] p-4">
+                                  <div className="space-y-0.5">
+                                    <FormLabel>{t('rankingVisibility')}</FormLabel>
+                                    <FormDescription className="text-xs">{t('rankingVisibilityHint')}</FormDescription>
                                   </div>
                                   <FormControl>
                                     <Switch

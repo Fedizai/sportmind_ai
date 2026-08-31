@@ -35,6 +35,26 @@ service cloud.firestore {
 
     // Declared after isAdmin so the owner-by-email path applies here too:
     // an owner with no user document has no stored role to match on.
+    /**
+     * Coaching material an athlete or another coach is allowed to read.
+     *
+     * Programmes, resources and reports were readable by every signed-in user,
+     * which made the team centre one shared pile across every coach and every
+     * sport. Ownership plus an explicit audience replaces that. Documents
+     * written before these fields existed have no ownerId, and are left
+     * readable so nothing already in the app disappears.
+     */
+    function canReadShared() {
+      return request.auth != null && (
+        isAdmin()
+        || !('ownerId' in resource.data)
+        || resource.data.ownerId == request.auth.uid
+        || resource.data.visibility == 'public'
+        || (resource.data.visibility == 'audience'
+            && request.auth.uid in resource.data.audience)
+      );
+    }
+
     function isAdminOrCoach() {
       return isAdmin() || (request.auth != null && getUserRole(request.auth.uid) == 'coach');
     }
@@ -231,8 +251,9 @@ service cloud.firestore {
 
     // TRAINING SESSIONS (coach-created practice sessions, with attendance)
     match /trainingSessions/{sessionId} {
-      allow read: if request.auth != null;
-      allow write: if isAdminOrCoach();
+      allow read: if canReadShared();
+      allow create: if isAdminOrCoach() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isAdmin() || (resource.data.ownerId == request.auth.uid);
     }
 
     // COACH MATCHES (schedule, lineups, tactics notes for the coach platform)
@@ -243,8 +264,9 @@ service cloud.firestore {
 
     // RESOURCES (drills, videos, documents, links — coach content library)
     match /resources/{resourceId} {
-      allow read: if request.auth != null;
-      allow write: if isAdminOrCoach();
+      allow read: if canReadShared();
+      allow create: if isAdminOrCoach() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isAdmin() || (resource.data.ownerId == request.auth.uid);
 
       // Timeline comments on a resource (e.g. video review)
       match /comments/{commentId} {
@@ -257,12 +279,16 @@ service cloud.firestore {
 
     // PERFORMANCE REPORTS (coach-authored, player-targeted or whole-team)
     match /reports/{reportId} {
+      // A report is also visible to the athlete it is about, whatever its
+      // sharing settings — it is their assessment.
       allow read: if request.auth != null && (
-        isAdminOrCoach() ||
-        resource.data.targetPlayerUid == request.auth.uid ||
-        resource.data.targetPlayerUid == null
+        canReadShared() ||
+        resource.data.targetPlayerUid == request.auth.uid
       );
-      allow write: if isAdminOrCoach();
+      allow create: if isAdminOrCoach() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isAdmin()
+        || (resource.data.ownerId == request.auth.uid)
+        || (resource.data.createdBy == request.auth.uid);
     }
 
     // FRIENDSHIPS
