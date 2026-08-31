@@ -96,6 +96,17 @@ const wizardSteps = [
     { step: 3, titleKey: 'yourFeedback', fields: ['stamina', 'notes'] }
 ];
 
+/**
+ * A fixture that has not been played has only the first step.
+ *
+ * Stats, result and how it felt are all unknowable before kick-off; walking
+ * someone through two steps of them to schedule a match is asking for
+ * invented data.
+ */
+const fixtureSteps = [
+    { step: 1, titleKey: 'matchDetails', fields: ['opponent', 'date'] },
+];
+
 const goalsChartConfig = {
     goals: {
         label: "Goals",
@@ -508,8 +519,11 @@ export default function FootballModuleClient() {
         }
     }
 
+    const isFixture = logMatchForm.watch("status") === "upcoming";
+    const activeSteps = isFixture ? fixtureSteps : wizardSteps;
+
     const goToNextStep = async () => {
-        const fieldsToValidate = wizardSteps.find(s => s.step === currentStep)?.fields;
+        const fieldsToValidate = activeSteps.find(s => s.step === currentStep)?.fields;
         const isValid = await logMatchForm.trigger(fieldsToValidate as any);
         if (isValid) {
             setCurrentStep(prev => prev + 1);
@@ -993,7 +1007,7 @@ export default function FootballModuleClient() {
 
                                     <div className="px-6 pb-6">
                                         <div className="flex items-center gap-4 mb-6">
-                                            {wizardSteps.map((s, index) => (
+                                            {activeSteps.map((s, index) => (
                                                 <React.Fragment key={s.step}>
                                                     <div className="flex flex-col items-center gap-1">
                                                         <div className={cn("h-8 w-8 rounded-full flex items-center justify-center transition-all", currentStep > s.step ? "bg-primary text-primary-foreground" : currentStep === s.step ? "bg-primary text-primary-foreground ring-4 ring-primary/30" : "bg-muted text-muted-foreground")}>
@@ -1001,7 +1015,7 @@ export default function FootballModuleClient() {
                                                         </div>
                                                         <p className={cn("text-xs transition-colors", currentStep >= s.step ? "text-primary" : "text-muted-foreground")}>{t(s.titleKey as any)}</p>
                                                     </div>
-                                                    {index < wizardSteps.length - 1 && <div className="flex-1 h-0.5 bg-border mt-[-1rem]" />}
+                                                    {index < activeSteps.length - 1 && <div className="flex-1 h-0.5 bg-border mt-[-1rem]" />}
                                                 </React.Fragment>
                                             ))}
                                         </div>
@@ -1035,7 +1049,7 @@ export default function FootballModuleClient() {
                                                                 )} />
                                                                 <FormField control={logMatchForm.control} name="opponent" render={({ field }) => (<FormItem><FormLabel>{'Opponent'}</FormLabel><FormControl><Input placeholder={'Enter opponent name'} {...field} /></FormControl><FormMessage /></FormItem>)} />
                                                                 <FormField control={logMatchForm.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>{t('dateOfMatch')}</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>{t('pickADate')}</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => (logMatchForm.watch("status") === "upcoming" ? date < new Date(new Date().setHours(0,0,0,0)) : date > new Date()) || date < new Date("1900-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                                                                <FormField control={logMatchForm.control} name="result" render={({ field }) => (
+                                                                {!isFixture && <FormField control={logMatchForm.control} name="result" render={({ field }) => (
                                                                     <FormItem>
                                                                         <FormLabel>{t('finalResult')}</FormLabel>
                                                                         <div className="flex gap-2 pt-2">
@@ -1045,7 +1059,7 @@ export default function FootballModuleClient() {
                                                                         </div>
                                                                         <FormMessage />
                                                                     </FormItem>
-                                                                )} />
+                                                                )} />}
                                                             </div>
                                                         )}
 
@@ -1068,8 +1082,8 @@ export default function FootballModuleClient() {
                                                             <div className="space-y-6">
                                                                 <FormField control={logMatchForm.control} name="stamina" render={({ field }) => (
                                                                     <FormItem>
-                                                                        <FormLabel>{t('staminaRating')} ({field.value}/10)</FormLabel>
-                                                                        <FormControl><Slider min={1} max={10} step={1} defaultValue={[field.value]} onValueChange={(value) => field.onChange(value[0])} /></FormControl>
+                                                                        <FormLabel>{t('staminaRating')} ({field.value ?? 5}/10)</FormLabel>
+                                                                        <FormControl><Slider min={1} max={10} step={1} defaultValue={[field.value ?? 5]} onValueChange={(value) => field.onChange(value[0])} /></FormControl>
                                                                         <FormMessage />
                                                                     </FormItem>
                                                                 )} />
@@ -1084,8 +1098,8 @@ export default function FootballModuleClient() {
                                                         {currentStep > 1 && (<Button type="button" variant="ghost" onClick={goToPrevStep}>{t('back')}</Button>)}
                                                     </div>
                                                     <div>
-                                                        {currentStep < wizardSteps.length && (<Button type="button" onClick={goToNextStep}>{t('next')}</Button>)}
-                                                        {currentStep === wizardSteps.length && (<Button type="submit" disabled={isSubmitting}>{isSubmitting ? t('saving') : t('saveReport')}</Button>)}
+                                                        {currentStep < activeSteps.length && (<Button type="button" onClick={goToNextStep}>{t('next')}</Button>)}
+                                                        {currentStep === activeSteps.length && (<Button type="submit" disabled={isSubmitting}>{isSubmitting ? t('saving') : t('saveReport')}</Button>)}
                                                     </div>
                                                 </div>
                                             </form>
@@ -1098,7 +1112,11 @@ export default function FootballModuleClient() {
                             {isUserLoading ? renderLoading() : (
                                 <div className="space-y-4">
                                     {matches.length > 0 ? matches.map((match) => {
-                                        const resultClasses = getResultClasses(match.result);
+                                        // A fixture has no result yet, so it is
+                                        // styled and labelled as upcoming rather
+                                        // than borrowing a win/draw/loss colour.
+                                        const isFixture = (match as any).status === 'upcoming' || !match.result;
+                                        const resultClasses = getResultClasses(match.result ?? 'draw');
                                         return (
                                             <Card key={match.id} className={cn("overflow-hidden hover:border-primary/50 transition-colors group", resultClasses.bg)}>
                                                 <div className={cn("h-1.5 w-full", resultClasses.text.replace('text-', 'bg-'))}></div>
@@ -1106,7 +1124,9 @@ export default function FootballModuleClient() {
                                                     <div className="flex justify-between items-start">
                                                         <div>
                                                             <p className="font-bold text-lg text-foreground">vs {match.opponent}</p>
-                                                            <p className={cn("text-sm font-semibold capitalize", resultClasses.text)}>{t(match.result)}</p>
+                                                            <p className={cn("text-sm font-semibold capitalize", isFixture ? "text-muted-foreground" : resultClasses.text)}>
+                                                                {isFixture ? t('matchStatusUpcoming') : t(match.result!)}
+                                                            </p>
                                                         </div>
                                                         <div className="text-right">
                                                             <div className="flex items-center gap-2">

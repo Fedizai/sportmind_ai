@@ -62,12 +62,20 @@ export const workoutSchema = z.object({
 
 export const footballMatchSchema = z.object({
   opponent: z.string().min(1, "Opponent name is required."),
-  result: z.enum(['win', 'draw', 'loss']),
+  /**
+   * Everything below the opponent is unknowable before kick-off.
+   *
+   * These were required, which made scheduling a fixture impossible — the form
+   * could not validate without a result and a stamina score for a match that
+   * had not happened. They are optional in the shape and required by the
+   * refinement further down, but only for a match that has been played.
+   */
+  result: z.enum(['win', 'draw', 'loss']).optional(),
   goals: z.coerce.number().min(0, "Goals cannot be negative.").default(0),
   assists: z.coerce.number().min(0, "Assists cannot be negative.").default(0),
   minutesPlayed: z.coerce.number().min(0, "Minutes must be positive.").max(120, "Minutes can't exceed 120.").default(90),
   position: z.string().optional(),
-  stamina: z.coerce.number().min(1).max(10),
+  stamina: z.coerce.number().min(1).max(10).optional(),
   notes: z.string().optional(),
   motm: z.boolean().default(false),
   date: z.date(),
@@ -78,7 +86,18 @@ export const footballMatchSchema = z.object({
    * put a fixture in the diary — and nothing for "next match" to read.
    */
   status: z.enum(['upcoming', 'completed']).default('completed'),
+}).superRefine((match, ctx) => {
+  // A played match still has to say how it went; a fixture does not.
+  if (match.status !== 'completed') return;
+  if (!match.result) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['result'], message: 'Result is required for a played match.' });
+  }
+  if (match.stamina === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['stamina'], message: 'Stamina is required for a played match.' });
+  }
 });
+
+
 
 
 export const tennisMatchSchema = z.object({
