@@ -45,10 +45,15 @@ function DashboardHeader() {
     const tabsRef = useRef<(HTMLAnchorElement | null)[]>([]);
     const { t } = useTranslation();
 
+    // Unread messages put a dot beside Social. A badge with a number belongs
+    // on the bell in the header; here the only question is "is there anything
+    // waiting", and a dot answers it without competing with the label.
+    const { unreadConversations } = useConversations(user?.uid);
+
     const navItems = [
         { href: "/dashboard", label: t('sports') },
         { href: "/dashboard/insights", label: t('insights') },
-        { href: "/dashboard/social", label: t('navSocial') },
+        { href: "/dashboard/social", label: t('navSocial'), dot: unreadConversations > 0 },
         { href: "/dashboard/autres", label: t('navOther') },
     ];
 
@@ -107,11 +112,22 @@ function DashboardHeader() {
                                         tabsRef.current[index] = el;
                                     }}
                                     className={cn(
-                                        "relative z-10 px-4 py-2 text-sm font-medium transition-colors",
-                                        isActive ? "font-bold text-foreground" : "text-muted-foreground hover:text-foreground"
+                                        "relative z-10 flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors",
+                                        // Social reads in the normal ink colour
+                                        // whenever something is waiting, so the
+                                        // dot is not the only thing carrying it.
+                                        isActive || item.dot
+                                            ? "font-bold text-foreground"
+                                            : "text-muted-foreground hover:text-foreground"
                                     )}
                                 >
                                     {item.label}
+                                    {item.dot && (
+                                        <span
+                                            aria-label={t('unreadMessages', { count: unreadConversations })}
+                                            className="h-2 w-2 shrink-0 rounded-full bg-primary"
+                                        />
+                                    )}
                                 </a>
                             </Link>
                          )

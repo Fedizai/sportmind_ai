@@ -71,6 +71,13 @@ export const footballMatchSchema = z.object({
   notes: z.string().optional(),
   motm: z.boolean().default(false),
   date: z.date(),
+  /**
+   * Whether this match has been played.
+   *
+   * Football could only record matches after the fact, so there was no way to
+   * put a fixture in the diary — and nothing for "next match" to read.
+   */
+  status: z.enum(['upcoming', 'completed']).default('completed'),
 });
 
 

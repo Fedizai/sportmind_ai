@@ -12,6 +12,7 @@ import { db } from "@/lib/firebase";
 import { useUser } from "@/hooks/use-user";
 import { useAthleteSessions, type AthleteSession } from '@/hooks/use-athlete-sessions';
 import { PlayerVideoPanel } from '@/components/video/player-video-panel';
+import { NextUpCard } from '@/components/sports/next-up-card';
 import { SportCoachChat } from '@/components/sport-coach-chat';
 import { tennisMatchSchema } from "@/lib/schemas";
 import { getTacticalAdvice } from "@/ai/flows/sports-flows";
@@ -239,6 +240,15 @@ export default function TennisModuleClient() {
         return () => unsubscribe();
     }, [user]);
 
+    /** The soonest fixture still ahead of us, for the "coming up" card. */
+    const nextTennisMatch = useMemo(
+        () =>
+            matches
+                .filter((m) => m.status === 'upcoming' && m.date && m.date >= new Date())
+                .sort((a, b) => a.date.getTime() - b.date.getTime())[0],
+        [matches]
+    );
+
     const handleLogMatchSubmit = async (values: TennisMatchFormValues) => {
         if (!user) {
             toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
@@ -435,6 +445,14 @@ export default function TennisModuleClient() {
                 ))}
             </TabsList>
             <TabsContent value="overview" className="mt-6">
+              {/* Both a planned session and a scheduled fixture existed as
+                  data and neither was shown anywhere. */}
+              <NextUpCard
+                sport="tennis"
+                nextMatchLabel={nextTennisMatch?.opponent}
+                nextMatchDate={nextTennisMatch?.date}
+              />
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-1 space-y-6">
                         <Card>
@@ -719,7 +737,23 @@ export default function TennisModuleClient() {
                             <DialogHeader><DialogTitle>{t('logNewMatch')}</DialogTitle></DialogHeader>
                             <Form {...matchForm}>
                                 <form onSubmit={matchForm.handleSubmit(handleLogMatchSubmit)} className="space-y-4">
-                                     <FormField control={matchForm.control} name="opponent" render={({ field }) => (<FormItem><FormLabel>{t('opponent')}</FormLabel><FormControl><Input placeholder={t('tennisOpponentPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                     <FormField
+                                            control={matchForm.control}
+                                            name="status"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{t('matchStatusLabel')}</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={field.value ?? 'completed'}>
+                                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                        <SelectContent>
+                                                            <SelectItem value="completed">{t('matchStatusCompleted')}</SelectItem>
+                                                            <SelectItem value="upcoming">{t('matchStatusUpcoming')}</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField control={matchForm.control} name="opponent" render={({ field }) => (<FormItem><FormLabel>{t('opponent')}</FormLabel><FormControl><Input placeholder={t('tennisOpponentPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
                                      <FormField control={matchForm.control} name="score" render={({ field }) => (<FormItem><FormLabel>{t('finalScore')}</FormLabel><FormControl><Input placeholder={t('tennisScorePlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
                                      <div className="grid grid-cols-2 gap-4">
                                         <FormField control={matchForm.control} name="result" render={({ field }) => (<FormItem><FormLabel>{t('finalResult')}</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder={t('selectResult')} /></SelectTrigger></FormControl><SelectContent><SelectItem value="W">{t('win')}</SelectItem><SelectItem value="L">{t('loss')}</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
