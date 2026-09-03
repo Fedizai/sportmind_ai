@@ -241,6 +241,8 @@ export default function TennisModuleClient() {
     }, [user]);
 
     /** The soonest fixture still ahead of us, for the "coming up" card. */
+    const isTennisFixture = matchForm.watch("status") === "upcoming";
+
     const nextTennisMatch = useMemo(
         () =>
             matches
@@ -256,7 +258,18 @@ export default function TennisModuleClient() {
         }
         setIsSubmitting(true);
         try {
-            await saveTennisMatch(user.uid, values);
+            // The played-only fields still hold their form defaults even when
+            // hidden, so a fixture would be stored with result "W" and go on to
+            // read as a win it had not played yet.
+            const payload = values.status === 'upcoming'
+                ? {
+                    opponent: values.opponent,
+                    date: values.date,
+                    status: 'upcoming' as const,
+                    addToTraining: false,
+                }
+                : values;
+            await saveTennisMatch(user.uid, payload);
             matchForm.reset();
             setIsLogMatchOpen(false);
             toast({ title: t('matchLogged'), description: t('matchLoggedDescription', { opponent: values.opponent }) });
@@ -754,6 +767,12 @@ export default function TennisModuleClient() {
                                             )}
                                         />
                                         <FormField control={matchForm.control} name="opponent" render={({ field }) => (<FormItem><FormLabel>{t('opponent')}</FormLabel><FormControl><Input placeholder={t('tennisOpponentPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                     {/* A match that has not been played has no score,
+                                         no result, no surface and no stat line. Asking
+                                         for them was not just noise: the score field
+                                         defaults to "" and was validated as required,
+                                         so a fixture could never be saved. */}
+                                     {!isTennisFixture && <>
                                      <FormField control={matchForm.control} name="score" render={({ field }) => (<FormItem><FormLabel>{t('finalScore')}</FormLabel><FormControl><Input placeholder={t('tennisScorePlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
                                      <div className="grid grid-cols-2 gap-4">
                                         <FormField control={matchForm.control} name="result" render={({ field }) => (<FormItem><FormLabel>{t('finalResult')}</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder={t('selectResult')} /></SelectTrigger></FormControl><SelectContent><SelectItem value="W">{t('win')}</SelectItem><SelectItem value="L">{t('loss')}</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
@@ -765,6 +784,7 @@ export default function TennisModuleClient() {
                                          <FormField control={matchForm.control} name="firstServePercent" render={({ field }) => (<FormItem><FormLabel>1st Serve %</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                          <FormField control={matchForm.control} name="breakPointsSaved" render={({ field }) => (<FormItem><FormLabel>Break Points Saved %</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                     </div>
+                                    </>}
                                     <FormField control={matchForm.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>{t('dateOfMatch')}</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>{t('pickADate')}</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => (matchForm.watch("status") === "upcoming" ? date < new Date(new Date().setHours(0,0,0,0)) : date > new Date()) || date < new Date("1900-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                                     <DialogFooter>
                                         <Button type="submit" disabled={isSubmitting}>{isSubmitting ? t('saving') : t('saveMatch')}</Button>
@@ -776,15 +796,23 @@ export default function TennisModuleClient() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {matches.length > 0 ? matches.map(match => {
-                            const resultClasses = getResultClasses(match.result as 'W' | 'L');
+                            // A match still to be played has no result to colour it by,
+                            // and rendering one anyway showed every fixture as
+                            // "LOSS - undefined".
+                            const isFixture = match.status === 'upcoming' || !match.result;
+                            const resultClasses = getResultClasses((match.result ?? 'W') as 'W' | 'L');
                             return (
-                                <Card key={match.id} className={cn("overflow-hidden hover:border-primary/50 transition-colors group", resultClasses.bg)}>
-                                    <div className={cn("h-1.5 w-full", resultClasses.text.replace('text-', 'bg-'))}></div>
+                                <Card key={match.id} className={cn("overflow-hidden hover:border-primary/50 transition-colors group", !isFixture && resultClasses.bg)}>
+                                    <div className={cn("h-1.5 w-full", isFixture ? "bg-primary/40" : resultClasses.text.replace('text-', 'bg-'))}></div>
                                     <CardContent className="p-4">
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <p className="font-bold text-lg text-foreground">vs {match.opponent}</p>
-                                            <p className={cn("text-sm font-semibold uppercase", resultClasses.text)}>{t(match.result === 'W' ? 'win' : 'loss')} - {match.score}</p>
+                                            {isFixture ? (
+                                                <p className="text-sm font-semibold uppercase text-primary">{t('matchStatusUpcoming')}</p>
+                                            ) : (
+                                                <p className={cn("text-sm font-semibold uppercase", resultClasses.text)}>{t(match.result === 'W' ? 'win' : 'loss')} - {match.score}</p>
+                                            )}
                                         </div>
                                         <div className="text-right">
                                             <div className="flex items-center gap-2">

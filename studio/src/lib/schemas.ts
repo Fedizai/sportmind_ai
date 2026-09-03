@@ -103,7 +103,7 @@ export const footballMatchSchema = z.object({
 export const tennisMatchSchema = z.object({
   id: z.string().optional(),
   opponent: z.string().min(1, "Opponent name is required."),
-  score: z.string().min(1, "Score is required.").optional(),
+  score: z.string().optional(),
   result: z.enum(["W", "L"]).optional(),
   surface: z.enum(["Hard", "Clay", "Grass", "Other"]).optional(),
   date: z.date(),
@@ -118,6 +118,19 @@ export const tennisMatchSchema = z.object({
   doubleFaults: z.coerce.number().min(0).optional(),
   aces: z.coerce.number().min(0).optional(),
   breakPointsSaved: z.coerce.number().min(0).max(100).optional(),
+}).superRefine((match, ctx) => {
+  // A fixture has not been played, so it has no score and no result. `score`
+  // used to be `.min(1).optional()`, and the form defaults it to "" — an empty
+  // string is not undefined, so the minimum ran and failed. Choosing "à venir"
+  // and filling in only the opponent and the date produced "Score is required."
+  // with no way past it: an upcoming tennis match could not be saved at all.
+  if (match.status === 'upcoming') return;
+  if (!match.score) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['score'], message: 'Score is required.' });
+  }
+  if (!match.result) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['result'], message: 'Result is required.' });
+  }
 });
 export type TennisMatch = z.infer<typeof tennisMatchSchema>;
 

@@ -964,21 +964,36 @@ export function InsightsGrid() {
         };
     }, [user]);
 
+    /**
+     * Only matches actually played.
+     *
+     * A fixture carries no goals, no stamina and no minutes; averaging it in
+     * drags every axis toward zero and puts an empty bar on the chart.
+     */
+    const playedFootball = useMemo(
+        () => footballMatches.filter((m: any) => m.status !== 'upcoming'),
+        [footballMatches]
+    );
+    const playedTennis = useMemo(
+        () => tennisMatches.filter((m: any) => m.status !== 'upcoming'),
+        [tennisMatches]
+    );
+
     const footballRadarData = useMemo(() => {
-        if (footballMatches.length === 0) {
+        if (playedFootball.length === 0) {
             return [
                 { subject: "Endurance", A: 0 },
                 { subject: "Passing", A: 0 },
                 { subject: "Shooting", A: 0 },
             ];
         }
-        const totalStamina = footballMatches.reduce((sum, m) => sum + m.stamina, 0);
-        const totalGoals = footballMatches.reduce((sum, m) => sum + m.goals, 0);
-        const totalAssists = footballMatches.reduce((sum, m) => sum + m.assists, 0);
+        const totalStamina = playedFootball.reduce((sum, m) => sum + (m.stamina ?? 0), 0);
+        const totalGoals = playedFootball.reduce((sum, m) => sum + (m.goals ?? 0), 0);
+        const totalAssists = playedFootball.reduce((sum, m) => sum + (m.assists ?? 0), 0);
 
-        const avgStamina = (totalStamina / footballMatches.length) * 10;
-        const shootingSkill = Math.min(100, (totalGoals / footballMatches.length) * 40);
-        const passingSkill = Math.min(100, (totalAssists / footballMatches.length) * 50);
+        const avgStamina = (totalStamina / playedFootball.length) * 10;
+        const shootingSkill = Math.min(100, (totalGoals / playedFootball.length) * 40);
+        const passingSkill = Math.min(100, (totalAssists / playedFootball.length) * 50);
 
         // Only axes that come from logged matches. "Speed" and "Defense"
         // used to be the constants 75 and 65 — numbers nobody measured,
@@ -989,15 +1004,15 @@ export function InsightsGrid() {
             { subject: "Passing", A: passingSkill },
             { subject: "Shooting", A: shootingSkill },
         ].map(item => ({ ...item, fullMark: 100 }));
-    }, [footballMatches]);
+    }, [playedFootball]);
 
     const footballStaminaData = useMemo(() => {
-        if (footballMatches.length === 0) return [];
-        return footballMatches.slice(0, 5).map(m => ({
+        if (playedFootball.length === 0) return [];
+        return playedFootball.slice(0, 5).map(m => ({
             match: `vs ${m.opponent.substring(0, 10)}`,
-            stamina: m.stamina
+            stamina: m.stamina ?? 0
         })).reverse();
-    }, [footballMatches]);
+    }, [playedFootball]);
 
     const nextTennisMatch = useMemo(() => {
         return tennisMatches.filter(m => m.status === 'upcoming' && m.date >= new Date()).sort((a, b) => a.date.getTime() - b.date.getTime())[0];
@@ -1090,11 +1105,11 @@ export function InsightsGrid() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <NextEventCard sportName={t('tennis')} eventType="match" link="/dashboard/tennis" event={nextTennisMatch} />
                                 <div className="grid grid-cols-1 gap-6 auto-rows-fr">
-                                    <TennisLastMatchCard match={tennisMatches.filter(m => m.status === 'completed').length > 0 ? tennisMatches[0] : null} />
-                                    <ShotAccuracyCard matches={tennisMatches} />
+                                    <TennisLastMatchCard match={playedTennis[0] ?? null} />
+                                    <ShotAccuracyCard matches={playedTennis} />
                                 </div>
                                 <div className="grid grid-cols-1 gap-6 auto-rows-fr">
-                                    <ServeConsistencyCard matches={tennisMatches} />
+                                    <ServeConsistencyCard matches={playedTennis} />
                                     <NextEventCard sportName={t('tennis')} eventType="training" link="/dashboard/tennis?tab=training" event={nextSessionFor('tennis')} />
                                 </div>
                             </div>
@@ -1109,7 +1124,7 @@ export function InsightsGrid() {
                             <motion.div variants={sectionVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <NextEventCard sportName={t('football')} eventType="match" link="/dashboard/football" event={nextFootballMatch} />
                                 <NextEventCard sportName={t('football')} eventType="training" link="/dashboard/football?tab=training" event={nextSessionFor('football')} />
-                                <FootballInsightCard match={footballMatches.length > 0 ? footballMatches[0] : null} />
+                                <FootballInsightCard match={playedFootball[0] ?? null} />
                                 <motion.div variants={itemVariants} whileHover="hover" className="md:col-span-1" onClick={() => router.push('/dashboard/football')}>
                                     <Card className="md:aspect-square flex flex-col group cursor-pointer">
                                         <CardHeader>
@@ -1117,7 +1132,7 @@ export function InsightsGrid() {
                                             <CardDescription>{t('progressRadarDescription')}</CardDescription>
                                         </CardHeader>
                                         <CardContent className="flex-1 flex items-center justify-center p-0">
-                                            {footballMatches.length > 0 ? (
+                                            {playedFootball.length > 0 ? (
                                                 <ChartContainer config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} className="mx-auto aspect-square h-full max-h-[250px] w-full">
                                                     <ResponsiveContainer width="100%" height="100%">
                                                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={footballRadarData}>

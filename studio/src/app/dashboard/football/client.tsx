@@ -489,7 +489,14 @@ export default function FootballModuleClient() {
         }
         setIsSubmitting(true);
         try {
-            await addDoc(collection(db, "football_matches"), { ...values, userId: user.uid });
+            // The played-only fields keep their form defaults even while hidden,
+            // so a fixture was stored as a 0-0 draw with 90 minutes and a
+            // stamina of 5 — a match report for a match nobody had played, which
+            // then counted toward the radar and the stamina chart.
+            const payload = values.status === 'upcoming'
+                ? { opponent: values.opponent, date: values.date, status: 'upcoming' as const }
+                : values;
+            await addDoc(collection(db, "football_matches"), { ...payload, userId: user.uid });
             logMatchForm.reset();
             setIsLogDialogOpen(false);
             setCurrentStep(1);
