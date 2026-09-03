@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import { getAuth } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 import { dayKey, type DailySnapshot } from '@/lib/daily-archive';
 import { fetchDailySnapshot, fetchWorkoutLog, saveDailySnapshot } from '@/app/dashboard/insights/actions';
@@ -11,7 +11,10 @@ import { useUser } from './use-user';
 
 /** Proof of who is calling. The server ignores any uid sent alongside it. */
 async function idToken(): Promise<string | null> {
-    const current = getAuth().currentUser;
+    // The initialised `auth` from the app's own module rather than `getAuth()`:
+    // a bare getAuth() throws when this module happens to load before Firebase
+    // has been initialised.
+    const current = auth?.currentUser;
     return current ? current.getIdToken() : null;
 }
 
@@ -118,7 +121,13 @@ export function useDailyArchive() {
         // should be one write.
         const schedule = () => {
             if (timer.current) clearTimeout(timer.current);
-            timer.current = setTimeout(() => { void write(); }, 800);
+            // `write` reaches a server action, and an action can reject outright
+            // rather than returning a result — a cold start, a bad deploy, a
+            // missing credential. Unhandled, that rejection surfaces as an
+            // uncaught error in the page rather than a failed save.
+            timer.current = setTimeout(() => {
+                write().catch((error) => console.error('Could not save the day:', error));
+            }, 800);
         };
 
         const unsubPlan = useNutritionPlanStore.subscribe(schedule);

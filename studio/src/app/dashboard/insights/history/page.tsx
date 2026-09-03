@@ -5,9 +5,10 @@ import React, { useState, useEffect } from "react";
 import { format, subDays, addDays, parseISO, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import { collection, query, where, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { describeIngredients } from '@/lib/ingredients';
 import { loadDailySnapshot, loadWorkoutLog } from '@/hooks/use-daily-archive';
+import { listSessions } from '@/app/dashboard/_components/session-actions';
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -24,6 +25,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useTranslation } from "@/hooks/use-translation";
 import { TennisBallIcon } from "@/components/icons/tennis-ball";
 import { motion } from "framer-motion";
+
+/** Proof of who is calling, for the session actions. */
+const currentIdToken = async () => {
+    const current = auth?.currentUser;
+    return current ? current.getIdToken() : null;
+};
 
 // --- Data Types for Historical Data ---
 interface HistoricalNutritionData {
@@ -829,16 +836,17 @@ export default function InsightsHistoryPage() {
      * a composite index, and a missing one fails the whole read.
      */
     const loadSessions = async (): Promise<HistoricalSession[]> => {
-        const snap = await getDocs(query(collection(db, "athlete_sessions"), where("userId", "==", uid)));
-        return snap.docs
-            .map(d => ({ id: d.id, ...d.data() } as any))
-            .filter(row => row.date instanceof Timestamp && isSameDay(row.date.toDate(), selectedDate))
+        const token = await currentIdToken();
+        if (!token) return [];
+        const rows = await listSessions(token);
+        return rows
+            .filter(row => row.date && isSameDay(new Date(row.date), selectedDate))
             .map(row => ({
                 id: row.id,
-                sport: row.sport ?? '',
-                title: row.title ?? '',
-                duration: typeof row.duration === 'number' ? row.duration : 0,
-                completed: !!row.completed,
+                sport: row.sport,
+                title: row.title,
+                duration: row.duration,
+                completed: row.completed,
             }));
     };
 

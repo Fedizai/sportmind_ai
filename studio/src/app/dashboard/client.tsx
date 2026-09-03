@@ -65,7 +65,6 @@ import FitnessAssistantChat from "../dashboard/fitness-assistant/page";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FootballInsightCard } from '@/components/insights/football-insight-card';
 import { useStreakStore } from '@/stores/streak-store';
-import { ComingUpSection, type UpcomingFixture } from '@/components/insights/coming-up-section';
 import { useAthleteSessions } from '@/hooks/use-athlete-sessions';
 import { useFavorites } from '@/hooks/use-favorites';
 import { FavoriteStar } from '@/components/favorite-star';
@@ -445,21 +444,34 @@ const MealPlanCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
                     ) : (
                         <div className="w-full space-y-4">
                             {generatedPlan.meals.map((meal, index) => (
-                                <div key={index} className="flex items-start space-x-3 p-2 bg-muted/50 rounded-md">
+                                // The whole row ticks the meal off, and the click
+                                // stops here. The card behind it navigates to the
+                                // nutrition page, so every attempt to cross a meal
+                                // off from insights used to leave the page instead.
+                                <div
+                                    key={index}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={(event) => { event.stopPropagation(); toggleMealCompleted(index); }}
+                                    onKeyDown={(event) => {
+                                        if (event.key !== 'Enter' && event.key !== ' ') return;
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        toggleMealCompleted(index);
+                                    }}
+                                    className="flex items-start space-x-3 p-2 bg-muted/50 rounded-md cursor-pointer transition-colors hover:bg-muted"
+                                >
                                     <Checkbox
-                                        id={`meal-${index}`}
                                         checked={meal.completed}
-                                        onCheckedChange={() => toggleMealCompleted(index)}
-                                        className="mt-1"
+                                        tabIndex={-1}
+                                        aria-hidden
+                                        className="mt-1 pointer-events-none"
                                     />
                                     <div className="grid gap-0.5 text-left">
-                                        <label
-                                            htmlFor={`meal-${index}`}
-                                            className="text-sm font-medium"
-                                        >
+                                        <span className={cn("text-sm font-medium", meal.completed && "line-through text-muted-foreground")}>
                                             {t(meal.name.toLowerCase() as TranslationKey)} <span className="text-xs text-muted-foreground">(~{meal.calories} {t('kcal')})</span>
-                                        </label>
-                                        <p className="text-sm text-muted-foreground">
+                                        </span>
+                                        <p className={cn("text-sm text-muted-foreground", meal.completed && "line-through")}>
                                             {describeIngredients(meal.items as any)}
                                         </p>
                                     </div>
@@ -497,19 +509,31 @@ const ShoppingListCard = () => {
                         <ScrollArea className="h-48">
                             <div className="space-y-3 pr-4">
                                 {items.map(item => (
-                                    <div key={item.id} className="flex items-start space-x-3">
+                                    // Tapping the line crosses it off and goes no
+                                    // further: the card is a link to the shopping
+                                    // page, and the click used to reach it.
+                                    <div
+                                        key={item.id}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={(event) => { event.stopPropagation(); toggleItemChecked(item.id); }}
+                                        onKeyDown={(event) => {
+                                            if (event.key !== 'Enter' && event.key !== ' ') return;
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                            toggleItemChecked(item.id);
+                                        }}
+                                        className="flex items-start space-x-3 rounded-md p-1 -mx-1 cursor-pointer transition-colors hover:bg-muted/60"
+                                    >
                                         <Checkbox
-                                            id={`shopping-item-${item.id}`}
                                             checked={item.checked}
-                                            onCheckedChange={() => toggleItemChecked(item.id)}
-                                            className="mt-1"
+                                            tabIndex={-1}
+                                            aria-hidden
+                                            className="mt-1 pointer-events-none"
                                         />
-                                        <label
-                                            htmlFor={`shopping-item-${item.id}`}
-                                            className={cn("text-sm font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70", item.checked && "line-through text-muted-foreground")}
-                                        >
+                                        <span className={cn("text-sm font-medium", item.checked && "line-through text-muted-foreground")}>
                                             {item.name}
-                                        </label>
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -565,18 +589,25 @@ const GymPlanInsightCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
                         <ScrollArea className="h-full w-full">
                             <div className="space-y-3 pr-4">
                                 {todayWorkout.exercises.map((ex, index) => (
-                                    <div key={index} className="flex items-center space-x-2 text-left p-2 rounded-md bg-muted/50">
-                                        <Checkbox
-                                            id={`ex-${index}`}
-                                            checked={ex.completed}
-                                            onCheckedChange={() => toggleExerciseCompleted(currentDayIndex, index)}
-                                        />
-                                        <label
-                                            htmlFor={`ex-${index}`}
-                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                        >
+                                    // Same as the meal and shopping rows: tick the
+                                    // set off without being thrown onto the gym page.
+                                    <div
+                                        key={index}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={(event) => { event.stopPropagation(); toggleExerciseCompleted(currentDayIndex, index); }}
+                                        onKeyDown={(event) => {
+                                            if (event.key !== 'Enter' && event.key !== ' ') return;
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                            toggleExerciseCompleted(currentDayIndex, index);
+                                        }}
+                                        className="flex items-center space-x-2 text-left p-2 rounded-md bg-muted/50 cursor-pointer transition-colors hover:bg-muted"
+                                    >
+                                        <Checkbox checked={ex.completed} tabIndex={-1} aria-hidden className="pointer-events-none" />
+                                        <span className={cn("text-sm font-medium leading-none", ex.completed && "line-through text-muted-foreground")}>
                                             {ex.name} <span className="text-xs text-muted-foreground">({ex.sets}x{ex.reps})</span>
-                                        </label>
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -968,27 +999,6 @@ export function InsightsGrid() {
         })).reverse();
     }, [footballMatches]);
 
-    /**
-     * Fixtures across the sports insights already listens to.
-     *
-     * A scheduled match lived only on its own sport page; insights is where an
-     * athlete checks where they stand, so it belongs here too.
-     */
-    const upcomingFixtures = useMemo<UpcomingFixture[]>(() => {
-        const rows: UpcomingFixture[] = [];
-        footballMatches.forEach((m: any) => {
-            if (m.status === 'upcoming' && m.date) {
-                rows.push({ sport: 'football', opponent: m.opponent, date: m.date });
-            }
-        });
-        tennisMatches.forEach((m: any) => {
-            if (m.status === 'upcoming' && m.date) {
-                rows.push({ sport: 'tennis', opponent: m.opponent, date: m.date });
-            }
-        });
-        return rows;
-    }, [footballMatches, tennisMatches]);
-
     const nextTennisMatch = useMemo(() => {
         return tennisMatches.filter(m => m.status === 'upcoming' && m.date >= new Date()).sort((a, b) => a.date.getTime() - b.date.getTime())[0];
     }, [tennisMatches]);
@@ -1029,8 +1039,6 @@ export function InsightsGrid() {
                         animate="visible"
                         className="space-y-6"
                     >
-                        <ComingUpSection fixtures={upcomingFixtures} />
-
                         <SectionHeader
                             icon={<Activity className="h-6 w-6" />}
                             title={t('generalInsightsTitle')}

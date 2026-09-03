@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
+import { format, isAfter, startOfDay } from "date-fns";
 import { collection, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useUser } from "@/hooks/use-user";
@@ -38,6 +38,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { NextUpCard } from "@/components/sports/next-up-card";
 
 type CompletedExercise = { name: string; completedAt: Date };
 
@@ -49,6 +50,14 @@ type SportEntry = {
     stats: Record<string, number>;
     notes?: string;
     date: Date;
+    /**
+     * A fixture is a match that has not happened yet.
+     *
+     * Football and tennis gained this; basketball, boxing and swimming did not,
+     * so in those sports there was no way to put a match on the calendar at all
+     * — only to log one already played, and only on a past date.
+     */
+    status?: 'completed' | 'upcoming';
 };
 
 // Sessions live in Firestore now; the row shape comes from the shared hook.
@@ -99,6 +108,11 @@ const S = {
     mins: { en: "mins", fr: "min" },
     deleteSessionTitle: { en: "Delete this session?", fr: "Supprimer cette séance ?" },
     deleteSessionDesc: { en: "This will permanently remove the session.", fr: "Cela supprimera définitivement la séance." },
+    entryStatus: { en: "This entry is", fr: "Cette entrée est" },
+    statusCompleted: { en: "Already played", fr: "Déjà joué" },
+    statusUpcoming: { en: "Scheduled (upcoming)", fr: "À venir (programmé)" },
+    upcomingHint: { en: "Nothing has happened yet, so only who and when are asked for.", fr: "Rien ne s'est encore passé : seuls l'adversaire et la date sont demandés." },
+    upcomingBadge: { en: "Upcoming", fr: "À venir" },
     finalResult: { en: "Result", fr: "Résultat" },
     selectResult: { en: "Select result", fr: "Choisir le résultat" },
     dateOf: { en: "Date", fr: "Date" },
@@ -237,22 +251,31 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
     const [completedExercises, setCompletedExercises] = useState<CompletedExercise[]>([]);
 
     // --- Dynamic entry form schema, built from the sport config ---
+    // A fixture cannot be asked for a score or a stat line — none of it exists
+    // before the match is played — so everything but who and when is optional
+    // and only enforced once the entry is marked as played.
     const entrySchema = useMemo(() => {
         const shape: Record<string, z.ZodTypeAny> = {
             primary: z.string().min(1, "Required."),
             date: z.date(),
             notes: z.string().optional(),
+            status: z.enum(["completed", "upcoming"]),
         };
         if (config.summaryField) shape[config.summaryField.key] = z.string().optional();
-        if (config.results) shape.result = z.string();
+        if (config.results) shape.result = z.string().optional();
         config.statFields.forEach((f) => {
-            shape[f.key] = z.coerce.number().min(0);
+            shape[f.key] = z.coerce.number().min(0).optional();
         });
-        return z.object(shape);
+        return z.object(shape).superRefine((values, ctx) => {
+            if (values.status !== "completed") return;
+            if (config.results && !values.result) {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["result"], message: "Required." });
+            }
+        });
     }, [config]);
 
     const entryDefaults = useMemo(() => {
-        const d: Record<string, any> = { primary: "", date: new Date(), notes: "" };
+        const d: Record<string, any> = { primary: "", date: new Date(), notes: "", status: "completed" };
         if (config.summaryField) d[config.summaryField.key] = "";
         if (config.results) d.result = config.results[0].value;
         config.statFields.forEach((f) => { d[f.key] = f.default ?? 0; });
@@ -265,6 +288,16 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
     });
 
     const goalForm = useForm<{ goal: string }>({ defaultValues: { goal: "" } });
+
+    const isFixtureEntry = entryForm.watch("status") === "upcoming";
+
+    /** The soonest match still to be played. */
+    const nextFixture = useMemo(() => {
+        const today = startOfDay(new Date());
+        return entries
+            .filter((e) => e.status === "upcoming" && isAfter(e.date, today))
+            .sort((a, b) => a.date.getTime() - b.date.getTime())[0] ?? null;
+    }, [entries]);
 
     const sessionSchema = z.object({
         title: z.string().min(1, "Required."),
@@ -294,6 +327,7 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
                     stats: data.stats ?? {},
                     notes: data.notes ?? "",
                     date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date),
+                    status: data.status === "upcoming" ? "upcoming" : "completed",
                 });
             });
             setEntries(rows);
@@ -331,15 +365,19 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
         if (!user) { toast({ title: tr(S.error), description: tr(S.loginRequired), variant: "destructive" }); return; }
         setIsSubmitting(true);
         try {
+            const isFixture = values.status === "upcoming";
             const stats: Record<string, number> = {};
-            config.statFields.forEach((f) => { stats[f.key] = Number(values[f.key] ?? 0); });
+            if (!isFixture) {
+                config.statFields.forEach((f) => { stats[f.key] = Number(values[f.key] ?? 0); });
+            }
             await saveSportEntry(config.collection, user.uid, {
                 primary: values.primary,
-                summary: config.summaryField ? values[config.summaryField.key] ?? "" : "",
-                result: config.results ? values.result : null,
+                summary: isFixture ? "" : (config.summaryField ? values[config.summaryField.key] ?? "" : ""),
+                result: isFixture || !config.results ? null : values.result,
                 stats,
                 notes: values.notes ?? "",
                 date: values.date,
+                status: isFixture ? "upcoming" : "completed",
             });
             entryForm.reset(entryDefaults);
             setIsLogOpen(false);
@@ -418,33 +456,38 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
     );
 
     // --- Analytics ---
+    // A fixture has no score and no stat line, so counting one would drag every
+    // average toward zero and put an empty bar on the chart. The logbook still
+    // lists them; the numbers are about what has actually been played.
+    const playedEntries = useMemo(() => entries.filter((e) => e.status !== "upcoming"), [entries]);
+
     const computeRecap = (kind: RecapKind): number => {
         if (kind === "sessions") return schedule.length;
-        if (kind === "count") return entries.length;
-        if (kind === "wins") return entries.filter((e) => e.result === "W").length;
-        if ("sum" in kind) return entries.reduce((s, e) => s + (e.stats[kind.sum] || 0), 0);
+        if (kind === "count") return playedEntries.length;
+        if (kind === "wins") return playedEntries.filter((e) => e.result === "W").length;
+        if ("sum" in kind) return playedEntries.reduce((s, e) => s + (e.stats[kind.sum] || 0), 0);
         if ("avg" in kind) {
-            if (entries.length === 0) return 0;
-            return Math.round(entries.reduce((s, e) => s + (e.stats[kind.avg] || 0), 0) / entries.length);
+            if (playedEntries.length === 0) return 0;
+            return Math.round(playedEntries.reduce((s, e) => s + (e.stats[kind.avg] || 0), 0) / playedEntries.length);
         }
         return 0;
     };
 
     const analytics = useMemo(() => {
-        const last5 = entries.slice(0, 5).map((e) => ({
+        const last5 = playedEntries.slice(0, 5).map((e) => ({
             label: e.primary.length > 10 ? e.primary.slice(0, 10) + "…" : e.primary,
             value: e.stats[config.charts.last5.key] || 0,
         })).reverse();
 
         const byMonth: Record<string, number> = {};
-        entries.forEach((e) => {
+        playedEntries.forEach((e) => {
             const m = format(e.date, "MMM");
             byMonth[m] = (byMonth[m] || 0) + (e.stats[config.charts.monthly.key] || 0);
         });
         const monthly = Object.keys(byMonth).map((m) => ({ month: m, value: byMonth[m] }));
 
         return { last5, monthly };
-    }, [entries, config]);
+    }, [playedEntries, config]);
 
     const radarData = config.radarSubjects.map((s, i) => ({ subject: tr(s), A: RADAR_PROFILE[i % RADAR_PROFILE.length], fullMark: 100 }));
     const radarChartConfig = { value: { label: "Current", color: "hsl(var(--primary))" } } satisfies ChartConfig;
@@ -484,7 +527,14 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
                 </TabsList>
 
                 {/* OVERVIEW */}
-                <TabsContent value="overview" className="mt-6">
+                <TabsContent value="overview" className="mt-6 space-y-6">
+                    {/* What is coming, in this sport. Sessions and fixtures were
+                        both stored and neither was shown anywhere on the page. */}
+                    <NextUpCard
+                        sessions={schedule}
+                        nextMatchLabel={nextFixture?.primary ?? null}
+                        nextMatchDate={nextFixture?.date ?? null}
+                    />
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1 space-y-6">
                             <Card>
@@ -715,38 +765,71 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
                                 <DialogContent className="max-h-[90vh] overflow-y-auto">
                                     <DialogHeader><DialogTitle>{tr(config.logAddLabel)}</DialogTitle></DialogHeader>
                                     <form onSubmit={entryForm.handleSubmit(handleLogSubmit)} className="space-y-4">
+                                        {/*
+                                          * Scheduling a match is the whole reason this
+                                          * selector exists. Without it the only thing
+                                          * this form could record was something already
+                                          * played, on a date already past.
+                                          */}
+                                        <div>
+                                            <Label>{tr(S.entryStatus)}</Label>
+                                            <Select
+                                                onValueChange={(v) => {
+                                                    entryForm.setValue("status", v);
+                                                    // A date in the past makes no sense for a
+                                                    // fixture and the calendar is about to stop
+                                                    // offering it, so move to today.
+                                                    if (v === "upcoming" && entryForm.getValues("date") < new Date()) {
+                                                        entryForm.setValue("date", new Date());
+                                                    }
+                                                }}
+                                                value={entryForm.watch("status")}
+                                            >
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="completed">{tr(S.statusCompleted)}</SelectItem>
+                                                    <SelectItem value="upcoming">{tr(S.statusUpcoming)}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            {isFixtureEntry && <p className="text-xs text-muted-foreground mt-1.5">{tr(S.upcomingHint)}</p>}
+                                        </div>
                                         <div>
                                             <Label htmlFor="primary">{tr(config.primaryField.label)}</Label>
                                             <Input id="primary" {...entryForm.register("primary")} placeholder={tr(config.primaryField.placeholder)} />
                                             {entryForm.formState.errors.primary && <p className="text-destructive text-xs mt-1">{String(entryForm.formState.errors.primary.message)}</p>}
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {config.summaryField && (
-                                                <div>
-                                                    <Label htmlFor="summary">{tr(config.summaryField.label)}</Label>
-                                                    <Input id="summary" {...entryForm.register(config.summaryField.key)} placeholder={tr(config.summaryField.placeholder)} />
-                                                </div>
-                                            )}
-                                            {config.results && (
-                                                <div>
-                                                    <Label>{tr(S.finalResult)}</Label>
-                                                    <Select onValueChange={(v) => entryForm.setValue("result", v)} defaultValue={entryForm.getValues("result")}>
-                                                        <SelectTrigger><SelectValue placeholder={tr(S.selectResult)} /></SelectTrigger>
-                                                        <SelectContent>
-                                                            {config.results.map((r) => <SelectItem key={r.value} value={r.value}>{tr(r.label)}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {config.statFields.map((f) => (
-                                                <div key={f.key}>
-                                                    <Label htmlFor={f.key}>{tr(f.label)}{f.suffix ? ` (${f.suffix})` : ""}</Label>
-                                                    <Input id={f.key} type="number" step="any" {...entryForm.register(f.key)} />
-                                                </div>
-                                            ))}
-                                        </div>
+                                        {!isFixtureEntry && (
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {config.summaryField && (
+                                                    <div>
+                                                        <Label htmlFor="summary">{tr(config.summaryField.label)}</Label>
+                                                        <Input id="summary" {...entryForm.register(config.summaryField.key)} placeholder={tr(config.summaryField.placeholder)} />
+                                                    </div>
+                                                )}
+                                                {config.results && (
+                                                    <div>
+                                                        <Label>{tr(S.finalResult)}</Label>
+                                                        <Select onValueChange={(v) => entryForm.setValue("result", v)} defaultValue={entryForm.getValues("result")}>
+                                                            <SelectTrigger><SelectValue placeholder={tr(S.selectResult)} /></SelectTrigger>
+                                                            <SelectContent>
+                                                                {config.results.map((r) => <SelectItem key={r.value} value={r.value}>{tr(r.label)}</SelectItem>)}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        {entryForm.formState.errors.result && <p className="text-destructive text-xs mt-1">{String(entryForm.formState.errors.result.message)}</p>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {!isFixtureEntry && (
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {config.statFields.map((f) => (
+                                                    <div key={f.key}>
+                                                        <Label htmlFor={f.key}>{tr(f.label)}{f.suffix ? ` (${f.suffix})` : ""}</Label>
+                                                        <Input id={f.key} type="number" step="any" {...entryForm.register(f.key)} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                         <div>
                                             <Label>{tr(S.dateOf)}</Label>
                                             <Popover>
@@ -757,7 +840,16 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
                                                     </Button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-auto p-0" align="start">
-                                                    <Calendar mode="single" selected={entryForm.watch("date")} onSelect={(d) => entryForm.setValue("date", d as Date)} disabled={(date) => date > new Date()} initialFocus />
+                                                    {/* The calendar follows the status: a played
+                                                        match cannot be in the future, and a fixture
+                                                        cannot be in the past. */}
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={entryForm.watch("date")}
+                                                        onSelect={(d) => entryForm.setValue("date", d as Date)}
+                                                        disabled={(date) => isFixtureEntry ? date < startOfDay(new Date()) : date > new Date()}
+                                                        initialFocus
+                                                    />
                                                 </PopoverContent>
                                             </Popover>
                                         </div>
@@ -780,9 +872,13 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <p className="font-bold text-lg text-foreground">{entry.primary}</p>
-                                                    <p className={cn("text-sm font-semibold uppercase tracking-wide", meta.text)}>
-                                                        {meta.label}{meta.label && entry.summary ? " — " : ""}{entry.summary}
-                                                    </p>
+                                                    {entry.status === "upcoming" ? (
+                                                        <p className="text-sm font-semibold uppercase tracking-wide text-primary">{tr(S.upcomingBadge)}</p>
+                                                    ) : (
+                                                        <p className={cn("text-sm font-semibold uppercase tracking-wide", meta.text)}>
+                                                            {meta.label}{meta.label && entry.summary ? " — " : ""}{entry.summary}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <p className="text-sm text-muted-foreground">{format(entry.date, "dd MMM yyyy")}</p>
@@ -814,7 +910,7 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
                             )}
                         </CardContent>
                     </Card>
-                    {entries.length > 0 && (
+                    {playedEntries.length > 0 && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <Card>
                                 <CardHeader><CardTitle className="text-base">{tr(config.charts.last5.label)}</CardTitle></CardHeader>

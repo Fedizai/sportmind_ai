@@ -4,9 +4,8 @@ import { format, isAfter, startOfDay } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
 import { CalendarClock, Swords } from 'lucide-react';
 
-import { useUser } from '@/hooks/use-user';
 import { useTranslation } from '@/hooks/use-translation';
-import { useAthleteSessions } from '@/hooks/use-athlete-sessions';
+import type { AthleteSession } from '@/hooks/use-athlete-sessions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 /**
@@ -18,18 +17,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
  * nothing about either.
  */
 export function NextUpCard({
-  sport,
+  sessions,
   nextMatchLabel,
   nextMatchDate,
 }: {
-  sport: string;
+  /**
+   * The parent's own session list.
+   *
+   * This card used to fetch its own copy. Once sessions stopped being a live
+   * subscription that was two independent lists on one page: adding a session
+   * from the training tab refreshed the tab's list and left this card showing
+   * "rien de prévu" until the page was reloaded.
+   */
+  sessions: AthleteSession[];
   /** Opponent or event, when a fixture is on the books. */
   nextMatchLabel?: string | null;
   nextMatchDate?: Date | null;
 }) {
-  const { user } = useUser();
   const { t, language } = useTranslation();
-  const { sessions } = useAthleteSessions(user?.uid, sport);
   const locale = language === 'fr' ? fr : enUS;
 
   const today = startOfDay(new Date());

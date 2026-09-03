@@ -725,7 +725,7 @@ export default function FootballModuleClient() {
                 </TabsList>
                 <TabsContent value="overview" className="mt-6">
                     <NextUpCard
-                        sport="football"
+                        sessions={schedule}
                         nextMatchLabel={nextFootballMatch?.opponent}
                         nextMatchDate={nextFootballMatch?.date}
                     />

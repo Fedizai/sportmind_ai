@@ -1,24 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
-import {
-  collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc,
-  doc, Timestamp,
-} from 'firebase/firestore';
+import { auth } from '@/lib/firebase';
 
-import { db } from '@/lib/firebase';
+import {
+  createSession, deleteSession, listSessions, setSessionCompleted,
+  type SessionRow,
+} from '@/app/dashboard/_components/session-actions';
 
 /**
  * An athlete's own planned training sessions, per sport.
  *
  * These used to live in `useState` alone — added, ticked off and deleted
  * entirely in the browser's memory — so every session an athlete planned
- * disappeared the moment they refreshed the page. Tennis, football and the
- * generic sport module each carried their own copy of that non-persistence.
+ * disappeared the moment they refreshed the page. Tennis, football, the gym
+ * and the generic sport module each carried their own copy of that
+ * non-persistence.
+ *
+ * They now go through the Admin SDK rather than the browser SDK. The browser
+ * SDK needed the `athlete_sessions` rules to be deployed, and an App Hosting
+ * rollout does not deploy rules — under the default-deny catch-all every write
+ * was refused and every read came back empty, which is what an athlete saw as
+ * "rien de prévu" no matter how much they had planned.
  *
  * Distinct from `use-training-sessions`, which is the coach's team-wide
  * schedule in `trainingSessions` with assigned players and attendance. This is
- * one athlete planning their own week, in `athlete_sessions`.
+ * one athlete planning their own week.
  */
 
 /**
@@ -52,86 +59,110 @@ export interface NewAthleteSession {
   notes?: string;
 }
 
+/** Proof of who is calling. The server ignores any uid sent alongside it. */
+async function idToken(): Promise<string | null> {
+  // The initialised `auth` from the app's own module rather than `getAuth()`:
+  // a bare getAuth() throws when this module happens to load before Firebase
+  // has been initialised.
+  const current = auth?.currentUser;
+  return current ? current.getIdToken() : null;
+}
+
 export function useAthleteSessions(userId: string | undefined, sport: string) {
-  const [sessions, setSessions] = useState<AthleteSession[]>([]);
+  const [all, setAll] = useState<AthleteSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const toSession = (row: SessionRow): AthleteSession => ({
+    id: row.id,
+    sport: row.sport,
+    title: row.title,
+    type: row.type as AthleteSessionType,
+    date: row.date ? new Date(row.date) : null,
+    duration: row.duration,
+    notes: row.notes,
+    completed: row.completed,
+  });
+
+  /**
+   * Always clears the loading flag, including on failure.
+   *
+   * A server action can reject rather than return — a cold start, a bad
+   * deploy, a missing credential — and a fetch that only clears the flag on
+   * the happy path leaves the schedule spinning forever with no way to tell
+   * that anything went wrong.
+   */
+  const load = useCallback(async () => {
+    try {
+      const token = await idToken();
+      if (!token) {
+        setAll([]);
+        return;
+      }
+      setAll((await listSessions(token)).map(toSession));
+    } catch (error) {
+      console.error('Could not read your sessions:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const refresh = load;
 
   useEffect(() => {
     if (!userId) {
-      setSessions([]);
+      setAll([]);
       setIsLoading(false);
       return;
     }
+    setIsLoading(true);
+    void load();
+  }, [userId, load]);
 
-    // userId alone, ordered in memory. Filtering on userId while ordering by
-    // date needs its own composite index, and a missing one fails the entire
-    // subscription rather than degrading — which has already emptied two lists
-    // in this app. One athlete's sessions number in the tens.
-    const q = query(collection(db, 'athlete_sessions'), where('userId', '==', userId));
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const rows: AthleteSession[] = [];
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          rows.push({
-            id: docSnap.id,
-            sport: data.sport ?? '',
-            title: data.title ?? '',
-            type: (data.type ?? 'other') as AthleteSessionType,
-            date: data.date instanceof Timestamp ? data.date.toDate() : null,
-            duration: typeof data.duration === 'number' ? data.duration : 0,
-            notes: data.notes ?? '',
-            completed: !!data.completed,
-          });
-        });
-        // `sport` of 'all' is used by the insights view, which needs every
-        // sport's sessions rather than one page's.
-        const scoped = sport === 'all' ? rows : rows.filter((r) => r.sport === sport);
-        scoped.sort((a, b) => (a.date?.getTime() ?? 0) - (b.date?.getTime() ?? 0));
-        setSessions(scoped);
-        setIsLoading(false);
-      },
-      (error) => {
-        console.error('Could not read athlete sessions:', error);
-        setIsLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [userId, sport]);
+  // `sport` of 'all' is used by the insights view, which needs every sport's
+  // sessions rather than one page's. Filtering here rather than in the query
+  // means one fetch serves every caller.
+  const sessions = (sport === 'all' ? all : all.filter((r) => r.sport === sport))
+    .slice()
+    .sort((a, b) => (a.date?.getTime() ?? 0) - (b.date?.getTime() ?? 0));
 
   const addSession = useCallback(
     async (values: NewAthleteSession) => {
-      if (!userId) throw new Error('You must be signed in to plan a session.');
-      await addDoc(collection(db, 'athlete_sessions'), {
-        userId,
-        sport,
+      const token = await idToken();
+      if (!token) throw new Error('You must be signed in to plan a session.');
+      const result = await createSession(token, sport, {
         title: values.title,
         type: values.type,
-        date: Timestamp.fromDate(values.date),
+        date: values.date.toISOString(),
         duration: values.duration,
-        notes: values.notes ?? '',
-        completed: false,
-        createdAt: Timestamp.now(),
+        notes: values.notes,
       });
+      if (!result.success) throw new Error(result.error ?? 'Could not save the session.');
+      await refresh();
     },
-    [userId, sport]
+    [sport, refresh]
   );
 
   const toggleSession = useCallback(
     async (id: string) => {
-      const current = sessions.find((s) => s.id === id);
-      if (!current) return;
-      await updateDoc(doc(db, 'athlete_sessions', id), { completed: !current.completed });
+      const token = await idToken();
+      if (!token) throw new Error('You must be signed in.');
+      const result = await setSessionCompleted(token, id);
+      if (!result.success) throw new Error(result.error ?? 'Could not update the session.');
+      await refresh();
     },
-    [sessions]
+    [refresh]
   );
 
-  const removeSession = useCallback(async (id: string) => {
-    await deleteDoc(doc(db, 'athlete_sessions', id));
-  }, []);
+  const removeSession = useCallback(
+    async (id: string) => {
+      const token = await idToken();
+      if (!token) throw new Error('You must be signed in.');
+      const result = await deleteSession(token, id);
+      if (!result.success) throw new Error(result.error ?? 'Could not remove the session.');
+      await refresh();
+    },
+    [refresh]
+  );
 
-  return { sessions, isLoading, addSession, toggleSession, removeSession };
+  return { sessions, isLoading, addSession, toggleSession, removeSession, refresh };
 }

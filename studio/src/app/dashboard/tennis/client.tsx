@@ -448,7 +448,7 @@ export default function TennisModuleClient() {
               {/* Both a planned session and a scheduled fixture existed as
                   data and neither was shown anywhere. */}
               <NextUpCard
-                sport="tennis"
+                sessions={schedule}
                 nextMatchLabel={nextTennisMatch?.opponent}
                 nextMatchDate={nextTennisMatch?.date}
               />
