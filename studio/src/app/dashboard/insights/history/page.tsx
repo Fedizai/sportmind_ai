@@ -4,9 +4,10 @@
 import React, { useState, useEffect } from "react";
 import { format, subDays, addDays, parseISO, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
-import { doc, onSnapshot, collection, query, where, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
+import { collection, query, where, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { describeIngredients } from '@/lib/ingredients';
+import { loadDailySnapshot, loadWorkoutLog } from '@/hooks/use-daily-archive';
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -56,11 +57,42 @@ interface HistoricalFootballData {
   staminaOverTime?: { match: string; stamina: number }[];
 }
 
+interface HistoricalTennisData {
+  lastMatch?: {
+    opponent: string;
+    result?: 'W' | 'L';
+    score?: string;
+    surface?: string;
+    aces?: number;
+    doubleFaults?: number;
+    firstServePercent?: number;
+  };
+  serveOverTime?: { match: string; percent: number }[];
+}
+
+/** A session the athlete had planned for the day being viewed. */
+interface HistoricalSession {
+  id: string;
+  sport: string;
+  title: string;
+  duration: number;
+  completed: boolean;
+}
+
+/** A match scheduled for the day being viewed, in any sport. */
+interface HistoricalFixture {
+  sport: string;
+  opponent: string;
+  date: Date;
+}
+
 interface HistoricalData {
   nutrition?: HistoricalNutritionData;
   gym?: HistoricalGymData;
   football?: HistoricalFootballData;
-  tennis?: any;
+  tennis?: HistoricalTennisData;
+  sessions: HistoricalSession[];
+  fixtures: HistoricalFixture[];
 }
 
 
@@ -483,6 +515,142 @@ const HistoricalStaminaCard = ({ data }: { data: HistoricalFootballData | undefi
 };
 
 
+/**
+ * A tennis match played on the day being viewed.
+ *
+ * Tennis was the one sport whose history was hardcoded: every card in the
+ * section rendered an empty placeholder, so a match logged months ago could
+ * never be looked up again even though it had been saved all along.
+ */
+const HistoricalTennisCard = ({ data }: { data: HistoricalTennisData | undefined }) => {
+    const { t } = useTranslation();
+    if (!data?.lastMatch) return <EmptyInsightCard title="lastMatch" description="noMatchLoggedForDay" icon={Trophy} />;
+
+    const match = data.lastMatch;
+    const won = match.result === 'W';
+    const tone = match.result
+        ? (won ? { bg: 'bg-success/10', text: 'text-success' } : { bg: 'bg-danger/10', text: 'text-danger' })
+        : { bg: '', text: '' };
+
+    return (
+        <div>
+            <Card className={cn("h-full group aspect-square flex flex-col", tone.bg)}>
+                <CardHeader>
+                    <CardTitle className={cn("flex items-center gap-2", tone.text)}><Trophy className="h-5 w-5"/>{t('lastMatch')}</CardTitle>
+                    <CardDescription className={tone.text}>{t('vsOpponent', { opponent: match.opponent })}</CardDescription>
+                </CardHeader>
+                <CardContent className={cn("flex-grow flex flex-col justify-center items-center text-center", tone.text)}>
+                    {match.score && <p className="font-bold text-3xl">{match.score}</p>}
+                    {match.surface && <p className="text-xs uppercase mt-1 text-muted-foreground">{match.surface}</p>}
+                    <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2">
+                        {match.aces !== undefined && (
+                            <div><p className="text-2xl font-bold">{match.aces}</p><p className="text-xs uppercase">{t('aces')}</p></div>
+                        )}
+                        {match.doubleFaults !== undefined && (
+                            <div><p className="text-2xl font-bold">{match.doubleFaults}</p><p className="text-xs uppercase">{t('doubleFaults')}</p></div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
+const HistoricalServeCard = ({ data }: { data: HistoricalTennisData | undefined }) => {
+    const { t } = useTranslation();
+    if (!data?.serveOverTime?.length) return <EmptyInsightCard title="serveConsistency" description="noDataLoggedForDay" icon={Activity} />;
+
+    return (
+        <div>
+            <Card className="aspect-square flex flex-col group">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5"/>{t('serveConsistency')}</CardTitle>
+                    <CardDescription>{t('serveConsistencyDescription', { count: data.serveOverTime.length })}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow flex flex-col justify-center items-center text-center">
+                    <div className="w-full h-full -mb-4">
+                        <ChartContainer config={{ percent: { label: "1st serve %", color: "hsl(var(--primary))" } }} className="w-full h-full">
+                            <BarChart data={data.serveOverTime} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <CartesianGrid vertical={false} strokeDasharray="3 3"/>
+                                <XAxis dataKey="match" fontSize={10} tickLine={false} axisLine={false} />
+                                <YAxis domain={[0, 100]} />
+                                <ChartTooltip content={<ChartTooltipContent />} cursor={false}/>
+                                <Bar dataKey="percent" fill="var(--color-percent)" radius={4} />
+                            </BarChart>
+                        </ChartContainer>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
+/**
+ * The training the athlete had planned for this day, in one sport.
+ *
+ * These sit in `athlete_sessions` and always have; the history page simply
+ * never asked for them and rendered a placeholder in their place.
+ */
+const HistoricalSessionsCard = ({ sessions, sport }: { sessions: HistoricalSession[]; sport: string }) => {
+    const { t } = useTranslation();
+    const forSport = sessions.filter(s => s.sport === sport);
+    if (!forSport.length) return <EmptyInsightCard title="training" description="noTrainingScheduledForDay" icon={CalendarDays} />;
+
+    return (
+        <div>
+            <Card className="h-full group aspect-square flex flex-col">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary"/>{t('training')}</CardTitle>
+                    <CardDescription>{forSport.length}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                    <ScrollArea className="h-full w-full">
+                        <div className="space-y-3 pr-4">
+                            {forSport.map(session => (
+                                <div key={session.id} className="flex items-start gap-2 text-left p-2 rounded-md bg-muted/50">
+                                    <Checkbox checked={session.completed} disabled className="mt-0.5" />
+                                    <div className="grid gap-0.5">
+                                        <span className={cn("text-sm font-medium", session.completed && "line-through text-muted-foreground")}>{session.title}</span>
+                                        <span className="text-xs text-muted-foreground">{session.duration} {t('mins')}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
+/** A match that was scheduled for the day being viewed, in one sport. */
+const HistoricalFixtureCard = ({ fixtures, sport }: { fixtures: HistoricalFixture[]; sport: string }) => {
+    const { t, language } = useTranslation();
+    const dateLocale = language === 'fr' ? fr : enUS;
+    const forSport = fixtures.filter(f => f.sport === sport);
+    if (!forSport.length) {
+        return <EmptyInsightCard title="nextMatch" description="noMatchScheduledForDay" icon={CalendarDays} className="md:col-span-2" isRectangle />;
+    }
+
+    return (
+        <div className="md:col-span-2">
+            <Card className="h-full group flex flex-col">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary"/>{t('nextMatch')}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    {forSport.map((fixture, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
+                            <span className="font-medium">{t('vsOpponent', { opponent: fixture.opponent })}</span>
+                            <span className="text-sm text-muted-foreground">{format(fixture.date, 'p', { locale: dateLocale })}</span>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
 export default function InsightsHistoryPage() {
   const { user } = useUser();
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -494,114 +662,261 @@ export default function InsightsHistoryPage() {
   useEffect(() => {
     if (!user) return;
 
+    let cancelled = false;
     setIsHistoryLoading(true);
 
-    const fetchHistoricalData = async () => {
-        try {
-            const dayStart = startOfDay(selectedDate);
-            const dayEnd = endOfDay(selectedDate);
+    const dayStart = startOfDay(selectedDate);
+    const dayEnd = endOfDay(selectedDate);
+    const uid = user.uid;
 
-            // --- Nutrition ---
-            let nutrition: HistoricalNutritionData | undefined;
-            const nutritionQuery = query(
-                collection(db, "nutritionLogs"),
-                where("userId", "==", user.uid),
-                where("createdAt", ">=", Timestamp.fromDate(dayStart)),
-                where("createdAt", "<=", Timestamp.fromDate(dayEnd))
-            );
-            const nutritionSnap = await getDocs(nutritionQuery);
-            if (!nutritionSnap.empty) {
-                let calories = 0, protein = 0, carbs = 0, fat = 0;
-                const mealsMap: Record<string, { items: string[]; calories: number }> = {};
-                nutritionSnap.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    const mealType = data.mealType || 'snack';
-                    if (!mealsMap[mealType]) mealsMap[mealType] = { items: [], calories: 0 };
-                    (data.items || []).forEach((item: any) => {
-                        calories += item.calories || 0;
-                        protein += item.protein || 0;
-                        carbs += item.carbs || 0;
-                        fat += item.fat || 0;
-                        mealsMap[mealType].items.push(item.name);
-                        mealsMap[mealType].calories += item.calories || 0;
-                    });
-                });
-                nutrition = {
-                    calories, protein, carbs, fat,
-                    meals: Object.entries(mealsMap).map(([name, meal]) => ({
-                        name: name.charAt(0).toUpperCase() + name.slice(1),
-                        items: meal.items,
-                        completed: true,
-                        calories: meal.calories,
-                    })),
-                };
-            }
+    /**
+     * Nutrition actually eaten, from the logs.
+     */
+    const loadNutrition = async (): Promise<HistoricalNutritionData | undefined> => {
+        const snap = await getDocs(query(
+            collection(db, "nutritionLogs"),
+            where("userId", "==", uid),
+            where("createdAt", ">=", Timestamp.fromDate(dayStart)),
+            where("createdAt", "<=", Timestamp.fromDate(dayEnd))
+        ));
+        if (snap.empty) return undefined;
 
-            // --- Gym ---
-            let gym: HistoricalGymData | undefined;
-            const gymPlan = user.gymPlan;
-            if (gymPlan?.days?.length) {
-                const dayForDate = gymPlan.days.find(d => d.completed_at && isSameDay(new Date(d.completed_at), selectedDate));
-                if (dayForDate) {
-                    const volume = dayForDate.exercises.reduce((sum, ex) => {
-                        const weightKg = ex.weight?.unit === 'lbs' ? ex.weight.value * 0.453592 : (ex.weight?.unit === 'kg' ? ex.weight.value : 0);
-                        return sum + ex.sets * weightKg;
-                    }, 0);
-                    const completedDays = gymPlan.days.filter(d => d.completed).length;
-                    gym = {
-                        plan: { days: [dayForDate] },
-                        consistency: { completed: completedDays, total: gymPlan.days.length },
-                        volume: Math.round(volume),
-                    };
-                }
-            }
+        let calories = 0, protein = 0, carbs = 0, fat = 0;
+        const mealsMap: Record<string, { items: string[]; calories: number }> = {};
+        snap.forEach((docSnap) => {
+            const data = docSnap.data();
+            const mealType = data.mealType || 'snack';
+            if (!mealsMap[mealType]) mealsMap[mealType] = { items: [], calories: 0 };
+            (data.items || []).forEach((item: any) => {
+                calories += item.calories || 0;
+                protein += item.protein || 0;
+                carbs += item.carbs || 0;
+                fat += item.fat || 0;
+                mealsMap[mealType].items.push(item.name);
+                mealsMap[mealType].calories += item.calories || 0;
+            });
+        });
 
-            // --- Football ---
-            let football: HistoricalFootballData | undefined;
-            const footballQuery = query(
-                collection(db, "football_matches"),
-                where("userId", "==", user.uid),
-                where("date", ">=", Timestamp.fromDate(dayStart)),
-                where("date", "<=", Timestamp.fromDate(dayEnd))
-            );
-            const footballSnap = await getDocs(footballQuery);
-            if (!footballSnap.empty) {
-                const matchData = footballSnap.docs[0].data();
-                football = {
-                    lastMatch: {
-                        opponent: matchData.opponent,
-                        result: matchData.result,
-                        goals: matchData.goals || 0,
-                        assists: matchData.assists || 0,
-                        minutesPlayed: matchData.minutesPlayed || 0,
-                        stamina: matchData.stamina || 0,
-                        motm: matchData.motm || false,
-                    },
-                };
-
-                const recentQuery = query(
-                    collection(db, "football_matches"),
-                    where("userId", "==", user.uid),
-                    where("date", "<=", Timestamp.fromDate(dayEnd)),
-                    orderBy("date", "desc"),
-                    limit(5)
-                );
-                const recentSnap = await getDocs(recentQuery);
-                football.staminaOverTime = recentSnap.docs
-                    .map(d => ({ match: `vs ${d.data().opponent}`, stamina: d.data().stamina || 0 }))
-                    .reverse();
-            }
-
-            setHistoricalData({ nutrition, gym, football });
-        } catch (error) {
-            console.error("Error fetching historical data:", error);
-            setHistoricalData(null);
-        } finally {
-            setIsHistoryLoading(false);
-        }
+        return {
+            calories, protein, carbs, fat,
+            meals: Object.entries(mealsMap).map(([name, meal]) => ({
+                name: name.charAt(0).toUpperCase() + name.slice(1),
+                items: meal.items,
+                completed: true,
+                calories: meal.calories,
+            })),
+        };
     };
 
-    fetchHistoricalData();
+    /**
+     * The plan and shopping list saved for that day.
+     *
+     * Kept apart from the logs above: one is what was eaten, the other is what
+     * was planned and bought, and only the first was ever stored server-side.
+     */
+    const loadSnapshot = async () => loadDailySnapshot(selectedDate);
+
+    /**
+     * The workout, from the permanent log rather than the live plan.
+     *
+     * Reading `user.gymPlan` meant history only knew about the plan currently
+     * loaded — regenerate it and every past session disappeared.
+     */
+    const loadGym = async (): Promise<HistoricalGymData | undefined> => {
+        const log = await loadWorkoutLog(selectedDate);
+        if (log) {
+            return {
+                plan: { days: [{ day: log.dayNumber ?? 1, focus: log.focus ?? '', exercises: log.exercises ?? [] }] },
+                consistency: { completed: log.completedDays ?? 0, total: log.totalDays ?? 0 },
+                volume: log.volumeKg ?? 0,
+            };
+        }
+
+        // Sessions finished before the log existed still live on the plan.
+        const gymPlan = user.gymPlan;
+        const dayForDate = gymPlan?.days?.find(d => d.completed_at && isSameDay(new Date(d.completed_at), selectedDate));
+        if (!dayForDate || !gymPlan) return undefined;
+
+        const volume = dayForDate.exercises.reduce((sum, ex) => {
+            const weightKg = ex.weight?.unit === 'lbs' ? ex.weight.value * 0.453592 : (ex.weight?.unit === 'kg' ? ex.weight.value : 0);
+            return sum + ex.sets * weightKg;
+        }, 0);
+        return {
+            plan: { days: [dayForDate] },
+            consistency: { completed: gymPlan.days.filter(d => d.completed).length, total: gymPlan.days.length },
+            volume: Math.round(volume),
+        };
+    };
+
+    const loadFootball = async (): Promise<HistoricalFootballData | undefined> => {
+        const snap = await getDocs(query(
+            collection(db, "football_matches"),
+            where("userId", "==", uid),
+            where("date", ">=", Timestamp.fromDate(dayStart)),
+            where("date", "<=", Timestamp.fromDate(dayEnd))
+        ));
+        const played = snap.docs.find(d => (d.data().status ?? 'completed') !== 'upcoming');
+        if (!played) return undefined;
+
+        const matchData = played.data();
+        const football: HistoricalFootballData = {
+            lastMatch: {
+                opponent: matchData.opponent,
+                result: matchData.result,
+                goals: matchData.goals || 0,
+                assists: matchData.assists || 0,
+                minutesPlayed: matchData.minutesPlayed || 0,
+                stamina: matchData.stamina || 0,
+                motm: matchData.motm || false,
+            },
+        };
+
+        const recentSnap = await getDocs(query(
+            collection(db, "football_matches"),
+            where("userId", "==", uid),
+            where("date", "<=", Timestamp.fromDate(dayEnd)),
+            orderBy("date", "desc"),
+            limit(5)
+        ));
+        football.staminaOverTime = recentSnap.docs
+            .filter(d => (d.data().status ?? 'completed') !== 'upcoming')
+            .map(d => ({ match: `vs ${d.data().opponent}`, stamina: d.data().stamina || 0 }))
+            .reverse();
+        return football;
+    };
+
+    const loadTennis = async (): Promise<HistoricalTennisData | undefined> => {
+        const snap = await getDocs(query(
+            collection(db, "tennis_matches"),
+            where("userId", "==", uid),
+            where("date", ">=", Timestamp.fromDate(dayStart)),
+            where("date", "<=", Timestamp.fromDate(dayEnd))
+        ));
+        const played = snap.docs.find(d => (d.data().status ?? 'completed') !== 'upcoming');
+        if (!played) return undefined;
+
+        const matchData = played.data();
+        const tennis: HistoricalTennisData = {
+            lastMatch: {
+                opponent: matchData.opponent,
+                result: matchData.result,
+                score: matchData.score,
+                surface: matchData.surface,
+                aces: matchData.aces,
+                doubleFaults: matchData.doubleFaults,
+                firstServePercent: matchData.firstServePercent,
+            },
+        };
+
+        const recentSnap = await getDocs(query(
+            collection(db, "tennis_matches"),
+            where("userId", "==", uid),
+            where("date", "<=", Timestamp.fromDate(dayEnd)),
+            orderBy("date", "desc"),
+            limit(5)
+        ));
+        tennis.serveOverTime = recentSnap.docs
+            .filter(d => typeof d.data().firstServePercent === 'number')
+            .map(d => ({ match: `vs ${d.data().opponent}`, percent: d.data().firstServePercent }))
+            .reverse();
+        return tennis;
+    };
+
+    /**
+     * Planned training, every sport at once.
+     *
+     * `userId` alone, filtered by date in memory: adding the range would need
+     * a composite index, and a missing one fails the whole read.
+     */
+    const loadSessions = async (): Promise<HistoricalSession[]> => {
+        const snap = await getDocs(query(collection(db, "athlete_sessions"), where("userId", "==", uid)));
+        return snap.docs
+            .map(d => ({ id: d.id, ...d.data() } as any))
+            .filter(row => row.date instanceof Timestamp && isSameDay(row.date.toDate(), selectedDate))
+            .map(row => ({
+                id: row.id,
+                sport: row.sport ?? '',
+                title: row.title ?? '',
+                duration: typeof row.duration === 'number' ? row.duration : 0,
+                completed: !!row.completed,
+            }));
+    };
+
+    /** Matches that were scheduled for that day but not played. */
+    const loadFixtures = async (): Promise<HistoricalFixture[]> => {
+        const rows: HistoricalFixture[] = [];
+        for (const [sport, collectionName] of [['football', 'football_matches'], ['tennis', 'tennis_matches']] as const) {
+            const snap = await getDocs(query(
+                collection(db, collectionName),
+                where("userId", "==", uid),
+                where("date", ">=", Timestamp.fromDate(dayStart)),
+                where("date", "<=", Timestamp.fromDate(dayEnd))
+            ));
+            snap.docs.forEach(d => {
+                const data = d.data();
+                if (data.status === 'upcoming' && data.date instanceof Timestamp) {
+                    rows.push({ sport, opponent: data.opponent, date: data.date.toDate() });
+                }
+            });
+        }
+        return rows;
+    };
+
+    /**
+     * Every source is read independently.
+     *
+     * They used to share one `try`, so a single failing query — a missing
+     * index, a rule change, one malformed document — threw away the whole
+     * day and the page showed nothing at all. Now a source that fails costs
+     * only its own cards.
+     */
+    Promise.allSettled([
+        loadNutrition(), loadSnapshot(), loadGym(),
+        loadFootball(), loadTennis(), loadSessions(), loadFixtures(),
+    ]).then(([nutritionRes, snapshotRes, gymRes, footballRes, tennisRes, sessionsRes, fixturesRes]) => {
+        if (cancelled) return;
+
+        const settled = <T,>(result: PromiseSettledResult<T>, label: string): T | undefined => {
+            if (result.status === 'fulfilled') return result.value;
+            console.error(`Could not load ${label} history:`, result.reason);
+            return undefined;
+        };
+
+        const nutrition = settled(nutritionRes, 'nutrition');
+        const snapshot = settled(snapshotRes, 'saved day');
+
+        // The plan and the list were saved that day; the logs say what was
+        // actually eaten. Both belong to the same nutrition card set.
+        const merged: HistoricalNutritionData | undefined = (nutrition || snapshot)
+            ? {
+                calories: nutrition?.calories ?? 0,
+                protein: nutrition?.protein ?? 0,
+                carbs: nutrition?.carbs ?? 0,
+                fat: nutrition?.fat ?? 0,
+                meals: snapshot?.mealPlan?.meals?.length
+                    ? snapshot.mealPlan.meals.map(meal => ({
+                        name: meal.name,
+                        items: meal.items as any,
+                        completed: meal.completed,
+                        calories: meal.calories,
+                    }))
+                    : nutrition?.meals,
+                shoppingList: snapshot?.shoppingList?.length ? snapshot.shoppingList : undefined,
+            }
+            : undefined;
+
+        setHistoricalData({
+            nutrition: merged,
+            gym: settled(gymRes, 'gym'),
+            football: settled(footballRes, 'football'),
+            tennis: settled(tennisRes, 'tennis'),
+            sessions: settled(sessionsRes, 'training') ?? [],
+            fixtures: settled(fixturesRes, 'fixtures') ?? [],
+        });
+        setIsHistoryLoading(false);
+    });
+
+    return () => { cancelled = true; };
   }, [selectedDate, user?.uid, user?.gymPlan]);
 
   const handleDateChange = (date: Date | undefined) => {
@@ -674,29 +989,28 @@ export default function InsightsHistoryPage() {
                     <HistoricalGymPlanCard data={historicalData?.gym} />
                     <HistoricalWorkoutConsistencyCard data={historicalData?.gym} />
                     <HistoricalVolumeLiftedCard data={historicalData?.gym} />
-                    <EmptyInsightCard title="nextTraining" description="noTrainingScheduledForDay" icon={CalendarDays} />
+                    <HistoricalSessionsCard sessions={historicalData?.sessions ?? []} sport="gym" />
                 </div>
             </div>
 
              <div className="space-y-6">
                 <SectionHeader icon={<TennisBallIcon className="h-8 w-8 text-primary" />} title="tennisInsightsTitle" subtitle="tennisInsightsSubtitle" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <EmptyInsightCard title="nextMatch" description="noMatchScheduledForDay" icon={CalendarDays} className="md:col-span-2" isRectangle/>
-                    <EmptyInsightCard title="lastMatch" description="noMatchLoggedForDay" icon={Trophy} />
-                    <EmptyInsightCard title="serveConsistency" description="noDataLoggedForDay" icon={Activity}/>
-                    <EmptyInsightCard title="shotAccuracy" description="noDataLoggedForDay" icon={Target}/>
-                    <EmptyInsightCard title="nextTraining" description="noTrainingScheduledForDay" icon={CalendarDays}/>
+                    <HistoricalFixtureCard fixtures={historicalData?.fixtures ?? []} sport="tennis" />
+                    <HistoricalTennisCard data={historicalData?.tennis} />
+                    <HistoricalServeCard data={historicalData?.tennis} />
+                    <HistoricalSessionsCard sessions={historicalData?.sessions ?? []} sport="tennis" />
                 </div>
             </div>
 
              <div className="space-y-6">
                 <SectionHeader icon={<Trophy className="h-8 w-8 text-primary" />} title="footballInsightsTitle" subtitle="footballInsightsSubtitle" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <EmptyInsightCard title="nextMatch" description="noMatchScheduledForDay" icon={CalendarDays} className="md:col-span-2" isRectangle/>
+                    <HistoricalFixtureCard fixtures={historicalData?.fixtures ?? []} sport="football" />
                     <HistoricalFootballCard data={historicalData?.football} />
                     <HistoricalRadarCard data={historicalData?.football} />
                     <HistoricalStaminaCard data={historicalData?.football} />
-                    <EmptyInsightCard title="nextTraining" description="noTrainingScheduledForDay" icon={CalendarDays}/>
+                    <HistoricalSessionsCard sessions={historicalData?.sessions ?? []} sport="football" />
                 </div>
             </div>
         </div>

@@ -202,6 +202,28 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
+    // A day's meal plan and shopping list, kept forever.
+    //
+    // These lived in localStorage alone, which is keyed by browser and not by
+    // athlete: a plan did not survive a cleared browser, never reached a
+    // second device, and every day overwrote the last, so history had nothing
+    // to show. Same ownership shape as the rest — the athlete writes their
+    // own, a coach or admin may read them.
+    match /daily_snapshots/{snapshotId} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // A finished workout, kept beyond the plan that produced it. Written
+    // server-side by the Admin SDK, which bypasses these rules; they exist so
+    // the athlete can read their own history back.
+    match /workout_logs/{logId} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
+      allow write: if request.auth != null && (resource.data == null || resource.data.userId == request.auth.uid || isAdmin());
+    }
+
     match /swimming_sessions/{entryId} {
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdminOrCoach());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;

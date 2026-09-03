@@ -44,6 +44,8 @@ interface ShoppingListState {
   toggleItemChecked: (itemId: string) => void;
   clearCompletedItems: () => void;
   clearList: () => void;
+  /** Replace the list wholesale — used when a saved day arrives from Firestore. */
+  hydrate: (items: ShoppingListItem[], planDays: number) => void;
   resetDailyData: () => void;
 }
 
@@ -133,6 +135,9 @@ export const useShoppingListStore = create<ShoppingListState>()(
       },
       clearList: () => {
         set({ items: [] });
+      },
+      hydrate: (items, planDays) => {
+        set({ items, planDays: Math.max(1, Math.min(30, Math.round(planDays) || 1)) });
       },
       resetDailyData: () => {
         set({ items: get().items.map(item => ({ ...item, checked: false })) });

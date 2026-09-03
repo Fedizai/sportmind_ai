@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, Suspense, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -66,6 +66,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { FootballInsightCard } from '@/components/insights/football-insight-card';
 import { useStreakStore } from '@/stores/streak-store';
 import { ComingUpSection, type UpcomingFixture } from '@/components/insights/coming-up-section';
+import { useAthleteSessions } from '@/hooks/use-athlete-sessions';
 import { useFavorites } from '@/hooks/use-favorites';
 import { FavoriteStar } from '@/components/favorite-star';
 import { tierForStreak, nextTier, daysToNextTier } from '@/lib/streak-tiers';
@@ -902,6 +903,7 @@ export function InsightsGrid() {
     const [tennisMatches, setTennisMatches] = useState<TennisMatch[]>([]);
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const { t } = useTranslation();
+    const { sessions } = useAthleteSessions(user?.uid, 'all');
 
     useEffect(() => {
         if (user && !isHydrated) {
@@ -991,6 +993,32 @@ export function InsightsGrid() {
         return tennisMatches.filter(m => m.status === 'upcoming' && m.date >= new Date()).sort((a, b) => a.date.getTime() - b.date.getTime())[0];
     }, [tennisMatches]);
 
+    /**
+     * Football's fixture, chosen the same way tennis's is.
+     *
+     * `.find(m => m.date >= new Date())` over a list sorted newest-first
+     * returned the *furthest* future match, and did not check that it was a
+     * fixture at all — so a match played this morning could show as the next
+     * one up.
+     */
+    const nextFootballMatch = useMemo(() => {
+        return footballMatches.filter(m => (m as any).status === 'upcoming' && m.date >= new Date()).sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+    }, [footballMatches]);
+
+    /**
+     * The next session the athlete has planned, per sport.
+     *
+     * These cards were passed a hardcoded `null`, so they told every athlete
+     * they had nothing scheduled no matter how much training they had entered.
+     * The sessions were in `athlete_sessions` the whole time.
+     */
+    const nextSessionFor = useCallback((sport: string) => {
+        const now = new Date();
+        return sessions
+            .filter(s => s.sport === sport && !s.completed && s.date && s.date >= now)
+            .sort((a, b) => (a.date!.getTime()) - (b.date!.getTime()))[0] ?? null;
+    }, [sessions]);
+
     return (
         <>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1041,7 +1069,7 @@ export function InsightsGrid() {
                                 <GymPlanInsightCard onUpgrade={() => setIsUpgradeModalOpen(true)} />
                                 <WorkoutConsistencyCard onUpgrade={() => setIsUpgradeModalOpen(true)} />
                                 <VolumeLiftedCard onUpgrade={() => setIsUpgradeModalOpen(true)} />
-                                <NextEventCard sportName={t('gym')} eventType="training" link="/dashboard/gym?tab=schedule" event={null} />
+                                <NextEventCard sportName={t('gym')} eventType="training" link="/dashboard/gym?tab=schedule" event={nextSessionFor('gym')} />
                             </motion.div>
                         </motion.div>
 
@@ -1059,7 +1087,7 @@ export function InsightsGrid() {
                                 </div>
                                 <div className="grid grid-cols-1 gap-6 auto-rows-fr">
                                     <ServeConsistencyCard matches={tennisMatches} />
-                                    <NextEventCard sportName={t('tennis')} eventType="training" link="/dashboard/tennis?tab=training" event={null} />
+                                    <NextEventCard sportName={t('tennis')} eventType="training" link="/dashboard/tennis?tab=training" event={nextSessionFor('tennis')} />
                                 </div>
                             </div>
                         </motion.div>
@@ -1071,8 +1099,8 @@ export function InsightsGrid() {
                                 subtitle={t('footballInsightsSubtitle')}
                             />
                             <motion.div variants={sectionVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <NextEventCard sportName={t('football')} eventType="match" link="/dashboard/football" event={footballMatches.find(m => m.date >= new Date())} />
-                                <NextEventCard sportName={t('football')} eventType="training" link="/dashboard/football?tab=training" event={null} />
+                                <NextEventCard sportName={t('football')} eventType="match" link="/dashboard/football" event={nextFootballMatch} />
+                                <NextEventCard sportName={t('football')} eventType="training" link="/dashboard/football?tab=training" event={nextSessionFor('football')} />
                                 <FootballInsightCard match={footballMatches.length > 0 ? footballMatches[0] : null} />
                                 <motion.div variants={itemVariants} whileHover="hover" className="md:col-span-1" onClick={() => router.push('/dashboard/football')}>
                                     <Card className="md:aspect-square flex flex-col group cursor-pointer">

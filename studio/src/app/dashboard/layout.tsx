@@ -21,6 +21,7 @@ import { UserProvider, useUser } from "@/hooks/use-user";
 import { PageTransition } from "@/components/page-transition";
 import { cn } from "@/lib/utils";
 import { useDailyReset } from "@/hooks/use-daily-reset";
+import { useDailyArchive } from "@/hooks/use-daily-archive";
 import { Header } from "@/components/header";
 import { StreakLevelUp } from "@/components/streak-level-up";
 import { useTranslation } from "@/hooks/use-translation";
@@ -144,6 +145,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const { user, isLoading } = useUser();
   useDailyReset();
+  useDailyArchive();
   const [isNavVisible, setIsNavVisible] = useState(true);
   const lastScrollY = useRef(0);
   const calculateStreak = useStreakStore((s) => s.calculateStreak);

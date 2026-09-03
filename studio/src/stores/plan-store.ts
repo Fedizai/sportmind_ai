@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { startOfToday, isBefore, format } from 'date-fns';
-import { deleteGymPlan, saveGymPlan } from '@/app/dashboard/gym/actions';
+import { deleteGymPlan, logCompletedWorkout, saveGymPlan } from '@/app/dashboard/gym/actions';
 import { toast } from '@/hooks/use-toast';
 
 export type WeightUnit = 'kg' | 'lbs' | 'bodyweight';
@@ -70,6 +70,37 @@ interface PlanState {
   updateDayFocus: (dayIndex: number, focus: string) => Promise<void>;
   _rehydrate: () => void;
 }
+
+/** Total load moved in a session, in kilos, for the history chart. */
+const volumeOf = (day: DayPlan) =>
+    Math.round(day.exercises.reduce((sum, ex) => {
+        const kg = ex.weight?.unit === 'lbs' ? ex.weight.value * 0.453592
+                 : ex.weight?.unit === 'kg' ? ex.weight.value
+                 : 0;
+        return sum + ex.sets * kg;
+    }, 0));
+
+/**
+ * Write a finished day into the permanent log.
+ *
+ * Separate from `saveGymPlan` because the plan is mutable and the record of
+ * having trained is not: the plan holds this week, the log holds every week.
+ */
+const archiveDay = (userId: string, plan: GymPlan, dayIndex: number) => {
+    const day = plan.days[dayIndex];
+    if (!day) return;
+    void logCompletedWorkout(userId, {
+        day: format(new Date(day.completed_at ?? Date.now()), 'yyyy-MM-dd'),
+        dayNumber: day.day,
+        focus: day.focus,
+        exercises: day.exercises.map(ex => ({
+            name: ex.name, sets: ex.sets, reps: ex.reps, completed: ex.completed,
+        })),
+        volumeKg: volumeOf(day),
+        completedDays: plan.days.filter(d => d.completed).length,
+        totalDays: plan.days.length,
+    });
+};
 
 const parseWeight = (weightString?: string): Weight => {
     if (!weightString || weightString.toLowerCase() === 'bodyweight') {
@@ -144,6 +175,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         if (completed) {
             updatedPlan.days[currentDayIndex].completed_at = new Date().toISOString();
             set({ plan: updatedPlan, lastCompletionDate: new Date().toISOString() });
+            archiveDay(userId, updatedPlan, currentDayIndex);
         } else {
             delete updatedPlan.days[currentDayIndex].completed_at;
             set({ plan: updatedPlan });
@@ -172,6 +204,8 @@ export const usePlanStore = create<PlanState>((set, get) => ({
             newPlan.days[dayIndex].completed = true;
             newPlan.days[dayIndex].completed_at = new Date().toISOString();
             set({ lastCompletionDate: new Date().toISOString() });
+
+            archiveDay(userId, newPlan, dayIndex);
 
             // Show toast only when the day is first marked as complete
             if (!wasDayCompletedBefore) {

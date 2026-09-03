@@ -33,6 +33,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, Tooltip, YAxis, Line, LineChart 
 import { Dialog, DialogHeader, DialogTitle, DialogTrigger, DialogContent, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { useUser } from '@/hooks/use-user';
+import { useAthleteSessions } from '@/hooks/use-athlete-sessions';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -64,7 +65,6 @@ const sessionSchema = z.object({
     notes: z.string().optional(),
 });
 type SessionInput = z.infer<typeof sessionSchema>;
-type ScheduleItem = SessionInput & { id: number; completed: boolean; date: Date | null };
 
 
 // Video Upload Types
@@ -975,9 +975,19 @@ function GymPlanTabContent() {
     );
 }
 
+/**
+ * The gym's training schedule.
+ *
+ * Every session lived in `useState` with a `Date.now()` id — added, ticked off
+ * and deleted entirely in the browser's memory, so the whole schedule was gone
+ * on the next refresh. Tennis, football and the generic sport module were
+ * moved onto `athlete_sessions` for exactly this reason; the gym was missed,
+ * which is why nothing about it was ever saved.
+ */
 function GymScheduleTab() {
     const { toast } = useToast();
-    const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
+    const { user } = useUser();
+    const { sessions, addSession, toggleSession, removeSession } = useAthleteSessions(user?.uid, 'gym');
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
 
@@ -992,38 +1002,54 @@ function GymScheduleTab() {
         }
     });
 
-    const handleAddSession = (values: SessionInput) => {
-        const newSession: ScheduleItem = {
-            id: Date.now(),
-            ...values,
-            date: values.date,
-            completed: false,
-        };
-        setSchedule(prev => [...prev, newSession].sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0)));
-        setIsAddSessionOpen(false);
-        addSessionForm.reset();
-        toast({
-            title: "Session Added!",
-            description: `Session "${newSession.title}" has been added to your schedule.`,
-        });
+    const handleAddSession = async (values: SessionInput) => {
+        try {
+            await addSession({
+                title: values.title,
+                type: values.type,
+                date: values.date,
+                duration: values.duration,
+                notes: values.notes,
+            });
+            setIsAddSessionOpen(false);
+            addSessionForm.reset();
+            toast({
+                title: "Session Added!",
+                description: `Session "${values.title}" has been added to your schedule.`,
+            });
+        } catch (error) {
+            // Saving is the point of the feature — a silent failure here is
+            // what made the old schedule look like it worked.
+            toast({
+                variant: "destructive",
+                title: "Could not save the session",
+                description: error instanceof Error ? error.message : String(error),
+            });
+        }
     };
 
-    const handleDeleteSession = (sessionId: number) => {
-        setSchedule(prev => prev.filter(session => session.id !== sessionId));
-        toast({
-            title: "Session Removed",
-            description: "The session has been removed from your schedule.",
-        });
+    const handleDeleteSession = async (sessionId: string) => {
+        try {
+            await removeSession(sessionId);
+            toast({
+                title: "Session Removed",
+                description: "The session has been removed from your schedule.",
+            });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Could not remove the session" });
+        }
     };
 
-    const handleToggleSession = (sessionId: number) => {
-        setSchedule(prev => prev.map(session =>
-            session.id === sessionId ? { ...session, completed: !session.completed } : session
-        ));
-        toast({ title: "Session status updated!" });
+    const handleToggleSession = async (sessionId: string) => {
+        try {
+            await toggleSession(sessionId);
+            toast({ title: "Session status updated!" });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Could not update the session" });
+        }
     };
 
-    const sessionsForSelectedDate = schedule.filter(s => {
+    const sessionsForSelectedDate = sessions.filter(s => {
         if (!selectedDate || !s.date) return false;
         return format(s.date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
     });

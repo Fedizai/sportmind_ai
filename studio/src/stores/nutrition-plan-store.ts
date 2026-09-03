@@ -15,6 +15,14 @@ export interface NutritionPlanState {
   toggleMealCompleted: (mealIndex: number) => void;
   /** Edit a planned meal — its name, calories, protein, or its ingredients. */
   updateMeal: (mealIndex: number, patch: Partial<Meal>) => void;
+  /**
+   * Replace the plan verbatim, ticked-off meals included.
+   *
+   * `setGeneratedPlan` is for a freshly generated day and resets completion,
+   * which is wrong when the source is the athlete's own saved day coming back
+   * from Firestore on another device.
+   */
+  hydrate: (plan: NutritionPlanState['generatedPlan']) => void;
   removePlan: () => void;
   resetDailyData: () => void;
 }
@@ -65,7 +73,10 @@ export const useNutritionPlanStore = create<NutritionPlanState>()(
         newMeals[mealIndex] = { ...meal, ...patch };
         set({ generatedPlan: { ...currentPlan, meals: newMeals } });
       },
-            removePlan: () => {
+      hydrate: (plan) => {
+        set({ generatedPlan: plan });
+      },
+      removePlan: () => {
         set({ generatedPlan: null });
       },
       resetDailyData: () => {

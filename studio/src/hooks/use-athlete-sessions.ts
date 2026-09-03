@@ -21,7 +21,14 @@ import { db } from '@/lib/firebase';
  * one athlete planning their own week, in `athlete_sessions`.
  */
 
-export type AthleteSessionType = 'technical' | 'tactical' | 'physical' | 'other';
+/**
+ * Includes the gym's own vocabulary alongside the sports' — the gym schedule
+ * speaks in strength/cardio/flexibility, and it stores its sessions here too.
+ */
+export type AthleteSessionType =
+  | 'technical' | 'tactical' | 'physical'
+  | 'strength' | 'cardio' | 'flexibility'
+  | 'other';
 
 export interface AthleteSession {
   id: string;

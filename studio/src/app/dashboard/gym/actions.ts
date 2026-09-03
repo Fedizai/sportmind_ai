@@ -56,3 +56,42 @@ export async function getGymPlan(userId: string): Promise<GymPlan | null> {
         throw new Error(`Could not fetch the gym plan: ${detail}`);
     }
 }
+
+/**
+ * One finished workout, kept forever.
+ *
+ * The gym plan is a single field on the user document, so it only ever holds
+ * the current week: regenerating a plan, resetting it, or simply coming round
+ * to the same day again next week erased `completed_at` and with it every
+ * trace that the session had happened. History read from that field, which is
+ * why a workout done a fortnight ago showed as "no plan active for this day".
+ *
+ * The id is deterministic — one athlete, one calendar day — so ticking the
+ * last exercise, then un-ticking and re-ticking it, updates the entry in place
+ * instead of piling up duplicates.
+ */
+export interface WorkoutLogEntry {
+    day: string;
+    dayNumber: number;
+    focus: string;
+    exercises: { name: string; sets: number; reps: string; completed?: boolean }[];
+    volumeKg: number;
+    completedDays: number;
+    totalDays: number;
+}
+
+export async function logCompletedWorkout(userId: string, entry: WorkoutLogEntry) {
+    if (!userId) {
+        throw new Error("User ID is required to log a workout.");
+    }
+    try {
+        await adminDb.collection('workout_logs').doc(`${userId}_${entry.day}`).set(
+            { userId, ...entry, completedAt: new Date().toISOString() },
+            { merge: true },
+        );
+    } catch (error) {
+        // A workout that was done is not worth failing the UI over; the plan
+        // itself has already been saved by the caller.
+        console.error("Error logging completed workout:", error);
+    }
+}
