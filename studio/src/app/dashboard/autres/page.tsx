@@ -9,7 +9,7 @@ import { FavoriteStar } from '@/components/favorite-star';
 import { Card, CardContent } from '@/components/ui/card';
 
 /**
- * The five secondary tools.
+ * The secondary tools.
  *
  * Each card opens the tool's existing route — this page adds a way in, not a
  * second implementation. The star pins that same route to the dashboard.

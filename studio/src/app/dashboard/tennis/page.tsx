@@ -6,7 +6,7 @@ import { Suspense } from 'react';
 import TennisModuleClient from './client';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Swords } from 'lucide-react';
 import { useTranslation } from "@/hooks/use-translation";
 
 export default function TennisPage() {
@@ -17,14 +17,24 @@ export default function TennisPage() {
       <Button variant="ghost" size="sm" asChild className="mb-4 -ml-2 text-muted-foreground hover:text-foreground">
         <Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />{t('backToDashboard')}</Link>
       </Button>
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight font-headline flex items-center gap-3">
-          <TennisBallIcon className="h-8 w-8 text-primary" />
-          {t('tennisModuleTitle')}
-        </h1>
-        <p className="text-muted-foreground">
-          {t('tennisModuleSubtitle')}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight font-headline flex items-center gap-3">
+            <TennisBallIcon className="h-8 w-8 text-primary" />
+            {t('tennisModuleTitle')}
+          </h1>
+          <p className="text-muted-foreground">
+            {t('tennisModuleSubtitle')}
+          </p>
+        </div>
+        {/* A fixture is scheduled on its own page. Without a way in from the
+            sport itself, the page exists and nobody finds it. */}
+        <Button asChild>
+          <Link href="/dashboard/fixtures">
+            <Swords className="mr-2 h-4 w-4" />
+            {t('scheduleMatch')}
+          </Link>
+        </Button>
       </div>
       <Suspense fallback={<div>Loading...</div>}>
         <TennisModuleClient />

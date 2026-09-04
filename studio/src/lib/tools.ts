@@ -1,9 +1,9 @@
-import { BarChart2, BrainCircuit, ClipboardList, ScanLine, Target, type LucideIcon } from 'lucide-react';
+import { BarChart2, BrainCircuit, ClipboardList, ScanLine, Swords, Target, type LucideIcon } from 'lucide-react';
 
 import type { TranslationKey } from '@/lib/i18n';
 
 /**
- * The five secondary tools, in one place.
+ * The secondary tools, in one place.
  *
  * Both the Autres page and the dashboard's Favoris row read this list, so a
  * favourite is a shortcut to the same route rather than a second copy of the
@@ -21,6 +21,13 @@ export interface Tool {
 }
 
 export const TOOLS: Tool[] = [
+  {
+    id: 'fixtures',
+    titleKey: 'fixturesCardTitle',
+    subtitleKey: 'fixturesCardSubtitle',
+    icon: Swords,
+    path: '/dashboard/fixtures',
+  },
   {
     id: 'team-hub',
     titleKey: 'teamHubCardTitle',

@@ -39,7 +39,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Calendar as CalendarIcon, Bot, Sparkles, Send, Trophy, BrainCircuit, Star, Plus, CheckCircle, Trash2, Loader2, Bookmark, MessageCircle, Share2, Heart, BarChart2, Shield, Flame, Activity, CalendarDays, ClipboardList, Lightbulb, User as UserIcon, Clock, Repeat, Droplets, Bed, Check, Dumbbell, ShieldCheck, Zap, Edit, Target, Upload, Video, Waves, PlusCircle, HeartPulse, ArrowRight, Dribbble, UtensilsCrossed, RefreshCw, ShoppingCart, ChevronLeft, ChevronRight, XCircle, PieChart as PieChartIcon, Lock, ScanLine, LifeBuoy, Flag, Inbox, Users } from "lucide-react";
+import { Calendar as CalendarIcon, Bot, Sparkles, Send, Trophy, BrainCircuit, Star, Plus, CheckCircle, Trash2, Loader2, Bookmark, MessageCircle, Share2, Heart, BarChart2, Shield, Flame, Activity, CalendarDays, ClipboardList, Lightbulb, User as UserIcon, Clock, Repeat, Droplets, Bed, Check, Dumbbell, ShieldCheck, Zap, Edit, Target, Upload, Video, Waves, PlusCircle, HeartPulse, ArrowRight, Dribbble, UtensilsCrossed, RefreshCw, ShoppingCart, ChevronLeft, ChevronRight, XCircle, PieChart as PieChartIcon, Lock, ScanLine, LifeBuoy, Flag, Inbox, Users, Swords } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -1063,6 +1063,15 @@ export function InsightsGrid() {
                                 <Link href="/dashboard/insights/history">
                                     <Clock className="mr-2 h-4 w-4" />
                                     {t('insightsHistory')}
+                                </Link>
+                            </Button>
+                            {/* Insights is where an athlete notices they have
+                                nothing scheduled, so it is where the way to fix
+                                that belongs. */}
+                            <Button variant="outline" asChild>
+                                <Link href="/dashboard/fixtures">
+                                    <Swords className="mr-2 h-4 w-4" />
+                                    {t('scheduleMatch')}
                                 </Link>
                             </Button>
                         </SectionHeader>
