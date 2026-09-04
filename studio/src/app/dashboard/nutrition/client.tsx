@@ -30,6 +30,7 @@ import { useDebounce } from 'use-debounce';
 import { Label } from '@/components/ui/label';
 import { useNutritionStore, type DailyLog } from '@/stores/nutrition-store';
 import { useNutritionPlanStore, type Meal } from '@/stores/nutrition-plan-store';
+import { useTogglePlannedMeal } from '@/hooks/use-planned-meal';
 import { useShoppingListStore } from '@/stores/shopping-list-store';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -59,6 +60,12 @@ export function NutritionClient() {
   const searchParams = useSearchParams();
   const { dailyLogs, dailyTotals, isLoading: isLogLoading, startListener } = useNutritionStore();
   const { generatedPlan, setGeneratedPlan, toggleMealCompleted, updateMeal, removePlan } = useNutritionPlanStore();
+  /**
+   * The checkbox both ticks and logs. The AI "log this meal" flow below keeps
+   * the plain toggle: it has already written a log entry with real macros, and
+   * logging again would count the meal twice.
+   */
+  const toggleAndLogMeal = useTogglePlannedMeal();
   const shoppingListStore = useShoppingListStore();
 
   useEffect(() => {
@@ -920,7 +927,7 @@ export function NutritionClient() {
                                         Open Prices observations, never from the model. */}
                                     <PlanMeals
                                         meals={generatedPlan.meals}
-                                        onToggleCompleted={toggleMealCompleted}
+                                        onToggleCompleted={toggleAndLogMeal}
                                         onUpdateMeal={updateMeal}
                                         onLogMeal={handleLogPlanMeal}
                                         onAddToShoppingList={handleAddItemToShoppingList}

@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { collection, query, where, getDocs, Timestamp, doc, getDoc, setDoc, increment, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { listSessions } from '@/app/dashboard/_components/session-actions';
+import { listWorkoutDays } from '@/app/dashboard/insights/actions';
 import { startOfDay, format } from 'date-fns';
 import { usePlanStore } from './plan-store';
 import { summariseStreak } from '@/lib/streak-math';
@@ -73,17 +75,61 @@ const todayKey = () => dayKey(new Date());
 const currentMonthKey = () => format(new Date(), 'yyyy-MM');
 
 /** Collections keyed by the field holding the activity date. */
-const SPORT_SOURCES: { path: string; dateField: string; completedOnly?: boolean }[] = [
-  { path: 'football_matches', dateField: 'date' },
-  { path: 'tennis_matches', dateField: 'date' },
-  { path: 'basketball_games', dateField: 'date' },
-  { path: 'boxing_bouts', dateField: 'date' },
-  { path: 'swimming_sessions', dateField: 'date' },
+const SPORT_SOURCES: {
+  path: string;
+  dateField: string;
+  completedOnly?: boolean;
+  /** Skip rows still waiting to happen — a fixture is not training. */
+  playedOnly?: boolean;
+}[] = [
+  // `playedOnly` matters more than it looks: a scheduled match is a row in
+  // this same collection with a future date, and counting one used to end the
+  // streak outright rather than extend it.
+  { path: 'football_matches', dateField: 'date', playedOnly: true },
+  { path: 'tennis_matches', dateField: 'date', playedOnly: true },
+  { path: 'basketball_games', dateField: 'date', playedOnly: true },
+  { path: 'boxing_bouts', dateField: 'date', playedOnly: true },
+  { path: 'swimming_sessions', dateField: 'date', playedOnly: true },
   { path: 'nutritionLogs', dateField: 'createdAt' },
-  // A planned session the athlete ticked off is training like any other.
-  // Counted on the session's own date, and only when completed.
-  { path: 'athlete_sessions', dateField: 'date', completedOnly: true },
 ];
+
+/**
+ * Ticked-off sessions and finished workouts, read server-side.
+ *
+ * Both live in collections whose security rules have never been deployed — an
+ * App Hosting rollout does not deploy firestore.rules — so a browser read of
+ * either is refused under the default-deny catch-all. They were being skipped
+ * silently, which meant a week of training the athlete had ticked off counted
+ * for nothing.
+ */
+async function serverSideActivity(): Promise<Date[]> {
+  const current = auth?.currentUser;
+  if (!current) return [];
+
+  const dates: Date[] = [];
+  try {
+    const token = await current.getIdToken();
+    const [sessions, workoutDays] = await Promise.all([
+      listSessions(token),
+      listWorkoutDays(token),
+    ]);
+
+    sessions.forEach((session) => {
+      // Scheduling one for next Tuesday is not training; ticking it off is.
+      if (!session.completed || !session.date) return;
+      const parsed = toDate(session.date);
+      if (parsed) dates.push(startOfDay(parsed));
+    });
+
+    workoutDays.forEach((day) => {
+      const parsed = toDate(`${day}T12:00:00`);
+      if (parsed) dates.push(startOfDay(parsed));
+    });
+  } catch (err) {
+    console.warn('Streak: skipped server-side activity', err);
+  }
+  return dates;
+}
 
 function toDate(value: unknown): Date | null {
   if (!value) return null;
@@ -129,6 +175,8 @@ export const useStreakStore = create<StreakState>()(
             if (parsed) dates.push(startOfDay(parsed));
           });
 
+          dates.push(...await serverSideActivity());
+
           // One failing collection (missing index, rules) must not zero the streak.
           const results = await Promise.allSettled(
             SPORT_SOURCES.map((src) =>
@@ -147,6 +195,8 @@ export const useStreakStore = create<StreakState>()(
               // A planned session only counts once it has been ticked off;
               // scheduling one for next Tuesday is not training.
               if (source.completedOnly && data.completed !== true) return;
+              // A fixture has a date but has not been played.
+              if (source.playedOnly && data.status === 'upcoming') return;
               const parsed = toDate(data[source.dateField]);
               if (parsed) dates.push(startOfDay(parsed));
             });

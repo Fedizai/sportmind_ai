@@ -48,14 +48,27 @@ function longestRun(ascending: Date[]): number {
  * actually ends rather than resetting at midnight.
  */
 export function summariseStreak(dates: Date[], now: Date = new Date()): StreakSummary {
-  if (dates.length === 0) {
+  const today = startOfDay(now);
+
+  /**
+   * A day that has not happened yet is not training.
+   *
+   * Scheduling a match for next Tuesday writes a future-dated row into the
+   * same collection the streak counts, and that row then sorted to the front
+   * as "most recent activity". The gap to today came out negative, which is
+   * neither 0 nor 1, so the streak read as zero and the flame went out — an
+   * athlete who had trained every day for a fortnight lost all of it by
+   * putting one fixture in the calendar.
+   */
+  const past = dates.filter((d) => differenceInCalendarDays(today, startOfDay(d)) >= 0);
+
+  if (past.length === 0) {
     return { current: 0, longest: 0, activeToday: false, activeDays: [] };
   }
 
-  const uniqueKeys = Array.from(new Set(dates.map((d) => dayKey(d)))).sort().reverse();
+  const uniqueKeys = Array.from(new Set(past.map((d) => dayKey(d)))).sort().reverse();
   const descending = uniqueKeys.map(fromKey);
 
-  const today = startOfDay(now);
   const gap = differenceInCalendarDays(today, descending[0]);
   const activeToday = gap === 0;
 

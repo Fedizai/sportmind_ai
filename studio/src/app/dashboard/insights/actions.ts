@@ -76,3 +76,23 @@ export async function fetchWorkoutLog(idToken: string, day: string): Promise<any
         return null;
     }
 }
+
+/**
+ * Every day the athlete finished a workout, as `yyyy-MM-dd`.
+ *
+ * Read here rather than in the browser for the same reason the rest of this
+ * file is: `workout_logs` has no deployed security rule, so a browser read is
+ * refused and the streak quietly loses every gym day.
+ */
+export async function listWorkoutDays(idToken: string): Promise<string[]> {
+    try {
+        const userId = await requireCaller(idToken);
+        const snap = await adminDb.collection('workout_logs').where('userId', '==', userId).get();
+        return snap.docs
+            .map((doc) => doc.data().day)
+            .filter((day): day is string => typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day));
+    } catch (error) {
+        console.error('Could not read your workout days:', error);
+        return [];
+    }
+}

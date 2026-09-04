@@ -67,6 +67,7 @@ import { FootballInsightCard } from '@/components/insights/football-insight-card
 import { useStreakStore } from '@/stores/streak-store';
 import { useAthleteSessions } from '@/hooks/use-athlete-sessions';
 import { visibleSports, hasSportRestriction } from '@/lib/sports';
+import { useTogglePlannedMeal } from '@/hooks/use-planned-meal';
 import { useFavorites } from '@/hooks/use-favorites';
 import { FavoriteStar } from '@/components/favorite-star';
 import { tierForStreak, nextTier, daysToNextTier } from '@/lib/streak-tiers';
@@ -387,7 +388,10 @@ const NutritionChart = () => {
                 </div>
             </CardContent>
             {totalLogs > 0 && <Separator />}
-            <CardFooter className="p-0">
+            {/* Opening the list is not a request to leave for the nutrition
+                page, but the click reached the card behind it and did exactly
+                that — so the list could never actually be read from here. */}
+            <CardFooter className="p-0" onClick={(event) => event.stopPropagation()}>
                 <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="item-1" className="border-b-0">
                         <AccordionTrigger className="px-6 text-sm">
@@ -423,7 +427,9 @@ const MealPlanCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
     const { user } = useUser();
     const router = useRouter();
     const { t } = useTranslation();
-    const { generatedPlan, toggleMealCompleted } = useNutritionPlanStore();
+    const generatedPlan = useNutritionPlanStore((s) => s.generatedPlan);
+    // Ticking a meal has to reach the nutrition ring, not just the checkbox.
+    const toggleMealCompleted = useTogglePlannedMeal();
 
     if (user?.plan !== 'pro') {
         return <ProInsightCard title={t('todaysMealPlan')} icon={ClipboardList} onUpgrade={onUpgrade} />;
@@ -1408,8 +1414,10 @@ export function DashboardClient({ initialView }: { initialView?: 'sports' | 'ins
                         <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <p className="text-sm font-medium">{t('addAnotherSport')}</p>
                         <p className="text-sm text-muted-foreground">{t('addAnotherSportHint')}</p>
+                        {/* Asking for a sport is a request, not a fault report —
+                            it belongs in the help queue. */}
                         <Link
-                            href="/dashboard/report-problem"
+                            href="/dashboard/help"
                             className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
                         >
                             {t('requestSport')}
