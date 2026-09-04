@@ -117,6 +117,13 @@ const adminEditSchema = z.object({
     email: z.string().email().optional(),
     role: z.enum(['player', 'coach', 'admin']).optional(),
     plan: z.enum(['athlete', 'pro']).optional(),
+    /**
+     * Which sports the athlete may open.
+     *
+     * Adding one is deliberately not self-service: an athlete reports that
+     * they play something else and an admin grants it here.
+     */
+    sports: z.array(z.enum(['gym', 'football', 'tennis'])).optional(),
 });
 
 async function requireAdmin(idToken: string): Promise<void> {
@@ -140,7 +147,7 @@ export async function adminUpdateUser(
         }
         if (!targetUid) return { success: false, message: 'No user selected.' };
 
-        const { displayName, username, email, role, plan } = parsed.data;
+        const { displayName, username, email, role, plan, sports } = parsed.data;
 
         // The two protected owner accounts keep their admin role whoever edits
         // them, matching the rule that has always guarded them in Firestore.
@@ -170,6 +177,9 @@ export async function adminUpdateUser(
         if (email) profilePatch.email = email;
         if (role) profilePatch.role = role;
         if (plan) profilePatch.plan = plan;
+        // An empty array is a real answer here — it means "back to the
+        // default", so it is written rather than skipped like the others.
+        if (sports) profilePatch.sports = sports;
         if (Object.keys(profilePatch).length > 0) {
             await adminDb.collection('users').doc(targetUid).set(profilePatch, { merge: true });
         }

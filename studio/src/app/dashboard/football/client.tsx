@@ -422,13 +422,18 @@ export default function FootballModuleClient() {
 
     useEffect(() => {
         if (!user) return;
-        const q = query(collection(db, "football_matches"), where("userId", "==", user.uid), orderBy("date", "desc"));
+        // userId alone, sorted in memory. Ordering by date in the query needs a
+        // composite index, and a missing one fails the whole subscription with
+        // `failed-precondition` rather than degrading — index deployment is a
+        // separate `firebase deploy --only firestore` that a push never runs.
+        const q = query(collection(db, "football_matches"), where("userId", "==", user.uid));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const userMatches: FootballMatch[] = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
                 userMatches.push({ id: doc.id, ...data, date: (data.date as Timestamp).toDate() } as FootballMatch);
             });
+            userMatches.sort((a, b) => b.date.getTime() - a.date.getTime());
             setMatches(userMatches);
         });
         return () => unsubscribe();

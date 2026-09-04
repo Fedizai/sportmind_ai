@@ -48,6 +48,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { deleteUser, createUser } from "./actions";
 import { useTranslation } from "@/hooks/use-translation";
+import { SIGNUP_SECTIONS, QUESTION_LABELS, readStored, prettyOption } from '@/lib/signup-questions';
 import { useAdminPreviewStore } from "@/stores/admin-preview-store";
 
 const SUPER_ADMIN_EMAILS = ['khaled05062006@gmail.com', 'fedizayen12@gmail.com'];
@@ -66,7 +67,7 @@ export default function AdminPage() {
     const { startUserPreview } = useAdminPreviewStore();
     const router = useRouter();
     const { toast } = useToast();
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
     const [searchQuery, setSearchQuery] = useState("");
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
@@ -293,20 +294,40 @@ export default function AdminPage() {
                                         <div className="flex items-center gap-2"><UserIcon className="h-4 w-4 text-muted-foreground" /> <strong>{t('mainGoal')}:</strong> <span className="capitalize">{user.mainGoal?.replace('_', ' ') || 'N/A'}</span></div>
                                     </div>
                                     <Separator />
+                                    {/* Rendered from the same definition the signup
+                                        form validates against, so what an admin
+                                        reads back is the question that was asked.
+                                        The hand-written version here looked for
+                                        footballProfile.inClub as "inClub", gymProfile
+                                        height/weight under other names, and a tennis
+                                        ranking beside a level — a set that only
+                                        partly matched what signup writes. */}
                                     <div className="space-y-2">
                                         <h4 className="font-semibold">{t('sportsAndProfiles')}</h4>
                                         <div className="flex flex-wrap gap-2">
-                                            {user.sports?.map(sport => <Badge key={sport} variant="secondary" className="capitalize">{t(sport as any)}</Badge>)}
+                                            {user.sports?.length
+                                                ? user.sports.map(sport => <Badge key={sport} variant="secondary" className="capitalize">{t(sport as any)}</Badge>)
+                                                : <span className="text-xs text-muted-foreground">{t('adminNoSportsChosen')}</span>}
                                         </div>
-                                        {user.footballProfile && (
-                                            <div className="text-xs p-2 bg-muted rounded-md"><Trophy className="h-3 w-3 inline mr-1"/> <strong>{t('footballProfile')}:</strong> Position {user.footballProfile.position}, {user.footballProfile.inClub ? t('inAClub') : t('notInAClub')}.</div>
-                                        )}
-                                        {user.gymProfile && (
-                                            <div className="text-xs p-2 bg-muted rounded-md"><Dumbbell className="h-3 w-3 inline mr-1"/> <strong>{t('gymProfile')}:</strong> {user.gymProfile.height}cm, {user.gymProfile.weight}kg. Goal: {user.gymProfile.goal?.replace('_', ' ')}.</div>
-                                        )}
-                                        {user.tennisProfile && (
-                                            <div className="text-xs p-2 bg-muted rounded-md"><TennisBallIcon className="h-3 w-3 inline mr-1"/> <strong>{t('tennisProfile')}:</strong> {user.tennisProfile.level} level. {user.tennisProfile.ranking ? `Ranking: ${user.tennisProfile.ranking}` : ''}</div>
-                                        )}
+                                        {SIGNUP_SECTIONS.filter(section => section.sport && user.sports?.includes(section.sport)).map(section => {
+                                            const answered = section.fields
+                                                .map(field => ({ field, value: readStored(user as any, field) }))
+                                                .filter(row => row.value !== undefined && row.value !== null && row.value !== '');
+                                            if (!answered.length) return null;
+                                            return (
+                                                <div key={section.id} className="text-xs p-2 bg-muted rounded-md space-y-0.5">
+                                                    <strong>{language === 'fr' ? section.title.fr : section.title.en}</strong>
+                                                    {answered.map(({ field, value }) => (
+                                                        <div key={field}>
+                                                            <span className="text-muted-foreground">
+                                                                {language === 'fr' ? QUESTION_LABELS[field].fr : QUESTION_LABELS[field].en}:
+                                                            </span>{' '}
+                                                            {typeof value === 'boolean' ? (value ? t('yes') : t('no')) : prettyOption(String(value))}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </CardContent>
                                 <CardFooter className="flex flex-col gap-2">

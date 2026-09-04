@@ -4,11 +4,12 @@
 import React, { useState, useEffect } from "react";
 import { format, subDays, addDays, parseISO, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
-import { collection, query, where, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
+import { collection, query, where, getDocs, Timestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { describeIngredients } from '@/lib/ingredients';
 import { loadDailySnapshot, loadWorkoutLog } from '@/hooks/use-daily-archive';
 import { listSessions } from '@/app/dashboard/_components/session-actions';
+import { visibleSports } from '@/lib/sports';
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -665,6 +666,9 @@ export default function InsightsHistoryPage() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const { t, language } = useTranslation();
   const dateLocale = language === 'fr' ? fr : enUS;
+  // History showed every sport to everyone, so an athlete who only plays
+  // tennis paged back through empty football and gym sections.
+  const mySports = visibleSports(user);
 
   useEffect(() => {
     if (!user) return;
@@ -675,6 +679,38 @@ export default function InsightsHistoryPage() {
     const dayStart = startOfDay(selectedDate);
     const dayEnd = endOfDay(selectedDate);
     const uid = user.uid;
+
+    /**
+     * One athlete's matches in a collection, newest first.
+     *
+     * `userId` alone, then filtered and sorted in memory. Narrowing by a date
+     * range or ordering by date needs a composite index, and a missing index
+     * fails the whole read with `failed-precondition` rather than degrading —
+     * which is exactly what these queries were doing, because index deployment
+     * is a separate `firebase deploy --only firestore` that an App Hosting
+     * rollout never runs. One athlete's matches number in the tens.
+     */
+    const matchCache = new Map<string, Promise<any[]>>();
+    const matchesFor = (collectionName: string): Promise<any[]> => {
+        if (!matchCache.has(collectionName)) {
+            matchCache.set(collectionName, (async () => {
+                const snap = await getDocs(query(collection(db, collectionName), where("userId", "==", uid)));
+                return snap.docs
+                    .map(d => {
+                        const data = d.data();
+                        return {
+                            id: d.id,
+                            ...data,
+                            status: data.status ?? 'completed',
+                            date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date),
+                        };
+                    })
+                    .filter(m => m.date instanceof Date && !Number.isNaN(m.date.getTime()))
+                    .sort((a, b) => b.date.getTime() - a.date.getTime());
+            })());
+        }
+        return matchCache.get(collectionName)!;
+    };
 
     /**
      * Nutrition actually eaten, from the logs.
@@ -756,16 +792,11 @@ export default function InsightsHistoryPage() {
     };
 
     const loadFootball = async (): Promise<HistoricalFootballData | undefined> => {
-        const snap = await getDocs(query(
-            collection(db, "football_matches"),
-            where("userId", "==", uid),
-            where("date", ">=", Timestamp.fromDate(dayStart)),
-            where("date", "<=", Timestamp.fromDate(dayEnd))
-        ));
-        const played = snap.docs.find(d => (d.data().status ?? 'completed') !== 'upcoming');
+        const rows = await matchesFor("football_matches");
+        const played = rows.find(m => m.status !== 'upcoming' && m.date >= dayStart && m.date <= dayEnd);
         if (!played) return undefined;
 
-        const matchData = played.data();
+        const matchData = played;
         const football: HistoricalFootballData = {
             lastMatch: {
                 opponent: matchData.opponent,
@@ -778,31 +809,20 @@ export default function InsightsHistoryPage() {
             },
         };
 
-        const recentSnap = await getDocs(query(
-            collection(db, "football_matches"),
-            where("userId", "==", uid),
-            where("date", "<=", Timestamp.fromDate(dayEnd)),
-            orderBy("date", "desc"),
-            limit(5)
-        ));
-        football.staminaOverTime = recentSnap.docs
-            .filter(d => (d.data().status ?? 'completed') !== 'upcoming')
-            .map(d => ({ match: `vs ${d.data().opponent}`, stamina: d.data().stamina || 0 }))
+        football.staminaOverTime = rows
+            .filter(m => m.status !== 'upcoming' && m.date <= dayEnd)
+            .slice(0, 5)
+            .map(m => ({ match: `vs ${m.opponent}`, stamina: m.stamina || 0 }))
             .reverse();
         return football;
     };
 
     const loadTennis = async (): Promise<HistoricalTennisData | undefined> => {
-        const snap = await getDocs(query(
-            collection(db, "tennis_matches"),
-            where("userId", "==", uid),
-            where("date", ">=", Timestamp.fromDate(dayStart)),
-            where("date", "<=", Timestamp.fromDate(dayEnd))
-        ));
-        const played = snap.docs.find(d => (d.data().status ?? 'completed') !== 'upcoming');
+        const rows = await matchesFor("tennis_matches");
+        const played = rows.find(m => m.status !== 'upcoming' && m.date >= dayStart && m.date <= dayEnd);
         if (!played) return undefined;
 
-        const matchData = played.data();
+        const matchData = played;
         const tennis: HistoricalTennisData = {
             lastMatch: {
                 opponent: matchData.opponent,
@@ -815,16 +835,10 @@ export default function InsightsHistoryPage() {
             },
         };
 
-        const recentSnap = await getDocs(query(
-            collection(db, "tennis_matches"),
-            where("userId", "==", uid),
-            where("date", "<=", Timestamp.fromDate(dayEnd)),
-            orderBy("date", "desc"),
-            limit(5)
-        ));
-        tennis.serveOverTime = recentSnap.docs
-            .filter(d => typeof d.data().firstServePercent === 'number')
-            .map(d => ({ match: `vs ${d.data().opponent}`, percent: d.data().firstServePercent }))
+        tennis.serveOverTime = rows
+            .filter(m => typeof m.firstServePercent === 'number' && m.date <= dayEnd)
+            .slice(0, 5)
+            .map(m => ({ match: `vs ${m.opponent}`, percent: m.firstServePercent }))
             .reverse();
         return tennis;
     };
@@ -854,16 +868,10 @@ export default function InsightsHistoryPage() {
     const loadFixtures = async (): Promise<HistoricalFixture[]> => {
         const rows: HistoricalFixture[] = [];
         for (const [sport, collectionName] of [['football', 'football_matches'], ['tennis', 'tennis_matches']] as const) {
-            const snap = await getDocs(query(
-                collection(db, collectionName),
-                where("userId", "==", uid),
-                where("date", ">=", Timestamp.fromDate(dayStart)),
-                where("date", "<=", Timestamp.fromDate(dayEnd))
-            ));
-            snap.docs.forEach(d => {
-                const data = d.data();
-                if (data.status === 'upcoming' && data.date instanceof Timestamp) {
-                    rows.push({ sport, opponent: data.opponent, date: data.date.toDate() });
+            const matches = await matchesFor(collectionName);
+            matches.forEach(m => {
+                if (m.status === 'upcoming' && m.date >= dayStart && m.date <= dayEnd) {
+                    rows.push({ sport, opponent: m.opponent, date: m.date });
                 }
             });
         }
@@ -991,6 +999,7 @@ export default function InsightsHistoryPage() {
                 </div>
             </div>
 
+            {mySports.includes('gym') && (
             <div className="space-y-6">
                 <SectionHeader icon={<Dumbbell className="h-8 w-8 text-primary" />} title="gymInsightsTitle" subtitle="gymInsightsSubtitle" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1000,7 +1009,9 @@ export default function InsightsHistoryPage() {
                     <HistoricalSessionsCard sessions={historicalData?.sessions ?? []} sport="gym" />
                 </div>
             </div>
+            )}
 
+            {mySports.includes('tennis') && (
              <div className="space-y-6">
                 <SectionHeader icon={<TennisBallIcon className="h-8 w-8 text-primary" />} title="tennisInsightsTitle" subtitle="tennisInsightsSubtitle" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1010,7 +1021,9 @@ export default function InsightsHistoryPage() {
                     <HistoricalSessionsCard sessions={historicalData?.sessions ?? []} sport="tennis" />
                 </div>
             </div>
+            )}
 
+            {mySports.includes('football') && (
              <div className="space-y-6">
                 <SectionHeader icon={<Trophy className="h-8 w-8 text-primary" />} title="footballInsightsTitle" subtitle="footballInsightsSubtitle" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1021,6 +1034,7 @@ export default function InsightsHistoryPage() {
                     <HistoricalSessionsCard sessions={historicalData?.sessions ?? []} sport="football" />
                 </div>
             </div>
+            )}
         </div>
         )}
     </motion.div>

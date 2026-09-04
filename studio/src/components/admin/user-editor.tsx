@@ -11,6 +11,8 @@ import type { AppUser } from '@/hooks/use-all-users';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { SHIPPED_SPORTS, isSportId, type SportId } from '@/lib/sports';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -39,6 +41,7 @@ export function UserEditor({ user }: { user: AppUser }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'player' | 'coach' | 'admin'>('player');
   const [plan, setPlan] = useState<'athlete' | 'pro'>('athlete');
+  const [sports, setSports] = useState<SportId[]>([]);
 
   // Reload from the record each time it opens, so a dialog left open on stale
   // data never writes that stale data back.
@@ -49,7 +52,20 @@ export function UserEditor({ user }: { user: AppUser }) {
     setEmail(user.email ?? '');
     setRole((user.role as typeof role) ?? 'player');
     setPlan((user.plan as typeof plan) ?? 'athlete');
+    setSports(((user as any).sports ?? []).filter(isSportId));
   }, [open, user]);
+
+  const toggleSport = (sport: SportId) => {
+    setSports((current) =>
+      current.includes(sport) ? current.filter((s) => s !== sport) : [...current, sport]
+    );
+  };
+
+  // Order is irrelevant to what an athlete can open, so compare as a set.
+  const originalSports: SportId[] = (((user as any).sports ?? []) as string[]).filter(isSportId);
+  const sportsChanged =
+    sports.length !== originalSports.length ||
+    sports.some((sport) => !originalSports.includes(sport));
 
   const save = async () => {
     setSaving(true);
@@ -64,6 +80,7 @@ export function UserEditor({ user }: { user: AppUser }) {
         ...(email !== (user.email ?? '') ? { email } : {}),
         ...(role !== user.role ? { role } : {}),
         ...(plan !== user.plan ? { plan } : {}),
+        ...(sportsChanged ? { sports } : {}),
       });
 
       toast({
@@ -140,6 +157,26 @@ export function UserEditor({ user }: { user: AppUser }) {
                   <SelectItem value="pro">Pro</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* Which sports this athlete can open. Adding one is not
+              self-service: they report that they play it and it is granted
+              here. An empty selection falls back to showing them all, which is
+              what every account created before this existed looks like. */}
+          <div className="space-y-2">
+            <Label>{t('adminSportsLabel')}</Label>
+            <p className="text-xs text-muted-foreground">{t('adminSportsHint')}</p>
+            <div className="flex flex-wrap gap-4 pt-1">
+              {SHIPPED_SPORTS.map((sport) => (
+                <label key={sport} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={sports.includes(sport)}
+                    onCheckedChange={() => toggleSport(sport)}
+                  />
+                  <span className="capitalize">{t(sport)}</span>
+                </label>
+              ))}
             </div>
           </div>
         </div>

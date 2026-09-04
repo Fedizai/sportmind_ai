@@ -26,6 +26,13 @@ export interface AppUser {
   lastSeenAt?: { seconds: number } | null;
   /** Ids of the secondary tools pinned to the dashboard. See lib/tools. */
   favorites?: string[];
+  /**
+   * The sports chosen at signup, or granted later by an admin.
+   *
+   * `/signup` has always written this; nothing on the athlete's side read it,
+   * so every athlete saw every sport. See lib/sports.
+   */
+  sports?: string[];
   onboardingComplete?: boolean;
   gymPlan?: GymPlan | null;
   nutritionTarget?: {
@@ -110,6 +117,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
               notifications: userData.notifications || {},
               privacy: userData.privacy || {},
               favorites: userData.favorites || [],
+              sports: userData.sports || [],
             });
 
             // An owner whose stored role says otherwise is treated as an admin

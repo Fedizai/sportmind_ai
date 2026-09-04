@@ -202,13 +202,18 @@ export default function TennisModuleClient() {
 
     useEffect(() => {
         if (!user) return;
-        const q = query(collection(db, "tennis_matches"), where("userId", "==", user.uid), orderBy("date", "desc"));
+        // userId alone, sorted in memory. Ordering by date in the query needs a
+        // composite index, and a missing one fails the whole subscription with
+        // `failed-precondition` rather than degrading — index deployment is a
+        // separate `firebase deploy --only firestore` that a push never runs.
+        const q = query(collection(db, "tennis_matches"), where("userId", "==", user.uid));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const userMatches: TennisMatch[] = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
                 userMatches.push({ ...data, id: doc.id, date: (data.date as Timestamp).toDate() } as TennisMatch);
             });
+            userMatches.sort((a, b) => b.date.getTime() - a.date.getTime());
             setMatches(userMatches);
         });
         return () => unsubscribe();

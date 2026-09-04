@@ -66,6 +66,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { FootballInsightCard } from '@/components/insights/football-insight-card';
 import { useStreakStore } from '@/stores/streak-store';
 import { useAthleteSessions } from '@/hooks/use-athlete-sessions';
+import { visibleSports, hasSportRestriction } from '@/lib/sports';
 import { useFavorites } from '@/hooks/use-favorites';
 import { FavoriteStar } from '@/components/favorite-star';
 import { tierForStreak, nextTier, daysToNextTier } from '@/lib/streak-tiers';
@@ -76,13 +77,13 @@ import { useTranslation } from "@/hooks/use-translation";
 import { TranslationKey } from "@/lib/i18n";
 
 const sports = [
-    { name: "Gym", icon: Dumbbell, path: "/dashboard/gym" },
-    { name: "Football", icon: Trophy, path: "/dashboard/football" },
-    { name: "Tennis", icon: TennisBallIcon, path: "/dashboard/tennis" },
+    { name: "Gym", id: "gym", icon: Dumbbell, path: "/dashboard/gym" },
+    { name: "Football", id: "football", icon: Trophy, path: "/dashboard/football" },
+    { name: "Tennis", id: "tennis", icon: TennisBallIcon, path: "/dashboard/tennis" },
     // Not shipped yet: shown as inert "coming soon" cards, never navigable.
-    { name: "Basketball", icon: Dribbble, path: "/dashboard/basketball", comingSoon: true },
-    { name: "Boxing", icon: Shield, path: "/dashboard/boxing", comingSoon: true },
-    { name: "Swimming", icon: Waves, path: "/dashboard/swimming", comingSoon: true },
+    { name: "Basketball", id: "basketball", icon: Dribbble, path: "/dashboard/basketball", comingSoon: true },
+    { name: "Boxing", id: "boxing", icon: Shield, path: "/dashboard/boxing", comingSoon: true },
+    { name: "Swimming", id: "swimming", icon: Waves, path: "/dashboard/swimming", comingSoon: true },
 ];
 
 
@@ -935,6 +936,9 @@ export function InsightsGrid() {
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const { t } = useTranslation();
     const { sessions } = useAthleteSessions(user?.uid, 'all');
+    // An athlete who plays tennis alone was shown two empty football sections
+    // and a gym section they had never opted into.
+    const mySports = visibleSports(user);
 
     useEffect(() => {
         if (user && !isHydrated) {
@@ -945,16 +949,24 @@ export function InsightsGrid() {
     useEffect(() => {
         if (!user) return;
 
-        const footballQuery = query(collection(db, "football_matches"), where("userId", "==", user.uid), orderBy("date", "desc"));
-        const tennisQuery = query(collection(db, "tennis_matches"), where("userId", "==", user.uid), orderBy("date", "desc"));
+        // userId alone, sorted in memory. Ordering by date in the query needs a
+        // composite index, and a missing one fails the whole subscription with
+        // `failed-precondition` rather than degrading — index deployment is a
+        // separate `firebase deploy --only firestore` that a push never runs.
+        const footballQuery = query(collection(db, "football_matches"), where("userId", "==", user.uid));
+        const tennisQuery = query(collection(db, "tennis_matches"), where("userId", "==", user.uid));
 
         const unsubFootball = onSnapshot(footballQuery, (snapshot) => {
-            const matchesData: FootballMatch[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate() } as FootballMatch));
+            const matchesData: FootballMatch[] = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate() } as FootballMatch))
+                .sort((a, b) => b.date.getTime() - a.date.getTime());
             setFootballMatches(matchesData);
         });
 
         const unsubTennis = onSnapshot(tennisQuery, (snapshot) => {
-            const matchesData: TennisMatch[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate() } as TennisMatch));
+            const matchesData: TennisMatch[] = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data(), date: (doc.data().date as Timestamp).toDate() } as TennisMatch))
+                .sort((a, b) => b.date.getTime() - a.date.getTime());
             setTennisMatches(matchesData);
         });
 
@@ -1091,6 +1103,7 @@ export function InsightsGrid() {
                     </motion.div>
 
                     <motion.div variants={sectionVariants} initial="hidden" animate="visible" className="space-y-6">
+                        {mySports.includes('gym') && (
                         <motion.div variants={itemVariants}>
                             <SectionHeader
                                 icon={<Dumbbell className="h-6 w-6" />}
@@ -1104,7 +1117,9 @@ export function InsightsGrid() {
                                 <NextEventCard sportName={t('gym')} eventType="training" link="/dashboard/gym?tab=schedule" event={nextSessionFor('gym')} />
                             </motion.div>
                         </motion.div>
+                        )}
 
+                        {mySports.includes('tennis') && (
                         <motion.div variants={itemVariants}>
                             <SectionHeader
                                 icon={<TennisBallIcon className="h-6 w-6" />}
@@ -1123,7 +1138,9 @@ export function InsightsGrid() {
                                 </div>
                             </div>
                         </motion.div>
+                        )}
 
+                        {mySports.includes('football') && (
                         <motion.div variants={itemVariants}>
                             <SectionHeader
                                 icon={<Trophy className="h-6 w-6" />}
@@ -1188,6 +1205,7 @@ export function InsightsGrid() {
                                 </motion.div>
                             </motion.div>
                         </motion.div>
+                        )}
                     </motion.div>
                 </div>
 
@@ -1214,6 +1232,18 @@ export function DashboardClient({ initialView }: { initialView?: 'sports' | 'ins
     const handleCardClick = (path: string) => {
         router.push(path);
     };
+
+    /**
+     * Only the sports this athlete signed up for.
+     *
+     * Everyone used to get every card, including the three unreleased ones.
+     * Admins still see the lot, since they look at other people's setups.
+     */
+    const allowed = visibleSports(user);
+    const mySports = user?.role === 'admin'
+        ? sports
+        : sports.filter((sport) => (allowed as string[]).includes(sport.id));
+    const restricted = hasSportRestriction(user);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -1323,7 +1353,7 @@ export function DashboardClient({ initialView }: { initialView?: 'sports' | 'ins
                     <h2 className="text-lg font-semibold tracking-tight text-foreground">{t('sports')}</h2>
                 </div>
                 <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                    {sports.map((sport) => (
+                    {mySports.map((sport) => (
                         <motion.div
                             key={sport.name}
                             variants={itemVariants}
@@ -1369,6 +1399,24 @@ export function DashboardClient({ initialView }: { initialView?: 'sports' | 'ins
                         </motion.div>
                     ))}
                 </div>
+
+                {/* Adding a sport is not self-service: the athlete asks and an
+                    admin grants it from user management. Saying so beats a
+                    dashboard that silently lacks a sport they play. */}
+                {restricted && (
+                    <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-dashed border-border/70 px-4 py-3">
+                        <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <p className="text-sm font-medium">{t('addAnotherSport')}</p>
+                        <p className="text-sm text-muted-foreground">{t('addAnotherSportHint')}</p>
+                        <Link
+                            href="/dashboard/report-problem"
+                            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                        >
+                            {t('requestSport')}
+                            <ArrowRight className="h-4 w-4" />
+                        </Link>
+                    </div>
+                )}
             </motion.div>
         </div>
     );
