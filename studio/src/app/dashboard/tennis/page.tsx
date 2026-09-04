@@ -6,7 +6,7 @@ import { Suspense } from 'react';
 import TennisModuleClient from './client';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Swords } from 'lucide-react';
+import { ArrowLeft, CalendarClock } from 'lucide-react';
 import { useTranslation } from "@/hooks/use-translation";
 
 export default function TennisPage() {
@@ -31,8 +31,8 @@ export default function TennisPage() {
             sport itself, the page exists and nobody finds it. */}
         <Button asChild>
           <Link href="/dashboard/fixtures">
-            <Swords className="mr-2 h-4 w-4" />
-            {t('scheduleMatch')}
+            <CalendarClock className="mr-2 h-4 w-4" />
+            {t('schedule')}
           </Link>
         </Button>
       </div>

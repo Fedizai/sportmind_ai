@@ -40,7 +40,8 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Calendar as CalendarIcon, Bot, Sparkles, Send, Trophy, BrainCircuit, Star, Plus, CheckCircle, Trash2, Loader2, Bookmark, MessageSquare, Share2, Heart, BarChart2, Shield, Flame, Activity, CalendarDays, ClipboardList, Lightbulb, User as UserIcon, Clock, Repeat, Droplets, Bed, Check, Dumbbell, ShieldCheck, Zap, Edit, Target, Upload, Video, Lock, FileVideo, X } from "lucide-react";
+import Link from "next/link";
+import { Calendar as CalendarIcon, Bot, Sparkles, Send, Trophy, BrainCircuit, Star, Plus, CheckCircle, Trash2, Loader2, Bookmark, MessageSquare, Share2, Heart, BarChart2, Shield, Flame, Activity, CalendarDays, ClipboardList, Lightbulb, User as UserIcon, Clock, Repeat, Droplets, Bed, Check, Dumbbell, ShieldCheck, Zap, Edit, Target, Upload, Video, Lock, FileVideo, X, CalendarClock } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -94,17 +95,6 @@ const wizardSteps = [
     { step: 1, titleKey: 'matchDetails', fields: ['opponent', 'date', 'result'] },
     { step: 2, titleKey: 'yourStats', fields: ['position', 'minutesPlayed', 'goals', 'assists', 'motm'] },
     { step: 3, titleKey: 'yourFeedback', fields: ['stamina', 'notes'] }
-];
-
-/**
- * A fixture that has not been played has only the first step.
- *
- * Stats, result and how it felt are all unknowable before kick-off; walking
- * someone through two steps of them to schedule a match is asking for
- * invented data.
- */
-const fixtureSteps = [
-    { step: 1, titleKey: 'matchDetails', fields: ['opponent', 'date'] },
 ];
 
 const goalsChartConfig = {
@@ -194,12 +184,10 @@ export default function FootballModuleClient() {
     // refresh instead of living only in this component's memory.
     const {
         sessions: schedule,
-        addSession,
         toggleSession,
         removeSession,
     } = useAthleteSessions(user?.uid, 'football');
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-    const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
 
     const [goal, setGoal] = useState<string | null>("Improve my weak foot accuracy");
     const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
@@ -373,17 +361,6 @@ export default function FootballModuleClient() {
         goalForm.reset({ goal: goal || "" });
     }, [goal, goalForm]);
 
-    const addSessionForm = useForm<SessionInput>({
-        resolver: zodResolver(sessionSchema),
-        defaultValues: {
-            title: "",
-            type: "technical",
-            date: new Date(),
-            duration: 60,
-            notes: "",
-        }
-    });
-
     const handleUpdateSkill = (skillName: string, newValue: number[]) => {
         setSkillsData(prevSkills =>
             prevSkills.map(skill =>
@@ -401,21 +378,6 @@ export default function FootballModuleClient() {
     };
 
 
-    const handleAddSession = async (values: SessionInput) => {
-        try {
-            await addSession(values);
-            setIsAddSessionOpen(false);
-            addSessionForm.reset();
-            toast({
-                title: t('sessionAdded'),
-                description: t('sessionAddedDescription', { title: values.title }),
-            });
-        } catch (error) {
-            console.error('Could not save session:', error);
-            toast({ variant: 'destructive', title: t('sessionSaveFailed') });
-        }
-    }
-
     const handleDeleteSession = async (sessionId: string) => {
         try {
             await removeSession(sessionId);
@@ -427,7 +389,7 @@ export default function FootballModuleClient() {
             console.error('Could not remove session:', error);
             toast({ variant: 'destructive', title: t('sessionSaveFailed') });
         }
-    }
+    };
 
     const handleToggleSession = async (sessionId: string) => {
         try {
@@ -438,7 +400,6 @@ export default function FootballModuleClient() {
             toast({ variant: 'destructive', title: t('sessionSaveFailed') });
         }
     };
-
 
     const logMatchForm = useForm<FootballMatchInput>({
         resolver: zodResolver(footballMatchSchema),
@@ -489,14 +450,11 @@ export default function FootballModuleClient() {
         }
         setIsSubmitting(true);
         try {
-            // The played-only fields keep their form defaults even while hidden,
-            // so a fixture was stored as a 0-0 draw with 90 minutes and a
-            // stamina of 5 — a match report for a match nobody had played, which
-            // then counted toward the radar and the stamina chart.
-            const payload = values.status === 'upcoming'
-                ? { opponent: values.opponent, date: values.date, status: 'upcoming' as const }
-                : values;
-            await addDoc(collection(db, "football_matches"), { ...payload, userId: user.uid });
+            await addDoc(collection(db, "football_matches"), {
+                ...values,
+                status: 'completed' as const,
+                userId: user.uid,
+            });
             logMatchForm.reset();
             setIsLogDialogOpen(false);
             setCurrentStep(1);
@@ -526,8 +484,9 @@ export default function FootballModuleClient() {
         }
     }
 
-    const isFixture = logMatchForm.watch("status") === "upcoming";
-    const activeSteps = isFixture ? fixtureSteps : wizardSteps;
+    // One shape again: this dialog records a match that has been played.
+    // Scheduling one lives on /dashboard/fixtures.
+    const activeSteps = wizardSteps;
 
     const goToNextStep = async () => {
         const fieldsToValidate = activeSteps.find(s => s.step === currentStep)?.fields;
@@ -855,71 +814,15 @@ export default function FootballModuleClient() {
                                 <CardTitle>{t('trainingSchedule')}</CardTitle>
                                 <CardDescription>{t('trainingScheduleDescription')}</CardDescription>
                             </div>
-                            <Dialog open={isAddSessionOpen} onOpenChange={setIsAddSessionOpen}>
-                                <DialogTrigger asChild>
-                                    <Button><Plus className="mr-2 h-4 w-4" /> {t('addSession')}</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>{t('addSession')}</DialogTitle>
-                                        <DialogDescription>{t('addSessionDescription')}</DialogDescription>
-                                    </DialogHeader>
-                                    <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="space-y-4">
-                                        <div>
-                                            <Label htmlFor="title">{t('sessionName')}</Label>
-                                            <Input id="title" {...addSessionForm.register("title")} placeholder={t('sessionNamePlaceholder')} />
-                                            {addSessionForm.formState.errors.title && <p className="text-destructive text-xs mt-1">{addSessionForm.formState.errors.title.message}</p>}
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <Label>{t('sessionType')}</Label>
-                                                <Select onValueChange={(value) => addSessionForm.setValue("type", value as any)} defaultValue={addSessionForm.getValues("type")}>
-                                                    <SelectTrigger><SelectValue placeholder={t('sessionTypePlaceholder')} /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="technical">{t('technical')}</SelectItem>
-                                                        <SelectItem value="tactical">{t('tactical')}</SelectItem>
-                                                        <SelectItem value="physical">{t('physical')}</SelectItem>
-                                                        <SelectItem value="other">{t('other')}</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div>
-                                                <Label htmlFor="duration">{t('duration')} (mins)</Label>
-                                                <Input id="duration" type="number" {...addSessionForm.register("duration")} />
-                                                {addSessionForm.formState.errors.duration && <p className="text-destructive text-xs mt-1">{addSessionForm.formState.errors.duration.message}</p>}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <Label>{t('date')}</Label>
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !addSessionForm.watch("date") && "text-muted-foreground")}>
-                                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                                        {addSessionForm.watch("date") ? format(addSessionForm.watch("date"), "PPP") : <span>{t('pickADate')}</span>}
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0">
-                                                    <Calendar
-                                                        mode="single"
-                                                        selected={addSessionForm.watch("date")}
-                                                        onSelect={(date) => addSessionForm.setValue("date", date as Date)}
-                                                        initialFocus
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                            {addSessionForm.formState.errors.date && <p className="text-destructive text-xs mt-1">{addSessionForm.formState.errors.date.message}</p>}
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="notes">{t('notes')}</Label>
-                                            <Textarea id="notes" {...addSessionForm.register("notes")} placeholder="Add notes..." />
-                                        </div>
-                                        <DialogFooter>
-                                            <Button type="button" variant="ghost" onClick={() => setIsAddSessionOpen(false)}>{t('cancel')}</Button>
-                                            <Button type="submit">{t('saveSession')}</Button>
-                                        </DialogFooter>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
+                            {/* Planning happens in one place now. A dialog here and
+                                another on every other sport page meant five ways to
+                                schedule the same kind of thing. */}
+                            <Button asChild>
+                                <Link href="/dashboard/fixtures">
+                                    <CalendarClock className="mr-2 h-4 w-4" />
+                                    {t('schedule')}
+                                </Link>
+                            </Button>
                         </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="md:col-span-1">
@@ -1040,23 +943,9 @@ export default function FootballModuleClient() {
                                                     >
                                                         {currentStep === 1 && (
                                                             <div className="space-y-6">
-                                                                {/* Football could only record matches after the fact,
-                                                                    so a fixture could never be put in the diary. */}
-                                                                <FormField control={logMatchForm.control} name="status" render={({ field }) => (
-                                                                    <FormItem>
-                                                                        <FormLabel>{t('matchStatusLabel')}</FormLabel>
-                                                                        <Select onValueChange={field.onChange} value={field.value ?? 'completed'}>
-                                                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                                                            <SelectContent>
-                                                                                <SelectItem value="completed">{t('matchStatusCompleted')}</SelectItem>
-                                                                                <SelectItem value="upcoming">{t('matchStatusUpcoming')}</SelectItem>
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                    </FormItem>
-                                                                )} />
                                                                 <FormField control={logMatchForm.control} name="opponent" render={({ field }) => (<FormItem><FormLabel>{'Opponent'}</FormLabel><FormControl><Input placeholder={'Enter opponent name'} {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                                                <FormField control={logMatchForm.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>{t('dateOfMatch')}</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>{t('pickADate')}</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => (logMatchForm.watch("status") === "upcoming" ? date < new Date(new Date().setHours(0,0,0,0)) : date > new Date()) || date < new Date("1900-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                                                                {!isFixture && <FormField control={logMatchForm.control} name="result" render={({ field }) => (
+                                                                <FormField control={logMatchForm.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>{t('dateOfMatch')}</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>{t('pickADate')}</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                                                                <FormField control={logMatchForm.control} name="result" render={({ field }) => (
                                                                     <FormItem>
                                                                         <FormLabel>{t('finalResult')}</FormLabel>
                                                                         <div className="flex gap-2 pt-2">
@@ -1066,7 +955,7 @@ export default function FootballModuleClient() {
                                                                         </div>
                                                                         <FormMessage />
                                                                     </FormItem>
-                                                                )} />}
+                                                                )} />
                                                             </div>
                                                         )}
 

@@ -37,7 +37,8 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Calendar as CalendarIcon, Bot, Sparkles, Send, BrainCircuit, Star, Plus, CheckCircle, Trash2, Loader2, Bookmark, MessageSquare, Share2, Heart, BarChart2, Shield, Flame, Activity, CalendarDays, ClipboardList, Lightbulb, User as UserIcon, Clock, Repeat, Droplets, Bed, Check, Dumbbell, ShieldCheck, Zap, Edit, Target, Upload, Video, Lock, Play, Square, TimerReset, Film } from "lucide-react";
+import Link from "next/link";
+import { Calendar as CalendarIcon, Bot, Sparkles, Send, BrainCircuit, Star, Plus, CheckCircle, Trash2, Loader2, Bookmark, MessageSquare, Share2, Heart, BarChart2, Shield, Flame, Activity, CalendarDays, ClipboardList, Lightbulb, User as UserIcon, Clock, Repeat, Droplets, Bed, Check, Dumbbell, ShieldCheck, Zap, Edit, Target, Upload, Video, Lock, Play, Square, TimerReset, Film, CalendarClock } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -143,12 +144,10 @@ export default function TennisModuleClient() {
     // refresh instead of living only in this component's memory.
     const {
         sessions: schedule,
-        addSession,
         toggleSession,
         removeSession,
     } = useAthleteSessions(user?.uid, 'tennis');
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-    const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
 
     const [goal, setGoal] = useState<string | null>("Improve my first serve percentage");
     const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
@@ -177,32 +176,7 @@ export default function TennisModuleClient() {
         },
     });
 
-    const addSessionForm = useForm<SessionInput>({
-        resolver: zodResolver(sessionSchema),
-        defaultValues: {
-            title: "",
-            type: "technical",
-            date: new Date(),
-            duration: 60,
-            notes: "",
-        }
-      });
       
-    const handleAddSession = async (values: SessionInput) => {
-        try {
-            await addSession(values);
-            setIsAddSessionOpen(false);
-            addSessionForm.reset();
-            toast({
-                title: t('sessionAdded'),
-                description: t('sessionAddedDescription', { title: values.title }),
-            });
-        } catch (error) {
-            console.error('Could not save session:', error);
-            toast({ variant: 'destructive', title: t('sessionSaveFailed') });
-        }
-    }
-
     const handleDeleteSession = async (sessionId: string) => {
         try {
             await removeSession(sessionId);
@@ -214,7 +188,7 @@ export default function TennisModuleClient() {
             console.error('Could not remove session:', error);
             toast({ variant: 'destructive', title: t('sessionSaveFailed') });
         }
-    }
+    };
 
     const handleToggleSession = async (sessionId: string) => {
         try {
@@ -241,8 +215,6 @@ export default function TennisModuleClient() {
     }, [user]);
 
     /** The soonest fixture still ahead of us, for the "coming up" card. */
-    const isTennisFixture = matchForm.watch("status") === "upcoming";
-
     const nextTennisMatch = useMemo(
         () =>
             matches
@@ -258,18 +230,7 @@ export default function TennisModuleClient() {
         }
         setIsSubmitting(true);
         try {
-            // The played-only fields still hold their form defaults even when
-            // hidden, so a fixture would be stored with result "W" and go on to
-            // read as a win it had not played yet.
-            const payload = values.status === 'upcoming'
-                ? {
-                    opponent: values.opponent,
-                    date: values.date,
-                    status: 'upcoming' as const,
-                    addToTraining: false,
-                }
-                : values;
-            await saveTennisMatch(user.uid, payload);
+            await saveTennisMatch(user.uid, { ...values, status: 'completed' as const });
             matchForm.reset();
             setIsLogMatchOpen(false);
             toast({ title: t('matchLogged'), description: t('matchLoggedDescription', { opponent: values.opponent }) });
@@ -598,71 +559,15 @@ export default function TennisModuleClient() {
                           <CardTitle>{t('trainingSchedule')}</CardTitle>
                           <CardDescription>{t('trainingScheduleDescription')}</CardDescription>
                       </div>
-                      <Dialog open={isAddSessionOpen} onOpenChange={setIsAddSessionOpen}>
-                          <DialogTrigger asChild>
-                              <Button><Plus className="mr-2 h-4 w-4" /> {t('addSession')}</Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                              <DialogHeader>
-                                  <DialogTitle>{t('addSession')}</DialogTitle>
-                                  <DialogDescription>{t('addSessionDescription')}</DialogDescription>
-                              </DialogHeader>
-                              <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="space-y-4">
-                                  <div>
-                                      <Label htmlFor="title">{t('sessionName')}</Label>
-                                      <Input id="title" {...addSessionForm.register("title")} placeholder={t('sessionNamePlaceholder')} />
-                                      {addSessionForm.formState.errors.title && <p className="text-destructive text-xs mt-1">{addSessionForm.formState.errors.title.message}</p>}
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                          <Label>{t('sessionType')}</Label>
-                                          <Select onValueChange={(value) => addSessionForm.setValue("type", value as any)} defaultValue={addSessionForm.getValues("type")}>
-                                              <SelectTrigger><SelectValue placeholder={t('sessionTypePlaceholder')} /></SelectTrigger>
-                                              <SelectContent>
-                                                  <SelectItem value="technical">{t('technical')}</SelectItem>
-                                                  <SelectItem value="tactical">{t('tactical')}</SelectItem>
-                                                  <SelectItem value="physical">{t('physical')}</SelectItem>
-                                                  <SelectItem value="other">{t('other')}</SelectItem>
-                                              </SelectContent>
-                                          </Select>
-                                      </div>
-                                      <div>
-                                          <Label htmlFor="duration">{t('duration')} (mins)</Label>
-                                          <Input id="duration" type="number" {...addSessionForm.register("duration")} />
-                                          {addSessionForm.formState.errors.duration && <p className="text-destructive text-xs mt-1">{addSessionForm.formState.errors.duration.message}</p>}
-                                      </div>
-                                  </div>
-                                  <div>
-                                      <Label>{t('date')}</Label>
-                                      <Popover>
-                                          <PopoverTrigger asChild>
-                                              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !addSessionForm.watch("date") && "text-muted-foreground")}>
-                                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                                  {addSessionForm.watch("date") ? format(addSessionForm.watch("date"), "PPP") : <span>{t('pickADate')}</span>}
-                                              </Button>
-                                          </PopoverTrigger>
-                                          <PopoverContent className="w-auto p-0">
-                                              <Calendar
-                                                  mode="single"
-                                                  selected={addSessionForm.watch("date")}
-                                                  onSelect={(date) => addSessionForm.setValue("date", date as Date)}
-                                                  initialFocus
-                                              />
-                                          </PopoverContent>
-                                      </Popover>
-                                      {addSessionForm.formState.errors.date && <p className="text-destructive text-xs mt-1">{addSessionForm.formState.errors.date.message}</p>}
-                                  </div>
-                                  <div>
-                                      <Label htmlFor="notes">{t('notes')}</Label>
-                                      <Textarea id="notes" {...addSessionForm.register("notes")} placeholder={t('notesPlaceholder')} />
-                                  </div>
-                                  <DialogFooter>
-                                      <Button type="button" variant="ghost" onClick={() => setIsAddSessionOpen(false)}>{t('cancel')}</Button>
-                                      <Button type="submit">{t('saveSession')}</Button>
-                                  </DialogFooter>
-                              </form>
-                          </DialogContent>
-                      </Dialog>
+                      {/* Planning happens in one place now. A dialog here and another
+    on every other sport page meant five ways to schedule the
+    same kind of thing. */}
+                      <Button asChild>
+                          <Link href="/dashboard/fixtures">
+                              <CalendarClock className="mr-2 h-4 w-4" />
+                              {t('schedule')}
+                          </Link>
+                      </Button>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="md:col-span-1">
@@ -750,29 +655,7 @@ export default function TennisModuleClient() {
                             <DialogHeader><DialogTitle>{t('logNewMatch')}</DialogTitle></DialogHeader>
                             <Form {...matchForm}>
                                 <form onSubmit={matchForm.handleSubmit(handleLogMatchSubmit)} className="space-y-4">
-                                     <FormField
-                                            control={matchForm.control}
-                                            name="status"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>{t('matchStatusLabel')}</FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value ?? 'completed'}>
-                                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                                        <SelectContent>
-                                                            <SelectItem value="completed">{t('matchStatusCompleted')}</SelectItem>
-                                                            <SelectItem value="upcoming">{t('matchStatusUpcoming')}</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </FormItem>
-                                            )}
-                                        />
                                         <FormField control={matchForm.control} name="opponent" render={({ field }) => (<FormItem><FormLabel>{t('opponent')}</FormLabel><FormControl><Input placeholder={t('tennisOpponentPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                     {/* A match that has not been played has no score,
-                                         no result, no surface and no stat line. Asking
-                                         for them was not just noise: the score field
-                                         defaults to "" and was validated as required,
-                                         so a fixture could never be saved. */}
-                                     {!isTennisFixture && <>
                                      <FormField control={matchForm.control} name="score" render={({ field }) => (<FormItem><FormLabel>{t('finalScore')}</FormLabel><FormControl><Input placeholder={t('tennisScorePlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
                                      <div className="grid grid-cols-2 gap-4">
                                         <FormField control={matchForm.control} name="result" render={({ field }) => (<FormItem><FormLabel>{t('finalResult')}</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder={t('selectResult')} /></SelectTrigger></FormControl><SelectContent><SelectItem value="W">{t('win')}</SelectItem><SelectItem value="L">{t('loss')}</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
@@ -784,8 +667,7 @@ export default function TennisModuleClient() {
                                          <FormField control={matchForm.control} name="firstServePercent" render={({ field }) => (<FormItem><FormLabel>1st Serve %</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                          <FormField control={matchForm.control} name="breakPointsSaved" render={({ field }) => (<FormItem><FormLabel>Break Points Saved %</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                     </div>
-                                    </>}
-                                    <FormField control={matchForm.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>{t('dateOfMatch')}</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>{t('pickADate')}</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => (matchForm.watch("status") === "upcoming" ? date < new Date(new Date().setHours(0,0,0,0)) : date > new Date()) || date < new Date("1900-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                                    <FormField control={matchForm.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>{t('dateOfMatch')}</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? (format(field.value, "PPP")) : (<span>{t('pickADate')}</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                                     <DialogFooter>
                                         <Button type="submit" disabled={isSubmitting}>{isSubmitting ? t('saving') : t('saveMatch')}</Button>
                                     </DialogFooter>

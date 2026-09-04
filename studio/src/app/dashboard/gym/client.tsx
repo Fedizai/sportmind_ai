@@ -6,7 +6,8 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dumbbell, Utensils, Plus, Trash2, Loader2, Calendar as CalendarIcon, Target, Sparkles, CheckCircle, RefreshCw, Video, Upload, LineChart, BarChart2, CalendarDays, HeartPulse, Move, Eye, Camera, ImagePlus, Weight, FileImage, FileVideo, X, Lock, Maximize2 } from "lucide-react";
+import Link from "next/link";
+import { Dumbbell, Utensils, Plus, Trash2, Loader2, Calendar as CalendarIcon, Target, Sparkles, CheckCircle, RefreshCw, Video, Upload, LineChart, BarChart2, CalendarDays, HeartPulse, Move, Eye, Camera, ImagePlus, Weight, FileImage, FileVideo, X, Lock, Maximize2, CalendarClock } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { bodyParts, exercises as allExercises, OTHER_BODY_PART_IDS } from "@/lib/data";
 import Image from "next/image";
@@ -987,46 +988,8 @@ function GymPlanTabContent() {
 function GymScheduleTab() {
     const { toast } = useToast();
     const { user } = useUser();
-    const { sessions, addSession, toggleSession, removeSession } = useAthleteSessions(user?.uid, 'gym');
+    const { sessions, toggleSession, removeSession } = useAthleteSessions(user?.uid, 'gym');
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-    const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
-
-    const addSessionForm = useForm<SessionInput>({
-        resolver: zodResolver(sessionSchema),
-        defaultValues: {
-            title: "",
-            type: "strength",
-            date: new Date(),
-            duration: 60,
-            notes: "",
-        }
-    });
-
-    const handleAddSession = async (values: SessionInput) => {
-        try {
-            await addSession({
-                title: values.title,
-                type: values.type,
-                date: values.date,
-                duration: values.duration,
-                notes: values.notes,
-            });
-            setIsAddSessionOpen(false);
-            addSessionForm.reset();
-            toast({
-                title: "Session Added!",
-                description: `Session "${values.title}" has been added to your schedule.`,
-            });
-        } catch (error) {
-            // Saving is the point of the feature — a silent failure here is
-            // what made the old schedule look like it worked.
-            toast({
-                variant: "destructive",
-                title: "Could not save the session",
-                description: error instanceof Error ? error.message : String(error),
-            });
-        }
-    };
 
     const handleDeleteSession = async (sessionId: string) => {
         try {
@@ -1061,70 +1024,15 @@ function GymScheduleTab() {
                     <CardTitle>Training Schedule</CardTitle>
                     <CardDescription>Plan and track your sessions.</CardDescription>
                 </div>
-                <Dialog open={isAddSessionOpen} onOpenChange={setIsAddSessionOpen}>
-                    <DialogTrigger asChild>
-                        <Button><Plus className="mr-2 h-4 w-4" /> Add Session</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Add Session</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={addSessionForm.handleSubmit(handleAddSession)} className="space-y-4">
-                            <div>
-                                <Label htmlFor="title">Session Title</Label>
-                                <Input id="title" {...addSessionForm.register("title")} placeholder="e.g., Upper Body Strength" />
-                                {addSessionForm.formState.errors.title && <p className="text-destructive text-xs mt-1">{addSessionForm.formState.errors.title.message}</p>}
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <Label>Type</Label>
-                                    <Select onValueChange={(value) => addSessionForm.setValue("type", value as any)} defaultValue={addSessionForm.getValues("type")}>
-                                        <SelectTrigger><SelectValue/></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="strength">Strength</SelectItem>
-                                            <SelectItem value="cardio">Cardio</SelectItem>
-                                            <SelectItem value="flexibility">Flexibility</SelectItem>
-                                            <SelectItem value="other">Other</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div>
-                                    <Label htmlFor="duration">Duration (mins)</Label>
-                                    <Input id="duration" type="number" {...addSessionForm.register("duration")} />
-                                    {addSessionForm.formState.errors.duration && <p className="text-destructive text-xs mt-1">{addSessionForm.formState.errors.duration.message}</p>}
-                                </div>
-                            </div>
-                            <div>
-                                <Label>Date</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !addSessionForm.watch("date") && "text-muted-foreground")}>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {addSessionForm.watch("date") ? format(addSessionForm.watch("date"), "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                            mode="single"
-                                            selected={addSessionForm.watch("date")}
-                                            onSelect={(date) => addSessionForm.setValue("date", date as Date)}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                                {addSessionForm.formState.errors.date && <p className="text-destructive text-xs mt-1">{addSessionForm.formState.errors.date.message}</p>}
-                            </div>
-                            <div>
-                                <Label htmlFor="notes">Notes</Label>
-                                <Textarea id="notes" {...addSessionForm.register("notes")} placeholder="e.g., Focus on form, try to increase bench press weight." />
-                            </div>
-                            <DialogFooter>
-                                <Button type="button" variant="ghost" onClick={() => setIsAddSessionOpen(false)}>Cancel</Button>
-                                <Button type="submit">Save Session</Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                {/* Planning happens in one place now. A dialog here and another
+    on every other sport page meant five ways to schedule the
+    same kind of thing. */}
+                <Button asChild>
+                    <Link href="/dashboard/fixtures">
+                        <CalendarClock className="mr-2 h-4 w-4" />
+                        Schedule
+                    </Link>
+                </Button>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-1">

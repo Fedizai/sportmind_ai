@@ -1,4 +1,4 @@
-import { BarChart2, BrainCircuit, ClipboardList, ScanLine, Swords, Target, type LucideIcon } from 'lucide-react';
+import { BarChart2, BrainCircuit, CalendarClock, ClipboardList, ScanLine, Target, type LucideIcon } from 'lucide-react';
 
 import type { TranslationKey } from '@/lib/i18n';
 
@@ -25,7 +25,7 @@ export const TOOLS: Tool[] = [
     id: 'fixtures',
     titleKey: 'fixturesCardTitle',
     subtitleKey: 'fixturesCardSubtitle',
-    icon: Swords,
+    icon: CalendarClock,
     path: '/dashboard/fixtures',
   },
   {

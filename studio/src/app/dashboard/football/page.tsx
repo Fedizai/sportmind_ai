@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Trophy, ArrowLeft, Swords } from "lucide-react";
+import { Trophy, ArrowLeft, CalendarClock } from "lucide-react";
 import FootballModuleClient from "./client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -30,8 +30,8 @@ export default function FootballPage() {
             sport itself, the page exists and nobody finds it. */}
         <Button asChild>
           <Link href="/dashboard/fixtures">
-            <Swords className="mr-2 h-4 w-4" />
-            {t('scheduleMatch')}
+            <CalendarClock className="mr-2 h-4 w-4" />
+            {t('schedule')}
           </Link>
         </Button>
       </div>
