@@ -167,3 +167,13 @@ export const MEASUREMENT_ANCHORS: Partial<Record<MeasurementId, MeasurementAncho
   hips: { x: 116, y: 300, side: 'left' },
   thighs: { x: 166, y: 392, side: 'right' },
 };
+
+
+/** A muscle zone's score, shown in the report panel beside the avatar. */
+export interface ZoneScore {
+  zone: BodyZoneId;
+  score: number;
+}
+
+/** Which base mesh the athlete picked. "neutral" is fitted on the male GLB. */
+export type BodySex = 'male' | 'female' | 'neutral';

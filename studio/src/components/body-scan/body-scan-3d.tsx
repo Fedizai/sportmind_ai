@@ -3,16 +3,15 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ScanLine, Move3d, Loader2 } from 'lucide-react';
+import { ScanLine, Move3d, Loader2, RotateCcw } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import type { RingDatum } from './three/measure-rings';
-import type { ZoneScore } from './three/body-model';
-import type { ScanView3D } from './three/scene';
-import type { BodyMorph } from './three/human-geometry';
+import type { ZoneScore } from '@/lib/body-zones';
+import type { ScanView3D } from './three/glb-scene';
+import type { FitRegion, ModelSex, MorphWeights } from '@/lib/body-fit';
 import { usePrimaryColor } from './three/use-primary-color';
 
-const Scene = dynamic(() => import('./three/scene'), {
+const Scene = dynamic(() => import('./three/glb-scene'), {
   ssr: false,
   loading: () => (
     <div className="flex h-full w-full items-center justify-center">
@@ -27,13 +26,22 @@ export interface BodyScan3DLabels {
   side: string;
   back: string;
   hint: string;
+  reset?: string;
 }
 
 interface BodyScan3DProps {
-  rings: RingDatum[];
+  /** kept for API compatibility; the rings are drawn in the 3D scene now */
+  rings?: unknown[];
   /** accepted for API compatibility; muscle zones are shown in the report panel */
   zoneScores?: ZoneScore[];
-  morph?: BodyMorph;
+  /** Which shared GLB to fit — one male mesh and one female mesh, never a per-user file. */
+  modelSex: ModelSex;
+  /** Fitted morph influences, 0..1, at most one of each opposing pair. */
+  weights: MorphWeights;
+  /** Fitted stature, so framing and rings follow the body's size. */
+  bodyHeightCm?: number;
+  /** Fitted circumferences, so each ring is sized to the body it measures. */
+  circumferences?: Partial<Record<FitRegion, number>>;
   scanDate?: string;
   labels: BodyScan3DLabels;
   defaultView?: ScanView3D;
@@ -42,8 +50,12 @@ interface BodyScan3DProps {
 
 const VIEWS: ScanView3D[] = ['front', 'side', 'back'];
 
-export function BodyScan3D({ rings, morph, scanDate, labels, defaultView = 'front', className }: BodyScan3DProps) {
+export function BodyScan3D({
+  modelSex, weights, bodyHeightCm, circumferences, scanDate, labels,
+  defaultView = 'front', className,
+}: BodyScan3DProps) {
   const [view, setView] = useState<ScanView3D>(defaultView);
+  const [resetToken, setResetToken] = useState(0);
   const prefersReducedMotion = useReducedMotion();
   const animate = !prefersReducedMotion;
   const primary = usePrimaryColor();
@@ -102,7 +114,16 @@ export function BodyScan3D({ rings, morph, scanDate, labels, defaultView = 'fron
 
       {/* 3D canvas */}
       <div className="absolute inset-0">
-        <Scene view={view} color={primary} rings={rings} morph={morph} animate={animate} />
+        <Scene
+          modelSex={modelSex}
+          weights={weights}
+          view={view}
+          color={primary}
+          animate={animate}
+          bodyHeightCm={bodyHeightCm}
+          circumferences={circumferences}
+          resetToken={resetToken}
+        />
       </div>
 
       {/* drag hint */}
@@ -139,6 +160,16 @@ export function BodyScan3D({ rings, morph, scanDate, labels, defaultView = 'fron
               </button>
             );
           })}
+          <span aria-hidden className="mx-0.5 my-1 w-px bg-primary/20" />
+          <button
+            type="button"
+            onClick={() => setResetToken((n) => n + 1)}
+            title={labels.reset ?? 'Reset view'}
+            aria-label={labels.reset ?? 'Reset view'}
+            className="rounded-md px-2.5 py-1.5 text-white/60 transition-colors hover:text-white"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </div>

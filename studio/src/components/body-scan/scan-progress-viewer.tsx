@@ -1,0 +1,150 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { format } from 'date-fns';
+
+import { BodyScan3D, type BodyScan3DLabels } from './body-scan-3d';
+import { fitBodyMeasurements, FIT_REGIONS, type FitRegion } from '@/lib/body-fit';
+import { toBodyMeasurements, modelSexFor } from '@/lib/body-fit/from-scan';
+import type { BodyScan } from '@/hooks/use-body-scans';
+import { MEASUREMENT_FIELDS, type MeasurementId, type MeasurementUnitSystem } from '@/lib/body-zones';
+import { cn } from '@/lib/utils';
+
+/** Which tape field feeds which fitted loop, for the side-by-side readout. */
+const FIELD_FOR: Record<FitRegion, MeasurementId> = {
+    chest: 'chest', waist: 'waist', hips: 'hips', upperArm: 'arms', thigh: 'thighs',
+};
+
+interface Props {
+    scans: BodyScan[];
+    labels: BodyScan3DLabels;
+    unitLabel: (kind: 'length' | 'mass', system: MeasurementUnitSystem) => string;
+    t: (key: any, vars?: Record<string, string | number>) => string;
+}
+
+/**
+ * Every scan the athlete has taken, one body at a time.
+ *
+ * Selecting another date does not reload the GLB — the fitted influences
+ * change and the mesh eases from one body to the next, so a waist coming down
+ * over three months reads as a single continuous change rather than a jump
+ * between two unrelated pictures. Nothing is overwritten: each scan is its own
+ * document and this only ever reads them.
+ */
+export function ScanProgressViewer({ scans, labels, unitLabel, t }: Props) {
+    const ordered = useMemo(
+        () => scans.slice().sort((a, b) => (a.createdAt?.seconds ?? 0) - (b.createdAt?.seconds ?? 0)),
+        [scans],
+    );
+    const [index, setIndex] = useState(ordered.length - 1);
+    const scan = ordered[Math.min(index, ordered.length - 1)];
+
+    const fit = useMemo(() => {
+        if (!scan) return null;
+        return fitBodyMeasurements({
+            modelSex: modelSexFor(scan.sex),
+            ...toBodyMeasurements(scan.measurements, scan.unitSystem),
+        });
+    }, [scan]);
+
+    /** Change since the previous scan, so progress is visible without a chart. */
+    const previous = index > 0 ? ordered[index - 1] : undefined;
+
+    if (!scan || !fit) return null;
+
+    const when = scan.createdAt?.seconds
+        ? format(new Date(scan.createdAt.seconds * 1000), 'd MMM yyyy')
+        : '';
+
+    return (
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+            <BodyScan3D
+                modelSex={modelSexFor(scan.sex)}
+                weights={fit.weights}
+                bodyHeightCm={fit.predicted.heightCm}
+                circumferences={fit.predicted}
+                scanDate={when}
+                labels={labels}
+                className="h-[460px] sm:h-[560px]"
+            />
+
+            <div className="space-y-4">
+                {/* The measurements sit beside the body rather than as twenty
+                    labels floating over it. */}
+                <div className="rounded-xl border border-border/60 p-3">
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                        {t('bodyScanMeasurements')}
+                    </p>
+                    <dl className="space-y-1.5 text-sm">
+                        {MEASUREMENT_FIELDS.map((field) => {
+                            const value = scan.measurements[field.id];
+                            if (value === undefined) return null;
+                            const before = previous?.measurements[field.id];
+                            const delta = before === undefined ? undefined : value - before;
+                            return (
+                                <div key={field.id} className="flex items-baseline justify-between gap-2">
+                                    <dt className="text-muted-foreground">{t(field.labelKey)}</dt>
+                                    <dd className="flex items-baseline gap-1.5 tabular-nums">
+                                        <span className="font-medium">
+                                            {value} {unitLabel(field.kind, scan.unitSystem)}
+                                        </span>
+                                        {delta !== undefined && Math.abs(delta) >= 0.1 && (
+                                            <span className={cn(
+                                                'text-[11px] font-semibold',
+                                                delta < 0 ? 'text-success' : 'text-warning',
+                                            )}>
+                                                {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                                            </span>
+                                        )}
+                                    </dd>
+                                </div>
+                            );
+                        })}
+                    </dl>
+                    {scan.estimated && (
+                        <p className="mt-2 text-[11px] text-muted-foreground">{t('bodyScanEstimateNote')}</p>
+                    )}
+                </div>
+
+                {/* Anything the mesh could not reach is said plainly rather
+                    than shown as a body that quietly does not match. */}
+                {fit.outOfRange.length > 0 && (
+                    <p className="rounded-lg border border-warning/30 bg-warning/5 p-2.5 text-[11px] leading-relaxed text-muted-foreground">
+                        {t('bodyScanOutOfRange', {
+                            fields: fit.outOfRange
+                                .map((r) => t(MEASUREMENT_FIELDS.find((f) => f.id === FIELD_FOR[r])!.labelKey))
+                                .join(', '),
+                        })}
+                    </p>
+                )}
+
+                {ordered.length > 1 && (
+                    <div>
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                            {t('bodyScanHistory')}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                            {ordered.map((s, i) => (
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => setIndex(i)}
+                                    className={cn(
+                                        'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
+                                        i === index
+                                            ? 'border-primary bg-primary/10 text-primary'
+                                            : 'border-border/60 text-muted-foreground hover:text-foreground',
+                                    )}
+                                >
+                                    {s.createdAt?.seconds
+                                        ? format(new Date(s.createdAt.seconds * 1000), 'd MMM')
+                                        : `#${i + 1}`}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}

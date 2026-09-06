@@ -40,66 +40,22 @@ import { useBodyScans } from "@/hooks/use-body-scans";
 import { analyzeBody } from "@/ai/flows/body-analysis-flow";
 import { cn } from "@/lib/utils";
 import type { TranslationKey } from "@/lib/i18n";
-import {
-  MEASUREMENT_FIELDS,
-  MEASUREMENT_ANCHORS,
-  ZONES,
-  unitLabel,
-  zoneColor,
-  zoneStatusKey,
-  type MeasurementId,
-  type Measurements,
-  type MeasurementUnitSystem,
-} from "@/lib/body-zones";
+import { MEASUREMENT_FIELDS, MEASUREMENT_ANCHORS, ZONES, unitLabel, zoneColor, zoneStatusKey, type MeasurementId, type Measurements, type MeasurementUnitSystem, type ZoneScore, type BodySex } from "@/lib/body-zones";
 import { BodyWireframe, type LeaderEntry, type ScanView } from "@/components/body-scan/body-wireframe";
 import { GeneticReportCard } from "@/components/body-scan/genetic-report-card";
 import { BodyScan3D, type BodyScan3DLabels } from "@/components/body-scan/body-scan-3d";
+import { ScanProgressViewer } from "@/components/body-scan/scan-progress-viewer";
 import { PhysiqueReport } from "@/components/body-scan/physique-report";
-import { BODY_RINGS } from "@/components/body-scan/three/human-landmarks";
-import type { RingDatum } from "@/components/body-scan/three/measure-rings";
-import type { ZoneScore } from "@/components/body-scan/three/body-model";
-import type { BodySex } from "@/components/body-scan/three/human-geometry";
-import { deriveMorph } from "@/lib/body-morph";
+
+
+
+import { fitBodyMeasurements } from "@/lib/body-fit";
+import { toBodyMeasurements, modelSexFor } from "@/lib/body-fit/from-scan";
 
 type TFn = (k: TranslationKey) => string;
 
-function ringLabel(id: RingDatum["id"], t: TFn): string {
-  switch (id) {
-    case "shoulders":
-      return t("zoneShoulders");
-    case "chest":
-      return t("zoneChest");
-    case "waist":
-      return t("measureWaist");
-    case "hips":
-      return t("measureHips");
-    default:
-      return id;
-  }
-}
 
 /** Builds the holographic measuring bands from whatever measurements exist. */
-function buildRings(
-  values: Partial<Record<MeasurementId, number>>,
-  system: MeasurementUnitSystem,
-  t: TFn
-): RingDatum[] {
-  const out: RingDatum[] = [];
-  for (const ring of BODY_RINGS) {
-    const v = values[ring.source];
-    if (v === undefined || Number.isNaN(v) || v <= 0) continue;
-    out.push({
-      id: ring.id,
-      label: ringLabel(ring.id, t),
-      valueText: `${v} ${unitLabel("length", system)}`,
-      y: ring.y,
-      radiusX: ring.radiusX,
-      radiusZ: ring.radiusZ,
-      side: ring.side,
-    });
-  }
-  return out;
-}
 
 function scan3dLabels(t: TFn): BodyScan3DLabels {
   return {
@@ -108,6 +64,7 @@ function scan3dLabels(t: TFn): BodyScan3DLabels {
     side: t("sideView"),
     back: t("backView"),
     hint: t("bodyScanDragHint"),
+    reset: t("bodyScanResetView"),
   };
 }
 
@@ -195,7 +152,18 @@ export function BodyScanClient() {
         frontPhotoUri: frontPhoto,
         sidePhotoUri: sidePhoto,
       });
-      await addScan({ unitSystem, sport, sex, measurements: parsed, analysis });
+      // Only data. The body is rebuilt from the shared GLB client-side.
+      const saveFit = fitBodyMeasurements({
+        modelSex: modelSexFor(sex),
+        ...toBodyMeasurements(parsed, unitSystem),
+      });
+      await addScan({
+        unitSystem, sport, sex,
+        measurements: parsed,
+        morphWeights: saveFit.weights as Record<string, number>,
+        estimated: inputMode === "photos",
+        analysis,
+      });
       toast({ title: t("bodyScanSaved") });
       setTab("results");
     } catch (err) {
@@ -234,8 +202,20 @@ export function BodyScanClient() {
     return out;
   }, [form]);
 
-  const liveRings = useMemo(() => buildRings(parsedForm, unitSystem, t), [parsedForm, unitSystem, t]);
-  const liveMorph = useMemo(() => deriveMorph(parsedForm, unitSystem, sex), [parsedForm, unitSystem, sex]);
+  /**
+   * The fit, recomputed only when a measurement actually changes.
+   *
+   * Everything costly — slicing the mesh, hunting landmarks, measuring hull
+   * perimeters — happened offline when the calibration was built, so this is
+   * table lookup and interpolation and is cheap enough to run on a keystroke.
+   */
+  const liveFit = useMemo(
+    () => fitBodyMeasurements({
+      modelSex: modelSexFor(sex),
+      ...toBodyMeasurements(parsedForm, unitSystem),
+    }),
+    [parsedForm, unitSystem, sex],
+  );
   const scanLabels = useMemo(() => scan3dLabels(t), [t]);
 
   const progressData = useMemo(() => {
@@ -312,8 +292,10 @@ export function BodyScanClient() {
       {tab === "scan" && (
         <div className="grid items-stretch gap-6 lg:grid-cols-2">
           <BodyScan3D
-            rings={liveRings}
-            morph={liveMorph}
+            modelSex={modelSexFor(sex)}
+            weights={liveFit.weights}
+            bodyHeightCm={liveFit.predicted.heightCm}
+            circumferences={liveFit.predicted}
             labels={scanLabels}
             className="h-[480px] sm:h-[560px] lg:h-auto lg:min-h-[600px]"
           />
@@ -460,6 +442,12 @@ export function BodyScanClient() {
           <EmptyState text={t("bodyScanNoResults")} onCta={() => setTab("scan")} ctaLabel={t("bodyScanTabScan")} />
         ))}
 
+      {tab === "progress" && scans.length > 0 && (
+        <div className="mb-6">
+          <ScanProgressViewer scans={scans} labels={scan3dLabels(t)} unitLabel={unitLabel} t={t as any} />
+        </div>
+      )}
+
       {tab === "progress" &&
         (progressData.length > 0 ? (
           <Card>
@@ -590,15 +578,21 @@ function ResultsView({
   scanDate: string;
 }) {
   const analysis = latest.analysis!;
-  const rings = buildRings(latest.measurements, latest.unitSystem, t);
-  const morph = deriveMorph(latest.measurements, latest.unitSystem, latest.sex ?? "male");
+  // Rebuilt from the stored measurements against the shared GLB — no per-user
+  // model file is ever written.
+  const fit = fitBodyMeasurements({
+    modelSex: modelSexFor(latest.sex),
+    ...toBodyMeasurements(latest.measurements, latest.unitSystem),
+  });
   const scanLabels = scan3dLabels(t);
   return (
     <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
       <div className="space-y-4">
         <BodyScan3D
-          rings={rings}
-          morph={morph}
+          modelSex={modelSexFor(latest.sex)}
+          weights={fit.weights}
+          bodyHeightCm={fit.predicted.heightCm}
+          circumferences={fit.predicted}
           zoneScores={analysis.zoneScores as ZoneScore[]}
           scanDate={scanDate}
           labels={scanLabels}

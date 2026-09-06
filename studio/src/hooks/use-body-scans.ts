@@ -37,6 +37,17 @@ export interface BodyScan {
   sport?: string;
   sex?: BodySexInput;
   measurements: Partial<Measurements>;
+  /**
+   * The fitted morph influences, stored alongside the measurements.
+   *
+   * No per-user `.glb` is ever written: there is one shared male mesh and one
+   * shared female mesh, and the body is reconstructed client-side from these
+   * numbers. Keeping them means an old scan still renders exactly as it did
+   * even after the fitting engine is improved.
+   */
+  morphWeights?: Record<string, number>;
+  /** Whether the measurements came from photo estimation rather than a tape. */
+  estimated?: boolean;
   analysis: ScanAnalysis | null;
   createdAt: Timestamp;
 }
@@ -46,6 +57,8 @@ export interface BodyScanInput {
   sport?: string;
   sex?: BodySexInput;
   measurements: Partial<Measurements>;
+  morphWeights?: Record<string, number>;
+  estimated?: boolean;
   analysis: ScanAnalysis | null;
 }
 
