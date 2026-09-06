@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "deploy": "npm run build && gh-pages -d out"
+    "dev": "node scripts/stage-mediapipe.mjs && next dev",
+    "build": "node scripts/stage-mediapipe.mjs && next build",
+    "deploy": "npm run build && gh-pages -d out",
+    "stage:mediapipe": "node scripts/stage-mediapipe.mjs"
   },
   "dependencies": {
     "@genkit-ai/googleai": "latest",
@@ -63,7 +64,8 @@
     "three": "^0.169.0",
     "use-debounce": "^10.0.0",
     "zod": "^3.22.4",
-    "zustand": "^4.5.2"
+    "zustand": "^4.5.2",
+    "@mediapipe/tasks-vision": "0.10.8"
   },
   "devDependencies": {
     "@types/node": "^20",

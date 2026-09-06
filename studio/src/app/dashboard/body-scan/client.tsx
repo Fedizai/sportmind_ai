@@ -45,6 +45,8 @@ import { BodyWireframe, type LeaderEntry, type ScanView } from "@/components/bod
 import { GeneticReportCard } from "@/components/body-scan/genetic-report-card";
 import { BodyScan3D, type BodyScan3DLabels } from "@/components/body-scan/body-scan-3d";
 import { ScanProgressViewer } from "@/components/body-scan/scan-progress-viewer";
+import { PhotoScanFlow } from "@/components/body-scan/photo-scan-flow";
+import type { ReviewedMeasurements } from "@/components/body-scan/measurement-review";
 import { PhysiqueReport } from "@/components/body-scan/physique-report";
 
 
@@ -102,23 +104,22 @@ export function BodyScanClient() {
   const [form, setForm] = useState<Record<MeasurementId, string>>(emptyForm);
   const [sport, setSport] = useState("general");
   const [sex, setSex] = useState<BodySex>("male");
-  const [frontPhoto, setFrontPhoto] = useState<string | undefined>();
-  const [sidePhoto, setSidePhoto] = useState<string | undefined>();
+  /**
+   * Provenance for the numbers currently in the form.
+   *
+   * Everything is `manual` until the photo pipeline fills a field in, and a
+   * value the athlete then edits on the review screen is `user_corrected`.
+   */
+  const [photoProvenance, setPhotoProvenance] = useState<{
+    sources: Record<string, "manual" | "photo_estimated" | "user_corrected">;
+    confidence: Record<string, number>;
+  } | null>(null);
   const [view, setView] = useState<ScanView>("front");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const setField = (id: MeasurementId, value: string) => setForm((f) => ({ ...f, [id]: value }));
 
-  const readPhoto = (file: File | null, set: (uri?: string) => void) => {
-    if (!file) {
-      set(undefined);
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => set(reader.result as string);
-    reader.readAsDataURL(file);
-  };
 
   const handleAnalyze = async () => {
     if (!user) return;
@@ -130,15 +131,10 @@ export function BodyScanClient() {
       if (!isNaN(num) && num > 0) parsed[field.id] = num;
     }
     const hasAllMeasurements = MEASUREMENT_FIELDS.every((f) => parsed[f.id] !== undefined);
-    const hasPhoto = Boolean(frontPhoto || sidePhoto);
-
-    // Either path is valid: full measurements OR at least one photo.
-    if (inputMode === "measurements" && !hasAllMeasurements && !hasPhoto) {
+    // Both paths end here with the same numbers. Photo mode has already
+    // written its confirmed values into the form.
+    if (!hasAllMeasurements) {
       toast({ variant: "destructive", title: t("bodyScanIncomplete") });
-      return;
-    }
-    if (inputMode === "photos" && !hasPhoto && !hasAllMeasurements) {
-      toast({ variant: "destructive", title: t("bodyScanNeedInput") });
       return;
     }
 
@@ -149,8 +145,6 @@ export function BodyScanClient() {
         unitSystem,
         sport,
         measurements: parsed,
-        frontPhotoUri: frontPhoto,
-        sidePhotoUri: sidePhoto,
       });
       // Only data. The body is rebuilt from the shared GLB client-side.
       const saveFit = fitBodyMeasurements({
@@ -161,7 +155,11 @@ export function BodyScanClient() {
         unitSystem, sport, sex,
         measurements: parsed,
         morphWeights: saveFit.weights as Record<string, number>,
-        estimated: inputMode === "photos",
+        estimated: Object.values(photoProvenance?.sources ?? {}).some((v) => v === "photo_estimated"),
+        measurementSources: photoProvenance?.sources ?? Object.fromEntries(
+          MEASUREMENT_FIELDS.map((f) => [f.id, "manual" as const]),
+        ),
+        measurementConfidence: photoProvenance?.confidence,
         analysis,
       });
       toast({ title: t("bodyScanSaved") });
@@ -209,6 +207,50 @@ export function BodyScanClient() {
    * perimeters — happened offline when the calibration was built, so this is
    * table lookup and interpolation and is cheap enough to run on a keystroke.
    */
+  /**
+   * Photo mode is only offered once height and weight are in.
+   *
+   * Height is the pipeline's only metric reference — every circumference is
+   * scaled by it — and weight feeds the body-composition prior. Neither is
+   * estimated from the photographs, so neither can be skipped.
+   */
+  const photoHeightCm = useMemo(() => {
+    const raw = parseFloat(form.height);
+    if (!Number.isFinite(raw) || raw <= 0) return 0;
+    return unitSystem === "imperial" ? raw * 2.54 : raw;
+  }, [form.height, unitSystem]);
+  const photoReady = photoHeightCm > 0 && parseFloat(form.weight) > 0;
+
+  /**
+   * The review screen's output is the same shape manual entry produces, so
+   * both paths meet at one `BodyMeasurements` and one fitting engine.
+   */
+  const handlePhotoMeasured = async (reviewed: ReviewedMeasurements) => {
+    const next = { ...form };
+    const toDisplay = (cm: number) => (unitSystem === "imperial" ? cm / 2.54 : cm);
+    next.chest = toDisplay(reviewed.values.chest).toFixed(1);
+    next.waist = toDisplay(reviewed.values.waist).toFixed(1);
+    next.hips = toDisplay(reviewed.values.hips).toFixed(1);
+    next.arms = toDisplay(reviewed.values.upperArm).toFixed(1);
+    next.thighs = toDisplay(reviewed.values.thigh).toFixed(1);
+    setForm(next);
+    setPhotoProvenance({
+      sources: {
+        height: "manual", weight: "manual",
+        chest: reviewed.sources.chest, waist: reviewed.sources.waist,
+        hips: reviewed.sources.hips, arms: reviewed.sources.upperArm,
+        thighs: reviewed.sources.thigh,
+      },
+      confidence: {
+        chest: reviewed.confidence.chest, waist: reviewed.confidence.waist,
+        hips: reviewed.confidence.hips, arms: reviewed.confidence.upperArm,
+        thighs: reviewed.confidence.thigh,
+      },
+    });
+    setInputMode("measurements");
+    toast({ title: t("bodyScanPhotoMeasured") });
+  };
+
   const liveFit = useMemo(
     () => fitBodyMeasurements({
       modelSex: modelSexFor(sex),
@@ -388,27 +430,26 @@ export function BodyScanClient() {
                 </Select>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>{t("bodyScanPhotos")}</Label>
-                  {inputMode === "measurements" && (
-                    <span className="text-xs text-muted-foreground">{t("bodyScanOptional")}</span>
+              {/*
+                Photo mode measures geometrically on this device. It needs an
+                exact height to scale the silhouette and a weight for the
+                body-composition prior; neither is guessed from the images.
+              */}
+              {inputMode === "photos" && (
+                <div className="space-y-3">
+                  {photoReady ? (
+                    <PhotoScanFlow
+                      heightCm={photoHeightCm}
+                      onComplete={handlePhotoMeasured}
+                      onCancel={() => setInputMode("measurements")}
+                    />
+                  ) : (
+                    <p className="rounded-lg border border-dashed border-border/70 p-3 text-xs text-muted-foreground">
+                      {t("bodyScanNeedHeightWeight")}
+                    </p>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">{t("bodyScanPhotosHint")}</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <PhotoInput
-                    label={t("bodyScanFrontPhoto")}
-                    preview={frontPhoto}
-                    onChange={(file) => readPhoto(file, setFrontPhoto)}
-                  />
-                  <PhotoInput
-                    label={t("bodyScanSidePhoto")}
-                    preview={sidePhoto}
-                    onChange={(file) => readPhoto(file, setSidePhoto)}
-                  />
-                </div>
-              </div>
+              )}
 
               <Button className="w-full" onClick={handleAnalyze} disabled={isAnalyzing}>
                 {isAnalyzing ? (
@@ -513,36 +554,6 @@ function Header({ t }: { t: (k: TranslationKey) => string }) {
       </h1>
       <p className="text-muted-foreground">{t("bodyScanSubtitle")}</p>
     </div>
-  );
-}
-
-function PhotoInput({
-  label,
-  preview,
-  onChange,
-}: {
-  label: string;
-  preview?: string;
-  onChange: (file: File | null) => void;
-}) {
-  return (
-    <label className="group relative flex aspect-[3/4] cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-border bg-background/50 text-center transition-colors hover:border-primary/50 dark:border-white/10 dark:bg-white/[0.03]">
-      {preview ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt={label} className="absolute inset-0 h-full w-full object-cover" />
-      ) : (
-        <>
-          <Upload className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
-          <span className="px-2 text-xs text-muted-foreground">{label}</span>
-        </>
-      )}
-      <input
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)}
-      />
-    </label>
   );
 }
 

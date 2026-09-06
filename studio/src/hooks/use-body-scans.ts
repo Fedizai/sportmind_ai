@@ -48,6 +48,17 @@ export interface BodyScan {
   morphWeights?: Record<string, number>;
   /** Whether the measurements came from photo estimation rather than a tape. */
   estimated?: boolean;
+  /**
+   * Where each stored number came from, per measurement.
+   *
+   * A tape reading and a photo estimate are not the same evidence, and a value
+   * the athlete corrected on the review screen is a third thing again. Keeping
+   * them apart means a later validation run can tell which numbers the
+   * pipeline actually produced.
+   */
+  measurementSources?: Partial<Record<string, 'manual' | 'photo_estimated' | 'user_corrected'>>;
+  /** Per-measurement confidence, 0..1, for anything photo-derived. */
+  measurementConfidence?: Partial<Record<string, number>>;
   analysis: ScanAnalysis | null;
   createdAt: Timestamp;
 }
@@ -59,6 +70,8 @@ export interface BodyScanInput {
   measurements: Partial<Measurements>;
   morphWeights?: Record<string, number>;
   estimated?: boolean;
+  measurementSources?: Partial<Record<string, 'manual' | 'photo_estimated' | 'user_corrected'>>;
+  measurementConfidence?: Partial<Record<string, number>>;
   analysis: ScanAnalysis | null;
 }
 

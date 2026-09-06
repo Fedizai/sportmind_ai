@@ -43,3 +43,8 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+# Staged from node_modules at build time; not committed.
+public/mediapipe/
+# generated validation build
+.photo-validation/

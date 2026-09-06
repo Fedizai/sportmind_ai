@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "outDir": "../../.photo-validation",
+    "module": "commonjs",
+    "target": "es2020",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "baseUrl": "../..",
+    "paths": { "@/*": ["src/*"] }
+  },
+  "include": ["../../src/lib/body-photo/**/*.ts", "../../src/lib/body-fit/**/*.ts"]
+}
