@@ -7,21 +7,13 @@
  * hoped for.
  */
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
 import { loadBody } from './measure.mjs';
 import { findLandmarks, measureAt } from './measure-all.mjs';
 
-const require = createRequire(import.meta.url);
-const OUT = fileURLToPath(new URL('../../.photo-validation', import.meta.url));
-const Module = require('node:module');
-const resolve = Module._resolveFilename;
-Module._resolveFilename = function (request, ...rest) {
-  if (request.startsWith('@/')) request = `${OUT}/${request.slice(2)}`;
-  return resolve.call(this, request, ...rest);
-};
-const { fitBodyMeasurements } = require(`${OUT}/lib/body-fit/index.js`);
+import { fitBodyMeasurements, calibratedFrame } from './engine.mjs';
 
-const DIR = fileURLToPath(new URL('../../../datasets/glb-body', import.meta.url));
+// The built meshes — the ones the scanner downloads.
+const DIR = fileURLToPath(new URL('../../public/models', import.meta.url));
 const AXIS = [-1, -0.5, 0, 0.5, 1];
 const hW = (v) => (v < 0 ? { Height_Short: -v } : v > 0 ? { Height_Tall: v } : {});
 const K = { chest: 'chestCm', waist: 'waistCm', hips: 'hipsCm', upperArm: 'upperArmCm', thigh: 'thighCm' };
@@ -57,7 +49,7 @@ for (const sex of ['male', 'female']) {
     let previous = null;
     for (const asked of SWEEPS[region]) {
       const fit = fitBodyMeasurements({ modelSex: sex, heightCm, weightKg: 75, [FIELD[region]]: asked });
-      const got = measureAt(bodies[sex], fit.weights, frames[sex][frameFor(fit.weights)])[K[region]];
+      const got = measureAt(bodies[sex], fit.weights, calibratedFrame(sex, fit.weights))[K[region]];
       const pair = Object.entries(fit.weights)
         .filter(([k]) => k.toLowerCase().startsWith(region.toLowerCase().replace('upperarm', 'upperarm')))
         .map(([k, v]) => `${k.split('_')[1]}=${v.toFixed(2)}`).join(' ') || '-';

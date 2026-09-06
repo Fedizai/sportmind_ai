@@ -1,10 +1,12 @@
 import calibration from './calibration.json';
+import { bellyProgram, bellyStage, BELLY_MAX } from './abdomen';
 import {
     FIT_REGIONS, type BodyMeasurements, type FitRegion, type FitResult,
     type ModelSex, type MorphName, type MorphWeights,
 } from './types';
 
 export * from './types';
+export { bellyProgram, bellyStage, BELLY_MAX } from './abdomen';
 
 /**
  * Turning tape measurements into morph influences.
@@ -54,7 +56,13 @@ const capsFor = (sex: ModelSex, region: FitRegion): { lo: number; hi: number } =
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
-/** Region → the opposing pair it drives. Only one member is ever non-zero. */
+/**
+ * Region → the opposing pair it drives. Only one member is ever non-zero.
+ *
+ * The waist's `high` is a placeholder: growing the abdomen goes through
+ * `bellyProgram`, which drives seven targets at once. Shrinking it is still
+ * `Waist_Small`, which is a perfectly good waist narrower.
+ */
 const REGION_MORPHS: Record<FitRegion, { low: MorphName; high: MorphName }> = {
     chest: { low: 'Chest_Small', high: 'Chest_Large' },
     waist: { low: 'Waist_Small', high: 'Waist_Large' },
@@ -345,10 +353,12 @@ export function fitBodyMeasurements(input: FitInput): FitResult {
 
         /**
          * Hips and thigh move each other — Hips_Large adds 3.5 cm to the thigh
-         * — so a single pass leaves both wrong. The measured couplings are
-         * small, so three passes settle it.
+         * — so a single pass leaves both wrong. Three passes settled it while
+         * the waist could only move 6 cm; an abdomen that can move 180 leaves a
+         * much larger residual to pass around, and a fully measured male at a
+         * 200 cm waist was still 5 cm out on the third pass.
          */
-        for (let pass = 0; pass < 3; pass++) {
+        for (let pass = 0; pass < 6; pass++) {
             unreached.length = 0;
             for (const region of driven) {
                 const target = targets[region]!;
@@ -392,7 +402,19 @@ export function fitBodyMeasurements(input: FitInput): FitResult {
     const wLo = weightAxis[0];
     const wHi = weightAxis[weightAxis.length - 1];
     let best = solve(prior);
-    if (driven.length > 0) {
+    /**
+     * Overall fullness is only worth moving when there is a reason to move it.
+     *
+     * The scan exists so a saturated region can recruit body fullness to close
+     * a gap it cannot close alone. With the abdomen able to reach 200 cm on its
+     * own there is usually no such gap, and the scan was then using
+     * `BodyWeight_High` to shave the last centimetre off a waist residual —
+     * which took the hips of an athlete who had entered nothing but a waist
+     * from 100 cm to 149. It runs when a weight was actually given, or when the
+     * straightforward answer leaves something out of reach.
+     */
+    const explore = (input.weightKg ?? 0) > 0 || best.unreached.length > 0;
+    if (driven.length > 0 && explore) {
         const step = (wHi - wLo) / 24;
         for (let w = wLo; w <= wHi + 1e-9; w += step) {
             const candidate = solve(clamp(w, wLo, wHi));
@@ -424,6 +446,12 @@ export function fitBodyMeasurements(input: FitInput): FitResult {
     for (const region of FIT_REGIONS) {
         const { low, high } = REGION_MORPHS[region];
         const cap = capsFor(sex, region);
+        if (region === 'waist' && regionWeight.waist > 0.001) {
+            // The abdomen, not a wider waist: seven targets on the schedule the
+            // meshes were authored for.
+            Object.assign(weights, bellyProgram(Math.min(regionWeight.waist, BELLY_MAX)));
+            continue;
+        }
         setPair(low, high, regionWeight[region], regionWeight[region] < 0 ? cap.lo : cap.hi);
     }
 
@@ -449,6 +477,7 @@ export function fitBodyMeasurements(input: FitInput): FitResult {
     predicted.heightCm = heights[hi.i] + (heights[hi.j] - heights[hi.i]) * hi.t;
 
     const outOfRange = unreached.slice();
+    const belly = Math.max(0, Math.min(BELLY_MAX, regionWeight.waist));
 
     const residuals: Partial<Record<FitRegion, number>> = {};
     for (const region of FIT_REGIONS) {
@@ -458,7 +487,7 @@ export function fitBodyMeasurements(input: FitInput): FitResult {
         }
     }
 
-    return { weights, predicted, residuals, outOfRange };
+    return { weights, predicted, residuals, outOfRange, belly, bellyStage: bellyStage(belly) };
 }
 
 /**

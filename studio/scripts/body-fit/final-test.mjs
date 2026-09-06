@@ -3,29 +3,20 @@ import { createRequire } from 'node:module';
 import { loadBody } from './measure.mjs';
 import { findLandmarks, measureAt } from './measure-all.mjs';
 const require = createRequire(import.meta.url);
-const OUT = fileURLToPath(new URL('../../.photo-validation', import.meta.url));
-// tsc emits `require('@/lib/...')` from the path alias, which Node cannot
-// resolve; point it at the compiled tree so this runs the shipped modules.
-const Module = require('node:module');
-const resolveFilename = Module._resolveFilename;
-Module._resolveFilename = function (request, ...rest) {
-  if (request.startsWith('@/')) request = `${OUT}/${request.slice(2)}`;
-  return resolveFilename.call(this, request, ...rest);
-};
-const { fitBodyMeasurements } = require(`${OUT}/lib/body-fit/index.js`);
+const { fitBodyMeasurements, calibratedFrame, OUT } = await import('./engine.mjs');
 
+// The built meshes — the ones the scanner downloads. `datasets/glb-body` is the
+// pristine 20-target source and no longer describes what the app shows.
 // fileURLToPath, not URL.pathname: the repo lives under a directory with a
 // space in its name, which percent-encodes into a path that does not exist.
-const DIR = fileURLToPath(new URL('../../../datasets/glb-body', import.meta.url));
+const DIR = fileURLToPath(new URL('../../public/models', import.meta.url));
 const bodies = { male: loadBody(`${DIR}/sportmind-male.glb`), female: loadBody(`${DIR}/sportmind-female.glb`) };
 const AXIS = [-1,-0.5,0,0.5,1];
 const hW = (v)=> v<0?{Height_Short:-v}:v>0?{Height_Tall:v}:{};
 const FRAMES = { male: AXIS.map(h=>findLandmarks(bodies.male, hW(h), 'male')), female: AXIS.map(h=>findLandmarks(bodies.female, hW(h), 'female')) };
-const measureFitted = (sex, w) => {
-  const h = (w.Height_Tall ?? 0) - (w.Height_Short ?? 0);
-  let i=0,b=Infinity; AXIS.forEach((a,k)=>{const d=Math.abs(a-h); if(d<b){b=d;i=k;}});
-  return measureAt(bodies[sex], w, FRAMES[sex][i]);
-};
+// The exact plane the calibration would have used at this stature. Snapping to
+// the nearest sampled frame reads a very large abdomen 8 cm out on its own.
+const measureFitted = (sex, w) => measureAt(bodies[sex], w, calibratedFrame(sex, w));
 
 const P = [
   ['short + slim',                { modelSex:'male',   heightCm:163, weightKg:56,  chestCm:88,  waistCm:70,  hipsCm:86,  upperArmCm:29, thighCm:50 }],
@@ -51,6 +42,10 @@ function capsOf(sex) {
   const pair = { chest:['Chest_Small','Chest_Large'], waist:['Waist_Small','Waist_Large'],
     hips:['Hips_Small','Hips_Large'], upperArm:['UpperArm_Small','UpperArm_Large'], thigh:['Thigh_Small','Thigh_Large'] };
   for (const [r,[lo,hi]] of Object.entries(pair)) { out[lo]=t.caps[r].lo; out[hi]=t.caps[r].hi; }
+  // The abdomen targets are driven by the program, so their ceiling is the
+  // influence the program itself reaches at its last stop.
+  const top = require(`${OUT}/lib/body-fit/abdomen-program.json`);
+  for (const name of top.morphs) out[name] = top.program[name][top.program[name].length - 1];
   return out;
 }
 

@@ -19,7 +19,7 @@ export interface BodyMeasurements {
 /** Which GLB the profile is fitted against. */
 export type ModelSex = 'male' | 'female';
 
-/** The 20 targets authored into both meshes, spelled exactly as the GLBs name them. */
+/** The 27 targets in both meshes, spelled exactly as the GLBs name them. */
 export const MORPH_NAMES = [
     'BodyWeight_Low', 'BodyWeight_High',
     'Muscularity_Low', 'Muscularity_High',
@@ -31,6 +31,15 @@ export const MORPH_NAMES = [
     'Thigh_Small', 'Thigh_Large',
     'ShoulderWidth_Narrow', 'ShoulderWidth_Wide',
     'Calf_Small', 'Calf_Large',
+    /**
+     * The abdomen system, written into the meshes by
+     * scripts/body-fit/build-glb.mjs. Seven targets rather than one because a
+     * belly grows forward, sideways, downward and around the flanks by
+     * different amounts, and `Waist_Large` only ever did sideways.
+     */
+    'AbdomenWidth_Large', 'AbdomenDepth_Large',
+    'UpperAbdomen_Large', 'LowerAbdomen_Large',
+    'Flanks_Large', 'BellyProjection_Large', 'LowerBellyDrop_Large',
 ] as const;
 
 export type MorphName = (typeof MORPH_NAMES)[number];
@@ -49,4 +58,8 @@ export interface FitResult {
     residuals: Partial<Record<FitRegion, number>>;
     /** Requested values the mesh cannot reach even at full deflection. */
     outOfRange: FitRegion[];
+    /** How far along the abdomen program the fit sits, 0 to BELLY_MAX. */
+    belly: number;
+    /** What that amount is called: flat, full, large, very large, extreme. */
+    bellyStage: string;
 }

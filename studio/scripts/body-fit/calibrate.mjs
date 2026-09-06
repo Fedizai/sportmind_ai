@@ -2,10 +2,20 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { loadBody } from './measure.mjs';
 import { findLandmarks, measureAt, usableCap, GEOMETRY_CAP, SAFETY } from './measure-all.mjs';
+import { bellyProgram, PROGRAM_MAX } from './abdomen-morphs.mjs';
 
-// fileURLToPath, not URL.pathname: the repo lives under a directory with a
-// space in its name, which percent-encodes into a path that does not exist.
-const DIR = fileURLToPath(new URL('../../../datasets/glb-body', import.meta.url));
+/**
+ * The *built* meshes, not the delivered ones.
+ *
+ * `datasets/glb-body` is the pristine 20-target source; the abdomen system is
+ * written into `public/models` by scripts/body-fit/build-glb.mjs, and those are
+ * the files the scanner downloads. Calibrating against the source would produce
+ * a table describing a body the app never shows.
+ *
+ * fileURLToPath, not URL.pathname: the repo lives under a directory with a
+ * space in its name, which percent-encodes into a path that does not exist.
+ */
+const DIR = fileURLToPath(new URL('../../public/models', import.meta.url));
 
 const HEIGHT_AXIS = [-1, -0.5, 0, 0.5, 1];
 const MID = HEIGHT_AXIS.indexOf(0);
@@ -21,7 +31,20 @@ const KEYS = ['chestCm', 'waistCm', 'hipsCm', 'upperArmCm', 'thighCm'];
 
 const hW = (v) => (v < 0 ? { Height_Short: -v } : v > 0 ? { Height_Tall: v } : {});
 const wW = (v) => (v < 0 ? { BodyWeight_Low: -v } : v > 0 ? { BodyWeight_High: v } : {});
-const rW = (r, v) => (v < 0 ? { [REGIONS[r].lo]: -v } : v > 0 ? { [REGIONS[r].hi]: v } : {});
+/**
+ * A region's influences at signed amount `v`.
+ *
+ * The waist is the exception, and the point of the whole exercise: growing it
+ * is not one target at a higher number but the seven-target abdomen program,
+ * which shifts from an even swelling to a forward-and-downward one as it goes.
+ * Shrinking it is still `Waist_Small`, which is a perfectly good waist
+ * narrower.
+ */
+const rW = (r, v) => {
+    if (v === 0) return {};
+    if (r === 'waist' && v > 0) return bellyProgram(v);
+    return v < 0 ? { [REGIONS[r].lo]: -v } : { [REGIONS[r].hi]: v };
+};
 const r1 = (n) => Math.round(n * 10) / 10;
 const r3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -85,6 +108,24 @@ for (const [sex, file] of [['male', 'sportmind-male.glb'], ['female', 'sportmind
         );
         caps[region] = { lo: r3(capOf(spec.lo)), hi: r3(capOf(spec.hi)) };
     }
+    /**
+     * The belly's own limit is the top of its program, not a morph's fold point.
+     *
+     * The program is authored to stay clear of the arm and to keep the apron
+     * inside the range where it does not fold, so what is left to check is that
+     * the rig can still read the waist and that it is still growing — the same
+     * test every other region gets, walked along the program instead of along
+     * one influence.
+     */
+    caps.waist.hi = (() => {
+        let last = 0, previous = M({}).waistCm;
+        for (let t = 0.1; t <= PROGRAM_MAX + 1e-9; t += 0.1) {
+            const v = M(bellyProgram(t)).waistCm;
+            if (!Number.isFinite(v) || v < previous - 0.05) break;
+            previous = v; last = t;
+        }
+        return r3(last);
+    })();
     /**
      * Body composition is limited by what stays measurable, not just by what
      * stays sound.

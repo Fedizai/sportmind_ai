@@ -1,4 +1,6 @@
 import { loadBody, deform, heightOf, sliceY, hullPerimeter, clustersByX } from './measure.mjs';
+import { trunkMask, sliceTrunk } from './abdomen-profile.mjs';
+import { bellyProgram, ABDOMEN_MORPHS, PROGRAM_MAX } from './abdomen-morphs.mjs';
 
 /**
  * The X gap that separates one body part from another, per measurement.
@@ -57,12 +59,26 @@ function parts(body, pos, y, gap) {
       const half = pts.filter(([x]) => x > 0.004);
       return half.length >= 8 ? cm(half) : undefined;
     })(),
+    /** The trunk alone, by vertex membership rather than by gap. */
+    trunk: (() => {
+      const t = sliceTrunk(body, pos, y, body.trunk ?? (body.trunk = trunkMask(body)));
+      return t.length >= 8 ? cm(t) : undefined;
+    })(),
   };
 }
 
 const PICK = {
   chest: (p) => (p.n >= 3 ? p.torso : undefined),
-  waist: (p) => (p.n >= 3 ? p.torso : undefined),
+  /**
+   * The waist is read off the trunk itself, not off a cluster.
+   *
+   * Cluster separation asks the mesh to leave a 2 cm gap between the belly and
+   * the forearm, and a 190 cm waist does not: the loop then spans from one
+   * wrist to the other. Which vertices are trunk is decided once, on the
+   * neutral mesh, so a vertex that starts on the abdomen at 14 cm out and ends
+   * up at 33 cm is still abdomen and still counted.
+   */
+  waist: (p) => p.trunk,
   hips: (p) => p.pelvis,
   upperArm: (p) => p.arm,
   thigh: (p) => p.leg,
@@ -85,7 +101,7 @@ const BANDS = {
   // cluster swallows them — that read a 100 cm chest as 148 cm.
   chest: { lo: 0.68, hi: 0.740, mode: 'max', probes: ['Chest_Small', 'Chest_Large', 'BodyWeight_Low', 'BodyWeight_High'] },
   // Natural waist: the narrowest torso level between ribs and pelvis.
-  waist: { lo: 0.575, hi: 0.665, mode: 'min', probes: ['Waist_Small', 'Waist_Large', 'BodyWeight_Low', 'BodyWeight_High'] },
+  waist: { lo: 0.575, hi: 0.665, mode: 'min', probes: ['Waist_Small', 'BodyWeight_Low', 'BodyWeight_High', ...ABDOMEN_MORPHS] },
   // Widest level of the seat, where the legs have merged into one section.
   hips: { lo: 0.465, hi: 0.545, mode: 'max', probes: ['Hips_Small', 'Hips_Large', 'BodyWeight_Low', 'BodyWeight_High'] },
   // Mid upper-arm. The diagonal A-pose arm puts this just below the shoulder,
@@ -107,14 +123,34 @@ const BANDS = {
  * neighbours — see scripts/body-fit/tmp/caps.mjs in the commit that introduced
  * this. Landmarks are chosen to keep working across the whole of it.
  */
+/**
+ * The abdomen targets are not limited by the mesh.
+ *
+ * Six of the seven displace the surface radially outward from the trunk axis,
+ * which cannot fold: every section stays star-shaped about the axis and no
+ * vertex changes height. Driven alone they are sound past influence 6. What
+ * limits them is the arm — the A-pose forearm passes 42 cm from the centreline
+ * at the navel — and that limit is already built into the geometry, level by
+ * level, by scripts/body-fit/abdomen-morphs.mjs. The one exception is the
+ * apron, the only target that moves a vertex downward, which starts to fold
+ * its own surface at 1.5 and is scheduled to stop at 1.25.
+ */
+const ABDOMEN_CAP = {
+  AbdomenWidth_Large: 6, AbdomenDepth_Large: 6, UpperAbdomen_Large: 2.5,
+  LowerAbdomen_Large: 6, Flanks_Large: 6, BellyProjection_Large: 6,
+  LowerBellyDrop_Large: 1.4,
+};
+
 export const GEOMETRY_CAP = {
   male: {
     Chest_Small: 1, Chest_Large: 1.5, Waist_Small: 4.25, Waist_Large: 8,
+    ...ABDOMEN_CAP,
     Hips_Small: 6.5, Hips_Large: 6, UpperArm_Small: 2, UpperArm_Large: 4.5,
     Thigh_Small: 4.25, Thigh_Large: 6.25, BodyWeight_Low: 3.25, BodyWeight_High: 3,
   },
   female: {
     Chest_Small: 1.75, Chest_Large: 1.25, Waist_Small: 3.25, Waist_Large: 7.25,
+    ...ABDOMEN_CAP,
     Hips_Small: 4.75, Hips_Large: 5.25, UpperArm_Small: 1.5, UpperArm_Large: 3.5,
     Thigh_Small: 3.25, Thigh_Large: 4.75, BodyWeight_Low: 1.5, BodyWeight_High: 3.25,
   },

@@ -21,12 +21,26 @@ const S = {
     upperArm: { en: 'Upper arm', fr: 'Bras' },
     thigh: { en: 'Thigh', fr: 'Cuisse' },
     limit: { en: 'at this model’s limit', fr: 'limite du modèle' },
+    abdomen: { en: 'Abdomen', fr: 'Abdomen' },
+    abdomenNote: {
+        en: 'built from seven abdominal morphs — width, depth, upper and lower belly, flanks, forward projection and overhang',
+        fr: 'construit à partir de sept morphs abdominaux — largeur, profondeur, haut et bas du ventre, flancs, projection avant et tablier',
+    },
     fromWeight: { en: 'from your weight', fr: 'd’après ton poids' },
     limitNote: {
         en: 'The model cannot reach the values marked above on this frame — the avatar shows the closest body it can build, not the number you entered.',
         fr: "Le modèle ne peut pas atteindre les valeurs marquées ci-dessus sur cette morphologie — l'avatar montre le corps le plus proche possible, pas le chiffre saisi.",
     },
 } as const;
+
+/** The stage names the abdomen program returns, in the athlete's language. */
+const STAGE: Record<string, { en: string; fr: string }> = {
+    flat: { en: 'flat', fr: 'plat' },
+    full: { en: 'full', fr: 'marqué' },
+    large: { en: 'large', fr: 'large' },
+    'very large': { en: 'very large', fr: 'très large' },
+    extreme: { en: 'extreme', fr: 'extrême' },
+};
 
 const LABEL: Record<FitRegion, keyof typeof S> = {
     chest: 'chest', waist: 'waist', hips: 'hips', upperArm: 'upperArm', thigh: 'thigh',
@@ -124,6 +138,16 @@ export function FitReport({
                     })}
                 </tbody>
             </table>
+
+            {fit.belly > 0.25 && (
+                <p className="mt-2 border-t border-border/40 pt-2 text-[11px] leading-relaxed text-muted-foreground">
+                    <span className="font-semibold text-foreground">
+                        {tr(S.abdomen)}: {tr(STAGE[fit.bellyStage] ?? { en: fit.bellyStage, fr: fit.bellyStage })}
+                    </span>
+                    {' — '}
+                    {tr(S.abdomenNote)}
+                </p>
+            )}
 
             {anyLimited && (
                 <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">

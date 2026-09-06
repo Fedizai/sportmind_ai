@@ -7,21 +7,13 @@
  * reach has to be reported rather than quietly clamped.
  */
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
 import { loadBody } from './measure.mjs';
 import { findLandmarks, measureAt } from './measure-all.mjs';
 
-const require = createRequire(import.meta.url);
-const OUT = fileURLToPath(new URL('../../.photo-validation', import.meta.url));
-const Module = require('node:module');
-const resolve = Module._resolveFilename;
-Module._resolveFilename = function (r, ...rest) {
-  if (r.startsWith('@/')) r = `${OUT}/${r.slice(2)}`;
-  return resolve.call(this, r, ...rest);
-};
-const { fitBodyMeasurements, impliedCircumferences } = require(`${OUT}/lib/body-fit/index.js`);
+import { fitBodyMeasurements, impliedCircumferences, calibratedFrame } from './engine.mjs';
 
-const DIR = fileURLToPath(new URL('../../../datasets/glb-body', import.meta.url));
+// The built meshes — the ones the scanner downloads.
+const DIR = fileURLToPath(new URL('../../public/models', import.meta.url));
 const AXIS = [-1,-0.5,0,0.5,1];
 const hW = (v)=> v<0?{Height_Short:-v}:v>0?{Height_Tall:v}:{};
 const K = { chest:'chestCm', waist:'waistCm', hips:'hipsCm', upperArm:'upperArmCm', thigh:'thighCm' };
@@ -42,7 +34,7 @@ for (const [sex, heightCm] of [['male',178],['female',165]]) {
   for (const kg of [75, 100, 120, 150, 180]) {
     const fit = fitBodyMeasurements({ modelSex: sex, heightCm, weightKg: kg });
     const want = impliedCircumferences(sex, heightCm, kg);
-    const got = measureAt(bodies[sex], fit.weights, frames[sex][frameFor(fit.weights)]);
+    const got = measureAt(bodies[sex], fit.weights, calibratedFrame(sex, fit.weights));
     const bmi = kg / Math.pow(heightCm/100, 2);
     R.forEach((r, i) => {
       const g = got[K[r]];

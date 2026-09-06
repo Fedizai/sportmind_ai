@@ -92,6 +92,13 @@ const FRAGMENT = /* glsl */ `
   }
 `;
 
+/**
+ * A sanity bound, well above anything the calibration emits — the largest cap
+ * in the table is 6.8. It exists so a bad number cannot turn the avatar inside
+ * out, not to limit the fit.
+ */
+const MAX_INFLUENCE = 8;
+
 interface GlbBodyProps {
     modelSex: ModelSex;
     weights: MorphWeights;
@@ -187,7 +194,19 @@ export function GlbBody({ modelSex, weights, color, animate = true, wireframe = 
         for (const [name, value] of Object.entries(weights)) {
             const index = mesh.morphTargetDictionary[name];
             if (index === undefined || !value) continue;
-            next[index] = Math.max(0, Math.min(1, value));
+            /**
+             * Not clamped to 1.
+             *
+             * It used to be, and that one line threw away everything the
+             * fitter had worked out: the calibration drives `Waist_Large` to
+             * 6.8 and `Hips_Large` to 5.1 because the meshes stay sound that
+             * far, the offline rig measured the bodies that produces, and the
+             * viewer then rendered every one of them at influence 1. A 150 kg
+             * athlete was being fitted correctly and drawn as an average one.
+             * Morph influences are a linear combination; three has never
+             * required them to be a fraction.
+             */
+            next[index] = Math.max(0, Math.min(MAX_INFLUENCE, value));
         }
         target.current = next;
     }, [mesh, weights]);
