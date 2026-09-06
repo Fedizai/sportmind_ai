@@ -43,10 +43,20 @@ function parts(body, pos, y, gap) {
     // requiring three clusters keeps it measurable when a heavy build merges
     // the torso with the arm on one side only.
     arm: outer && outer.length >= 8 && outer[0][0] > 0.02 ? cm(outer) : undefined,
-    // Below the crotch nothing but legs is in the slice, and a thigh is only
-    // measurable where the slice cleanly yields two of them: a fragmented
-    // section reads ~40 cm for a 57 cm thigh.
-    leg: gs.length === 2 && outer.length >= 8 ? cm(outer) : undefined,
+    /**
+     * One thigh, taken as everything on the athlete's left of the centreline.
+     *
+     * Clustering on gaps only works while the legs are apart. Enlarge them and
+     * they touch, the runs merge or shatter, and the measurement disappeared
+     * entirely past about 1.5 — which capped the thigh at 60 cm while the mesh
+     * itself stays sound out to 6. Two thighs in contact meet at the
+     * centreline, so a half-plane cut separates them whether they touch or not,
+     * and the range opens up to 42–87 cm.
+     */
+    leg: (() => {
+      const half = pts.filter(([x]) => x > 0.004);
+      return half.length >= 8 ? cm(half) : undefined;
+    })(),
   };
 }
 
@@ -82,11 +92,68 @@ const BANDS = {
   // which is also where the targets act: at 0.68 the pair moved the loop by
   // 0.2 cm, at 0.74 by 4.9 cm.
   upperArm: { lo: 0.705, hi: 0.742, mode: 'max', probes: ['UpperArm_Small', 'UpperArm_Large', 'BodyWeight_Low', 'BodyWeight_High'] },
-  // Upper thigh, below both the crotch and the hands.
-  thigh: { lo: 0.420, hi: 0.470, mode: 'max', probes: ['Thigh_Small', 'Thigh_Large', 'BodyWeight_Low', 'BodyWeight_High'] },
+  // Upper thigh. Located from the crotch rather than by taking the widest
+  // level in a band: measuring one half-plane makes higher slices score bigger
+  // because they take in the seat, so "widest" walked the landmark up into the
+  // glute and a 57 cm thigh read 62.
+  thigh: { lo: 0.420, hi: 0.470, mode: 'crotch', probes: ['Thigh_Small', 'Thigh_Large', 'BodyWeight_Low', 'BodyWeight_High'] },
 };
 
-export function findLandmarks(body, frameWeights = {}) {
+/**
+ * How far past 1.0 each target may be driven before the surface folds.
+ *
+ * Measured per target on each mesh by walking the influence up until a face
+ * normal flips, a triangle collapses, or an edge stretches past 2.5x its
+ * neighbours — see scripts/body-fit/tmp/caps.mjs in the commit that introduced
+ * this. Landmarks are chosen to keep working across the whole of it.
+ */
+export const GEOMETRY_CAP = {
+  male: {
+    Chest_Small: 1, Chest_Large: 1.5, Waist_Small: 4.25, Waist_Large: 8,
+    Hips_Small: 6.5, Hips_Large: 6, UpperArm_Small: 2, UpperArm_Large: 4.5,
+    Thigh_Small: 4.25, Thigh_Large: 6.25, BodyWeight_Low: 3.25, BodyWeight_High: 3,
+  },
+  female: {
+    Chest_Small: 1.75, Chest_Large: 1.25, Waist_Small: 3.25, Waist_Large: 7.25,
+    Hips_Small: 4.75, Hips_Large: 5.25, UpperArm_Small: 1.5, UpperArm_Large: 3.5,
+    Thigh_Small: 3.25, Thigh_Large: 4.75, BodyWeight_Low: 1.5, BodyWeight_High: 3.25,
+  },
+};
+
+/**
+ * Kept below the measured fold point, because the caps were found one target
+ * at a time and a fitted body drives several at once.
+ */
+export const SAFETY = 0.85;
+
+/**
+ * How far a target can be driven and still be *verified*.
+ *
+ * Geometry is only half the question: a mesh can stay perfectly sound while the
+ * measurement rig loses track of it — enlarged thighs meet at the centreline,
+ * a thick arm touches the ribs. Anything the rig cannot read cannot be shown to
+ * match what the athlete typed, so the usable limit is the point where the
+ * reading is still finite and still moving the right way.
+ */
+export function usableCap(body, target, measurementKey, landmarks, geometryCap) {
+  const base = measureAt(body, {}, landmarks)[measurementKey];
+  if (!Number.isFinite(base)) return 0;
+  const sign = /_Large$/.test(target) ? 1 : -1;
+  let last = 0;
+  let previous = base;
+  for (let w = 0.25; w <= geometryCap + 1e-9; w += 0.25) {
+    const value = measureAt(body, { [target]: w }, landmarks)[measurementKey];
+    if (!Number.isFinite(value)) break;
+    // Must keep moving in its own direction; a reversal means the rig has
+    // started measuring something else.
+    if ((value - previous) * sign < -0.05) break;
+    previous = value;
+    last = w;
+  }
+  return last;
+}
+
+export function findLandmarks(body, frameWeights = {}, sex = 'male') {
   const framePos = deform(body, frameWeights);
   const H = heightOf(framePos);
   const probePos = {};
@@ -94,8 +161,26 @@ export function findLandmarks(body, frameWeights = {}) {
 
   for (const [region, band] of Object.entries(BANDS)) {
     for (const probe of band.probes) {
+      // Probed at influence 1, not at the extrapolated cap. Forcing the level
+      // to survive the whole range pushed the arm landmark onto a part of the
+      // limb the morph barely touches, and a fully enlarged arm then measured
+      // *smaller* than a neutral one. The level stays anatomical; how far each
+      // target may be driven is settled separately, by `usableCap` below.
       probePos[probe] ??= deform(body, { ...frameWeights, [probe]: 1 });
     }
+    /**
+     * The crotch: the highest level at which the slice still resolves two
+     * legs. The upper thigh sits just below it, which is where a tape goes.
+     */
+    if (band.mode === 'crotch') {
+      let crotch = null;
+      for (let f = band.hi; f >= band.lo - 1e-9; f -= 0.0025) {
+        if (clustersByX(sliceY(body, framePos, f * H), GAP[region]).length >= 2) { crotch = f; break; }
+      }
+      out[region] = crotch === null ? (band.lo + band.hi) / 2 : Math.max(band.lo, crotch - 0.012);
+      continue;
+    }
+
     let best = null;
     for (let f = band.lo; f <= band.hi + 1e-9; f += 0.0025) {
       const v = PICK[region](parts(body, framePos, f * H, GAP[region]));

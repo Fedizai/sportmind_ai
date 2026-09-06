@@ -46,12 +46,13 @@ import { GeneticReportCard } from "@/components/body-scan/genetic-report-card";
 import { BodyScan3D, type BodyScan3DLabels } from "@/components/body-scan/body-scan-3d";
 import { ScanProgressViewer } from "@/components/body-scan/scan-progress-viewer";
 import { PhotoScanFlow } from "@/components/body-scan/photo-scan-flow";
+import { FitReport } from "@/components/body-scan/fit-report";
 import type { ReviewedMeasurements } from "@/components/body-scan/measurement-review";
 import { PhysiqueReport } from "@/components/body-scan/physique-report";
 
 
 
-import { fitBodyMeasurements } from "@/lib/body-fit";
+import { fitBodyMeasurements, impliedCircumferences } from "@/lib/body-fit";
 import { toBodyMeasurements, modelSexFor } from "@/lib/body-fit/from-scan";
 
 type TFn = (k: TranslationKey) => string;
@@ -251,6 +252,20 @@ export function BodyScanClient() {
     toast({ title: t("bodyScanPhotoMeasured") });
   };
 
+  /** Only what the athlete actually typed is worth comparing against. */
+  const liveRequested = useMemo(() => {
+    const m = toBodyMeasurements(parsedForm, unitSystem);
+    return { chest: m.chestCm, waist: m.waistCm, hips: m.hipsCm, upperArm: m.upperArmCm, thigh: m.thighCm };
+  }, [parsedForm, unitSystem]);
+
+  /** What the entered height and weight imply where no tape was given. */
+  const liveImplied = useMemo(() => {
+    const m = toBodyMeasurements(parsedForm, unitSystem);
+    return m.weightKg && m.weightKg > 0
+      ? impliedCircumferences(modelSexFor(sex), m.heightCm, m.weightKg)
+      : undefined;
+  }, [parsedForm, unitSystem, sex]);
+
   const liveFit = useMemo(
     () => fitBodyMeasurements({
       modelSex: modelSexFor(sex),
@@ -333,14 +348,19 @@ export function BodyScanClient() {
 
       {tab === "scan" && (
         <div className="grid items-stretch gap-6 lg:grid-cols-2">
-          <BodyScan3D
-            modelSex={modelSexFor(sex)}
-            weights={liveFit.weights}
-            bodyHeightCm={liveFit.predicted.heightCm}
-            circumferences={liveFit.predicted}
-            labels={scanLabels}
-            className="h-[480px] sm:h-[560px] lg:h-auto lg:min-h-[600px]"
-          />
+          <div className="flex flex-col gap-3">
+            <BodyScan3D
+              modelSex={modelSexFor(sex)}
+              weights={liveFit.weights}
+              bodyHeightCm={liveFit.predicted.heightCm}
+              circumferences={liveFit.predicted}
+              labels={scanLabels}
+              className="h-[480px] sm:h-[560px] lg:flex-1 lg:min-h-[520px]"
+            />
+            {/* Requested against represented, so a value the mesh cannot reach
+                is visible rather than silently clamped to an average body. */}
+            <FitReport fit={liveFit} requested={liveRequested} implied={liveImplied} />
+          </div>
           <Card>
             <CardHeader className="space-y-4">
               <div>

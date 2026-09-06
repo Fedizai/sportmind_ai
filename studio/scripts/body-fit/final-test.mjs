@@ -3,7 +3,16 @@ import { createRequire } from 'node:module';
 import { loadBody } from './measure.mjs';
 import { findLandmarks, measureAt } from './measure-all.mjs';
 const require = createRequire(import.meta.url);
-const { fitBodyMeasurements } = require('./fit/index.js');
+const OUT = fileURLToPath(new URL('../../.photo-validation', import.meta.url));
+// tsc emits `require('@/lib/...')` from the path alias, which Node cannot
+// resolve; point it at the compiled tree so this runs the shipped modules.
+const Module = require('node:module');
+const resolveFilename = Module._resolveFilename;
+Module._resolveFilename = function (request, ...rest) {
+  if (request.startsWith('@/')) request = `${OUT}/${request.slice(2)}`;
+  return resolveFilename.call(this, request, ...rest);
+};
+const { fitBodyMeasurements } = require(`${OUT}/lib/body-fit/index.js`);
 
 // fileURLToPath, not URL.pathname: the repo lives under a directory with a
 // space in its name, which percent-encodes into a path that does not exist.
@@ -11,7 +20,7 @@ const DIR = fileURLToPath(new URL('../../../datasets/glb-body', import.meta.url)
 const bodies = { male: loadBody(`${DIR}/sportmind-male.glb`), female: loadBody(`${DIR}/sportmind-female.glb`) };
 const AXIS = [-1,-0.5,0,0.5,1];
 const hW = (v)=> v<0?{Height_Short:-v}:v>0?{Height_Tall:v}:{};
-const FRAMES = { male: AXIS.map(h=>findLandmarks(bodies.male, hW(h))), female: AXIS.map(h=>findLandmarks(bodies.female, hW(h))) };
+const FRAMES = { male: AXIS.map(h=>findLandmarks(bodies.male, hW(h), 'male')), female: AXIS.map(h=>findLandmarks(bodies.female, hW(h), 'female')) };
 const measureFitted = (sex, w) => {
   const h = (w.Height_Tall ?? 0) - (w.Height_Short ?? 0);
   let i=0,b=Infinity; AXIS.forEach((a,k)=>{const d=Math.abs(a-h); if(d<b){b=d;i=k;}});
@@ -27,6 +36,24 @@ const P = [
   ['larger hips + smaller waist', { modelSex:'female', heightCm:168, weightKg:68,  chestCm:88,  waistCm:66,  hipsCm:108, upperArmCm:28, thighCm:60 }],
   ['larger thighs + small upper', { modelSex:'female', heightCm:166, weightKg:70,  chestCm:84,  waistCm:72,  hipsCm:102, upperArmCm:27, thighCm:59 }],
 ];
+const CAL = require(`${OUT}/lib/body-fit/calibration.json`);
+const SAFETY_FACTOR = 1;   // caps in the table already carry the safety margin
+/** Per-target fold points, from the calibration the engine actually ships. */
+const CAPS = {
+  male: capsOf('male'), female: capsOf('female'),
+};
+function capsOf(sex) {
+  const t = CAL.sexes[sex];
+  const out = { Height_Short: 1, Height_Tall: 1,
+    BodyWeight_Low: Math.abs(t.weightAxis[0]), BodyWeight_High: t.weightAxis[t.weightAxis.length-1],
+    ShoulderWidth_Narrow: 2, ShoulderWidth_Wide: 2, Calf_Small: 2.5, Calf_Large: 2.5,
+    Muscularity_Low: 1, Muscularity_High: 1 };
+  const pair = { chest:['Chest_Small','Chest_Large'], waist:['Waist_Small','Waist_Large'],
+    hips:['Hips_Small','Hips_Large'], upperArm:['UpperArm_Small','UpperArm_Large'], thigh:['Thigh_Small','Thigh_Large'] };
+  for (const [r,[lo,hi]] of Object.entries(pair)) { out[lo]=t.caps[r].lo; out[hi]=t.caps[r].hi; }
+  return out;
+}
+
 const REG = [['chest','chestCm'],['waist','waistCm'],['hips','hipsCm'],['upperArm','upperArmCm'],['thigh','thighCm']];
 const PAIRS = [['BodyWeight_Low','BodyWeight_High'],['Muscularity_Low','Muscularity_High'],['Height_Short','Height_Tall'],['Chest_Small','Chest_Large'],['Waist_Small','Waist_Large'],['Hips_Small','Hips_Large'],['UpperArm_Small','UpperArm_Large'],['Thigh_Small','Thigh_Large'],['ShoulderWidth_Narrow','ShoulderWidth_Wide'],['Calf_Small','Calf_Large']];
 
@@ -47,7 +74,15 @@ for (const [name, req] of P) {
   const hErr = Math.abs(got.heightCm - req.heightCm);
   if (hErr > 0.6) fails++;
   for (const [a,b] of PAIRS) if ((fit.weights[a]??0)>0 && (fit.weights[b]??0)>0) { console.log(`  PAIR FAIL ${name} ${a}+${b}`); fails++; }
-  for (const [k,v] of Object.entries(fit.weights)) if (v<0||v>1) { console.log(`  RANGE FAIL ${name} ${k}=${v}`); fails++; }
+  /**
+   * Influences may exceed 1 now — deliberately. Staying inside the documented
+   * range capped the waist at 83 cm, so each target is instead checked against
+   * the influence at which that mesh was measured to fold.
+   */
+  for (const [k,v] of Object.entries(fit.weights)) {
+    const cap = (CAPS[req.modelSex][k] ?? 1) * SAFETY_FACTOR;
+    if (v < 0 || v > cap + 1e-6) { console.log(`  RANGE FAIL ${name} ${k}=${v.toFixed(3)} > cap ${cap.toFixed(3)}`); fails++; }
+  }
   console.log(`${name.padEnd(30)} ±${hErr.toFixed(1)}cm   ${w.toFixed(1)}cm   ${detail.join(' ')}`);
 }
 

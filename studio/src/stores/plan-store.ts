@@ -68,6 +68,15 @@ interface PlanState {
   addExercise: (dayIndex: number, exercise: Exercise) => Promise<void>;
   /** Rename a day's focus, e.g. "Push" to "Upper body". */
   updateDayFocus: (dayIndex: number, focus: string) => Promise<void>;
+  /**
+   * Roll the programme onto a new calendar day.
+   *
+   * Advances past a finished day and clears the ticks on whichever day is now
+   * current — the programme itself is untouched. Without this the sets stayed
+   * ticked from the last time that day came round, so a workout looked done
+   * before it was started.
+   */
+  startNewDay: () => void;
   _rehydrate: () => void;
 }
 
@@ -297,6 +306,35 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         day.focus = focus;
         set({ plan: newPlan });
         await saveGymPlan(userId, newPlan);
+    },
+
+    startNewDay: () => {
+        const { plan, userId } = get();
+        if (!plan) return;
+
+        // Advance past a day that was finished before today.
+        get()._rehydrate();
+
+        const { currentDayIndex } = get();
+        const day = get().plan?.days[currentDayIndex];
+        if (!day) return;
+
+        // Nothing to clear: leave the plan alone rather than writing to
+        // Firestore on every morning's first page load.
+        const stale = day.completed || day.exercises.some((ex) => ex.completed);
+        if (!stale) return;
+
+        const newPlan: GymPlan = JSON.parse(JSON.stringify(get().plan));
+        const target = newPlan.days[currentDayIndex];
+        target.completed = false;
+        delete target.completed_at;
+        target.exercises.forEach((ex) => { ex.completed = false; });
+
+        set({ plan: newPlan });
+        if (userId) {
+            void saveGymPlan(userId, newPlan).catch((error) =>
+                console.error('Could not start the new training day:', error));
+        }
     },
 
     _rehydrate: () => {

@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 
 import { BodyScan3D, type BodyScan3DLabels } from './body-scan-3d';
-import { fitBodyMeasurements, FIT_REGIONS, type FitRegion } from '@/lib/body-fit';
+import { FitReport } from './fit-report';
+import { fitBodyMeasurements, impliedCircumferences, FIT_REGIONS, type FitRegion } from '@/lib/body-fit';
 import { toBodyMeasurements, modelSexFor } from '@/lib/body-fit/from-scan';
 import type { BodyScan } from '@/hooks/use-body-scans';
 import { MEASUREMENT_FIELDS, type MeasurementId, type MeasurementUnitSystem } from '@/lib/body-zones';
@@ -50,6 +51,20 @@ export function ScanProgressViewer({ scans, labels, unitLabel, t }: Props) {
     /** Change since the previous scan, so progress is visible without a chart. */
     const previous = index > 0 ? ordered[index - 1] : undefined;
 
+    /** What the scan's height and weight imply where no tape was recorded. */
+    const impliedFor = (s: BodyScan) => {
+        const m = toBodyMeasurements(s.measurements, s.unitSystem);
+        return m.weightKg && m.weightKg > 0
+            ? impliedCircumferences(modelSexFor(s.sex), m.heightCm, m.weightKg)
+            : undefined;
+    };
+
+    /** What this scan asked for, in cm, for the requested-vs-represented table. */
+    const requestedFor = (s: BodyScan) => {
+        const m = toBodyMeasurements(s.measurements, s.unitSystem);
+        return { chest: m.chestCm, waist: m.waistCm, hips: m.hipsCm, upperArm: m.upperArmCm, thigh: m.thighCm };
+    };
+
     if (!scan || !fit) return null;
 
     const when = scan.createdAt?.seconds
@@ -58,15 +73,18 @@ export function ScanProgressViewer({ scans, labels, unitLabel, t }: Props) {
 
     return (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-            <BodyScan3D
-                modelSex={modelSexFor(scan.sex)}
-                weights={fit.weights}
-                bodyHeightCm={fit.predicted.heightCm}
-                circumferences={fit.predicted}
-                scanDate={when}
-                labels={labels}
-                className="h-[460px] sm:h-[560px]"
-            />
+            <div className="space-y-3">
+                <BodyScan3D
+                    modelSex={modelSexFor(scan.sex)}
+                    weights={fit.weights}
+                    bodyHeightCm={fit.predicted.heightCm}
+                    circumferences={fit.predicted}
+                    scanDate={when}
+                    labels={labels}
+                    className="h-[460px] sm:h-[560px]"
+                />
+                <FitReport fit={fit} requested={requestedFor(scan)} implied={impliedFor(scan)} />
+            </div>
 
             <div className="space-y-4">
                 {/* The measurements sit beside the body rather than as twenty

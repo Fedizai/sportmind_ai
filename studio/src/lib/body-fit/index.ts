@@ -35,8 +35,22 @@ const TABLE: Record<ModelSex, SexTable> = {
 };
 
 const AXIS = calibration.axis;
-/** The morph weights the response curves were sampled at, with 0 inserted. */
-const RESPONSE_W = [...calibration.responseWeights.slice(0, 4), 0, ...calibration.responseWeights.slice(4)];
+
+/**
+ * The influences each region's curve was sampled at.
+ *
+ * Per region and per sex now, and they run well past 1: the meshes stay sound
+ * a long way beyond the documented range for most controls, and refusing to go
+ * there was capping a 120 cm waist at 83 and leaving the avatar looking
+ * average. How far each one may be pushed was measured — see
+ * scripts/body-fit/README.md — and the table carries the answer.
+ */
+const responseWeightsFor = (sex: ModelSex, region: FitRegion): number[] =>
+    (TABLE[sex].responseWeights as Record<string, number[]>)[region];
+
+/** Usable influence range for a region: {lo, hi}, both positive magnitudes. */
+const capsFor = (sex: ModelSex, region: FitRegion): { lo: number; hi: number } =>
+    (TABLE[sex].caps as Record<string, { lo: number; hi: number }>)[region];
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
@@ -103,21 +117,21 @@ function bodyCompositionAxis(heightCm: number, weightKg?: number): number {
 }
 
 /** Position on a sampled axis, as a fractional index. */
-function axisIndex(value: number): { i: number; j: number; t: number } {
-    const v = clamp(value, AXIS[0], AXIS[AXIS.length - 1]);
-    for (let i = 1; i < AXIS.length; i++) {
-        if (v <= AXIS[i]) {
-            const t = (v - AXIS[i - 1]) / (AXIS[i] - AXIS[i - 1]);
+function axisIndex(value: number, axis: number[] = AXIS): { i: number; j: number; t: number } {
+    const v = clamp(value, axis[0], axis[axis.length - 1]);
+    for (let i = 1; i < axis.length; i++) {
+        if (v <= axis[i]) {
+            const t = (v - axis[i - 1]) / (axis[i] - axis[i - 1] || 1);
             return { i: i - 1, j: i, t };
         }
     }
-    return { i: AXIS.length - 1, j: AXIS.length - 1, t: 0 };
+    return { i: axis.length - 1, j: axis.length - 1, t: 0 };
 }
 
 /** Circumferences of the un-regionalised body at this height and composition. */
 function baselineAt(sex: ModelSex, hAxis: number, wAxis: number): Record<FitRegion, number> {
     const h = axisIndex(hAxis);
-    const w = axisIndex(wAxis);
+    const w = axisIndex(wAxis, TABLE[sex].weightAxis as number[]);
     const grid = TABLE[sex].baseline;
     const out = {} as Record<FitRegion, number>;
     FIT_REGIONS.forEach((region, k) => {
@@ -134,10 +148,7 @@ function baselineAt(sex: ModelSex, hAxis: number, wAxis: number): Record<FitRegi
 function responseCurve(sex: ModelSex, region: FitRegion, hAxis: number): number[] {
     const h = axisIndex(hAxis);
     const rows = (TABLE[sex].response as Record<string, number[][]>)[region];
-    const lo = rows[h.i], hi = rows[h.j];
-    // The sampled rows have no entry for weight 0; it is 0 cm by definition.
-    const withZero = (row: number[]) => [...row.slice(0, 4), 0, ...row.slice(4)];
-    const a = withZero(lo), b = withZero(hi);
+    const a = rows[h.i], b = rows[h.j];
     return a.map((v, i) => v + (b[i] - v) * h.t);
 }
 
@@ -148,17 +159,17 @@ function responseCurve(sex: ModelSex, region: FitRegion, hAxis: number): number[
  * the sampled range the answer is the endpoint — never an extrapolation past
  * ±1, which the report warns is not certified.
  */
-function invertResponse(curve: number[], deltaCm: number): { weight: number; reachable: boolean } {
+function invertResponse(curve: number[], weights: number[], deltaCm: number): { weight: number; reachable: boolean } {
     const first = curve[0], last = curve[curve.length - 1];
-    if (deltaCm <= first) return { weight: RESPONSE_W[0], reachable: deltaCm >= first - 0.05 };
-    if (deltaCm >= last) return { weight: RESPONSE_W[RESPONSE_W.length - 1], reachable: deltaCm <= last + 0.05 };
+    if (deltaCm <= first) return { weight: weights[0], reachable: deltaCm >= first - 0.05 };
+    if (deltaCm >= last) return { weight: weights[weights.length - 1], reachable: deltaCm <= last + 0.05 };
 
     for (let i = 1; i < curve.length; i++) {
         const lo = curve[i - 1], hi = curve[i];
         if (deltaCm >= Math.min(lo, hi) && deltaCm <= Math.max(lo, hi)) {
             const span = hi - lo;
             const t = Math.abs(span) < 1e-6 ? 0 : (deltaCm - lo) / span;
-            return { weight: RESPONSE_W[i - 1] + t * (RESPONSE_W[i] - RESPONSE_W[i - 1]), reachable: true };
+            return { weight: weights[i - 1] + t * (weights[i] - weights[i - 1]), reachable: true };
         }
     }
     return { weight: 0, reachable: false };
@@ -166,9 +177,12 @@ function invertResponse(curve: number[], deltaCm: number): { weight: number; rea
 
 /** Side effects one region's morph has on the other four, at full deflection. */
 function couplingFor(sex: ModelSex, region: FitRegion, weight: number): Record<FitRegion, number> {
-    const c = (TABLE[sex].coupling as Record<string, { lo: number[]; hi: number[] }>)[region];
+    const c = (TABLE[sex].coupling as Record<string, { lo: number[]; hi: number[]; atLo: number; atHi: number }>)[region];
     const row = weight < 0 ? c.lo : c.hi;
-    const scale = Math.abs(weight);
+    // Couplings were measured at the cap, not at influence 1, so they scale by
+    // the fraction of that cap actually in use.
+    const at = weight < 0 ? c.atLo : c.atHi;
+    const scale = at > 0 ? Math.abs(weight) / at : 0;
     const out = {} as Record<FitRegion, number>;
     FIT_REGIONS.forEach((r, k) => { out[r] = row[k] * scale; });
     return out;
@@ -190,10 +204,11 @@ function predictAll(
             if (!regionWeight[other]) continue;
             if (other === region) {
                 const curve = curves[region];
-                const w = regionWeight[region];
-                for (let i = 1; i < RESPONSE_W.length; i++) {
-                    if (w <= RESPONSE_W[i]) {
-                        const t = (w - RESPONSE_W[i - 1]) / (RESPONSE_W[i] - RESPONSE_W[i - 1] || 1);
+                const pts = responseWeightsFor(sex, region);
+                const w = clamp(regionWeight[region], pts[0], pts[pts.length - 1]);
+                for (let i = 1; i < pts.length; i++) {
+                    if (w <= pts[i]) {
+                        const t = (w - pts[i - 1]) / (pts[i] - pts[i - 1] || 1);
                         value += curve[i - 1] + t * (curve[i] - curve[i - 1]);
                         break;
                     }
@@ -203,6 +218,74 @@ function predictAll(
             }
         }
         out[region] = value;
+    }
+    return out;
+}
+
+/**
+ * What a body of this height and weight is actually shaped like.
+ *
+ * Mapping weight onto `BodyWeight_High` and nothing else could not go past a
+ * 93 cm waist, so a 150 kg athlete came out looking merely stocky — the one
+ * control saturates long before the body does. Mass has to be distributed the
+ * way it is distributed on a person: mostly onto the abdomen, then the seat and
+ * chest, least onto the limbs.
+ *
+ * The slopes below are centimetres of circumference per unit of BMI, taken
+ * from the reference build of each mesh and asymmetric on purpose — girth is
+ * gained far faster than it is lost, and a lean athlete's waist has a floor
+ * that a linear fit would walk straight through. They are a documented
+ * anthropometric assumption, not a fit to measured data, and any circumference
+ * the athlete actually enters overrides them completely.
+ */
+const BMI_REFERENCE = 23.5;
+
+const MASS_SLOPE: Record<ModelSex, Record<FitRegion, { gain: number; loss: number }>> = {
+    male: {
+        // Abdominal-dominant distribution, which is the male pattern.
+        waist: { gain: 3.2, loss: 1.6 },
+        hips: { gain: 1.9, loss: 1.0 },
+        chest: { gain: 1.6, loss: 0.9 },
+        thigh: { gain: 1.05, loss: 0.6 },
+        upperArm: { gain: 0.62, loss: 0.35 },
+    },
+    female: {
+        // Gluteofemoral-dominant: the seat and thighs take more than the waist.
+        waist: { gain: 2.6, loss: 1.3 },
+        hips: { gain: 2.4, loss: 1.2 },
+        chest: { gain: 1.5, loss: 0.8 },
+        thigh: { gain: 1.3, loss: 0.7 },
+        upperArm: { gain: 0.55, loss: 0.3 },
+    },
+};
+
+/** The slopes are quoted for each mesh's own stature. */
+const SLOPE_REFERENCE_HEIGHT: Record<ModelSex, number> = { male: 178, female: 165 };
+
+export function impliedCircumferences(
+    sex: ModelSex,
+    heightCm: number,
+    weightKg: number,
+): Record<FitRegion, number> {
+    const hAxis = heightAxisPosition(sex, heightCm);
+    // The build this athlete's frame starts from, before any mass is added.
+    const base = baselineAt(sex, hAxis, 0);
+    const out = {} as Record<FitRegion, number>;
+
+    if (!(weightKg > 0) || !(heightCm > 0)) {
+        FIT_REGIONS.forEach((r) => { out[r] = base[r]; });
+        return out;
+    }
+
+    const bmi = weightKg / Math.pow(heightCm / 100, 2);
+    const delta = bmi - BMI_REFERENCE;
+    // A circumference at a given BMI grows with stature: BMI already divides
+    // out height squared, so the girth it implies still scales with height.
+    const frame = heightCm / SLOPE_REFERENCE_HEIGHT[sex];
+
+    for (const region of FIT_REGIONS) {
+        const slope = MASS_SLOPE[sex][region];
+        out[region] = base[region] + delta * (delta >= 0 ? slope.gain : slope.loss) * frame;
     }
     return out;
 }
@@ -235,6 +318,20 @@ export function fitBodyMeasurements(input: FitInput): FitResult {
         return v !== undefined && Number.isFinite(v) && v > 0;
     });
 
+    /**
+     * Weight fills in only what the tape did not.
+     *
+     * Every region is driven, so the whole body grows together instead of the
+     * abdomen alone; but a measured circumference is never touched, which is
+     * what keeps weight a prior rather than an override.
+     */
+    const implied = impliedCircumferences(sex, input.heightCm, input.weightKg ?? 0);
+    const targets: Partial<Record<FitRegion, number>> = {};
+    for (const region of FIT_REGIONS) {
+        targets[region] = measured.includes(region) ? requested[region] : implied[region];
+    }
+    const driven: FitRegion[] = input.weightKg && input.weightKg > 0 ? [...FIT_REGIONS] : measured;
+
     const curves = Object.fromEntries(
         FIT_REGIONS.map((r) => [r, responseCurve(sex, r, hAxis)])
     ) as Record<FitRegion, number[]>;
@@ -253,22 +350,30 @@ export function fitBodyMeasurements(input: FitInput): FitResult {
          */
         for (let pass = 0; pass < 3; pass++) {
             unreached.length = 0;
-            for (const region of measured) {
-                const target = requested[region]!;
+            for (const region of driven) {
+                const target = targets[region]!;
                 let spill = 0;
                 for (const other of FIT_REGIONS) {
                     if (other === region || !regionWeight[other]) continue;
                     spill += couplingFor(sex, other, regionWeight[other])[region];
                 }
                 const needed = target - baseline[region] - spill;
-                const { weight, reachable } = invertResponse(curves[region], needed);
-                regionWeight[region] = clamp(weight, -1, 1);
+                const pts = responseWeightsFor(sex, region);
+                const { weight, reachable } = invertResponse(curves[region], pts, needed);
+                const cap = capsFor(sex, region);
+                // Clamped to what this mesh can actually do, which is well past
+                // influence 1 for most regions and only just past it for the chest.
+                regionWeight[region] = clamp(weight, -cap.lo, cap.hi);
                 if (!reachable) unreached.push(region);
             }
         }
 
         const predicted = predictAll(sex, hAxis, wAxis, regionWeight, curves);
-        const error = measured.reduce((sum, r) => sum + Math.abs(predicted[r] - requested[r]!), 0);
+        // A measured value counts double: the tape decides, the weight suggests.
+        const error = driven.reduce<number>((sum, r) => {
+            const weightOfEvidence = measured.includes(r) ? 2 : 1;
+            return sum + weightOfEvidence * Math.abs(predicted[r] - targets[r]!);
+        }, 0);
         return { wAxis, baseline, regionWeight, unreached, predicted, error };
     };
 
@@ -283,10 +388,14 @@ export function fitBodyMeasurements(input: FitInput): FitResult {
      * the prior still decides what the tape leaves open, and never overrides
      * what it does not.
      */
+    const weightAxis = TABLE[sex].weightAxis as number[];
+    const wLo = weightAxis[0];
+    const wHi = weightAxis[weightAxis.length - 1];
     let best = solve(prior);
-    if (measured.length > 0) {
-        for (let w = -1; w <= 1.0001; w += 0.1) {
-            const candidate = solve(clamp(w, -1, 1));
+    if (driven.length > 0) {
+        const step = (wHi - wLo) / 24;
+        for (let w = wLo; w <= wHi + 1e-9; w += step) {
+            const candidate = solve(clamp(w, wLo, wHi));
             const penalty = Math.abs(candidate.wAxis - prior) * 1.5;
             const bestPenalty = Math.abs(best.wAxis - prior) * 1.5;
             if (candidate.error + penalty < best.error + bestPenalty - 1e-9) best = candidate;
@@ -297,17 +406,25 @@ export function fitBodyMeasurements(input: FitInput): FitResult {
 
     // ---- assemble the influences, one member of each pair at a time ----
     const weights: MorphWeights = {};
-    const setPair = (low: MorphName, high: MorphName, value: number) => {
-        const v = clamp(value, -1, 1);
-        if (v < -0.001) weights[low] = clamp(-v, 0, 1);
-        else if (v > 0.001) weights[high] = clamp(v, 0, 1);
+    /**
+     * One member of a pair, never both.
+     *
+     * `limit` is the point past which that target folds the surface — 1 for the
+     * chest, which is why a very large chest is the one measurement this mesh
+     * genuinely cannot represent, and as much as 6 for the waist and hips.
+     */
+    const setPair = (low: MorphName, high: MorphName, value: number, limit = 1) => {
+        const v = clamp(value, -limit, limit);
+        if (v < -0.001) weights[low] = clamp(-v, 0, limit);
+        else if (v > 0.001) weights[high] = clamp(v, 0, limit);
     };
 
     setPair('Height_Short', 'Height_Tall', hAxis);
-    setPair('BodyWeight_Low', 'BodyWeight_High', wAxis);
+    setPair('BodyWeight_Low', 'BodyWeight_High', wAxis, Math.max(Math.abs(wLo), wHi));
     for (const region of FIT_REGIONS) {
         const { low, high } = REGION_MORPHS[region];
-        setPair(low, high, regionWeight[region]);
+        const cap = capsFor(sex, region);
+        setPair(low, high, regionWeight[region], regionWeight[region] < 0 ? cap.lo : cap.hi);
     }
 
     /**
@@ -315,8 +432,8 @@ export function fitBodyMeasurements(input: FitInput): FitResult {
      * they are derived rather than left flat — a 120 cm chest on narrow
      * shoulders reads as wrong. Damped, because they are inferences.
      */
-    setPair('ShoulderWidth_Narrow', 'ShoulderWidth_Wide', regionWeight.chest * 0.5);
-    setPair('Calf_Small', 'Calf_Large', regionWeight.thigh * 0.6);
+    setPair('ShoulderWidth_Narrow', 'ShoulderWidth_Wide', regionWeight.chest * 0.5, 2);
+    setPair('Calf_Small', 'Calf_Large', regionWeight.thigh * 0.6, 2.5);
 
     // A chest that outruns the waist reads as built rather than heavy. Only
     // inferred when both were actually measured.
