@@ -243,7 +243,9 @@
   .liquid-glass-pill {
     backdrop-filter: blur(40px) saturate(180%) brightness(1.02);
     -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.02);
-    background: rgba(255, 255, 255, 0.28);
+    /* Lowered from 0.28: the surface gradient above now carries part of the
+       white, and the two together were fogging the bar. */
+    background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.55);
     box-shadow:
       0 16px 48px rgba(0,0,0,0.08),
@@ -251,13 +253,89 @@
       inset 0 1px 0 rgba(255,255,255,0.8);
   }
   .dark .liquid-glass-pill {
-    background: rgba(255, 255, 255, 0.045);
+    background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.11);
     box-shadow:
       0 20px 60px rgba(0,0,0,0.5),
       0 8px 24px rgba(0,0,0,0.28),
       0 2px 6px rgba(0,0,0,0.15),
       inset 0 1px 0 rgba(255,255,255,0.07);
+  }
+
+  /*
+   * The glass layers, drawn inside the pill by <LiquidGlassEdge />.
+   *
+   * The pill carries the frost, the border and the drop shadow, so it still
+   * reads as glass on its own and these only add what a blur cannot: the bend
+   * at the rim, the sheet of light across the surface, the bevel, and the
+   * specular line along the top edge. In CSS rather than inline so light and
+   * dark are two values of one thing instead of two branches in a component.
+   */
+
+  /*
+   * The rim.
+   *
+   * A second backdrop pass, barely blurred and heavily saturated, masked to a
+   * ring so it only shows along the edges — thicker at the sides than at the
+   * top and bottom, the way a slab of glass is. Two mask layers composited the
+   * default way (`add`): a horizontal band pair and a vertical band pair, whose
+   * union is the ring. That keeps it to plain multi-layer masks, which every
+   * engine that has `backdrop-filter` also has — `mask-composite: exclude`
+   * would be the tidier spelling and is years newer than the phones this bar
+   * is for.
+   */
+  .liquid-glass-rim {
+    /* Blurred, but a sixth as much as the middle. Left sharper than this the
+       rim turns into a readable strip of the page showing through the bar,
+       which reads as a hole rather than as an edge. */
+    backdrop-filter: blur(6px) saturate(240%) brightness(1.08);
+    -webkit-backdrop-filter: blur(6px) saturate(240%) brightness(1.08);
+    -webkit-mask-image:
+      linear-gradient(to bottom, #000 0, #000 4px, transparent 15px, transparent calc(100% - 15px), #000 calc(100% - 4px)),
+      linear-gradient(to right, #000 0, #000 7px, transparent 24px, transparent calc(100% - 24px), #000 calc(100% - 7px));
+    mask-image:
+      linear-gradient(to bottom, #000 0, #000 4px, transparent 15px, transparent calc(100% - 15px), #000 calc(100% - 4px)),
+      linear-gradient(to right, #000 0, #000 7px, transparent 24px, transparent calc(100% - 24px), #000 calc(100% - 7px));
+  }
+  .dark .liquid-glass-rim {
+    /* Saturation is what sells the bend on a dark backdrop; brightness only
+       greys it, because there is little light behind the bar to lift. */
+    backdrop-filter: blur(6px) saturate(320%) brightness(1.35);
+    -webkit-backdrop-filter: blur(6px) saturate(320%) brightness(1.35);
+  }
+
+  .liquid-glass-surface {
+    background: linear-gradient(135deg, rgba(255,255,255,0.30), rgba(255,255,255,0.08));
+  }
+  .dark .liquid-glass-surface {
+    /* A third of the light-mode value: the same gradient over a dark backdrop
+       turns the bar milky and takes the 9px labels down with it. */
+    background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
+  }
+
+  .liquid-glass-bevel {
+    box-shadow:
+      inset 1px 1px 0 rgba(255,255,255,0.62),
+      inset -1px -1px 0 rgba(255,255,255,0.34),
+      inset 0 0 18px rgba(255,255,255,0.07);
+  }
+  .dark .liquid-glass-bevel {
+    box-shadow:
+      inset 1px 1px 0 rgba(255,255,255,0.30),
+      inset -1px -1px 0 rgba(255,255,255,0.13),
+      inset 0 0 18px rgba(255,255,255,0.05);
+  }
+
+  .liquid-glass-shine {
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.9), transparent);
+  }
+  .dark .liquid-glass-shine {
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.62), transparent);
+  }
+
+  /* No backdrop to sharpen means the rim would only sit there as a flat band. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .liquid-glass-rim { display: none; }
   }
 
   .liquid-glass-bubble {

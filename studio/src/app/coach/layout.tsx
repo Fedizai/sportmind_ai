@@ -17,6 +17,7 @@ import { PageTransition } from "@/components/page-transition";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
+import { LiquidGlassEdge } from "@/components/ui/liquid-glass";
 import { Header } from "@/components/header";
 
 
@@ -301,12 +302,8 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
           // Block link clicks that are the tail-end of a drag gesture
           onClickCapture={(e) => { if (hasDraggedRef.current) e.stopPropagation(); }}
         >
-          {/* Inner glass gradient */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 rounded-xl"
-            style={{ background: 'linear-gradient(155deg, rgba(255,255,255,0.06) 0%, transparent 55%)' }}
-          />
+          {/* Refraction, surface light, bevel and top shine */}
+          <LiquidGlassEdge />
 
           {/* Bubble — always in DOM so dragBubbleRef is always valid */}
           <div
