@@ -54,13 +54,34 @@ processing personal data, and **prior authorisation** — a higher bar — for
 health data. SportMind processes health data as its core function. As far as I
 can tell from the repository, neither has been filed.
 
-### 1.4 No data processing agreement on file
+### 1.4 You are two joint controllers, with nothing in writing between you
+
+Fedy Zayen and Khaled Attia both decide why and how this data is processed, which
+makes you **joint controllers** under GDPR art. 26. That article requires an
+arrangement between you setting out who does what — in particular who answers
+access and deletion requests, who talks to a regulator, and who tells users if
+there is a breach. The essence of it has to be available to users; the privacy
+policy now carries a paragraph saying you answer jointly and that either of you
+can act on a request, which is the simplest honest arrangement and the one I
+have written the pages against.
+
+Two things follow from it:
+
+- **Put it in writing between yourselves**, even one page. Without it, art. 26
+  is unsatisfied and, more practically, neither of you knows who is on the hook
+  for a 30-day deadline.
+- **Neither of you is behind a company.** Joint controllers who are natural
+  persons are personally liable, and in practice jointly and severally — a user
+  or a regulator can pursue either of you for the whole of it. This is another
+  reason §1.1 matters.
+
+### 1.5 No data processing agreement on file
 
 Google will act as your processor for Firebase, but only under the Cloud Data
 Processing Addendum, which has to be accepted in the console. Check it is, and
 keep a copy. Without it you have no art. 28 contract with your main processor.
 
-### 1.5 AI that gives training and nutrition advice
+### 1.6 AI that gives training and nutrition advice
 
 The AI can produce a dangerous plan — an extreme deficit, a load progression
 that injures someone, a nutrition target unsafe for a particular person. I have

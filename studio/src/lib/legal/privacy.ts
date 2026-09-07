@@ -29,8 +29,20 @@ export const PRIVACY: LegalDocument = {
                 },
                 {
                     p: {
-                        en: 'We are the data controller: we decide what is collected and why. The companies listed further down act on our instructions, or on their own account where we say so.',
-                        fr: 'Nous sommes responsable du traitement : nous décidons de ce qui est collecté et pourquoi. Les sociétés listées plus bas agissent sur nos instructions, ou pour leur propre compte lorsque cela est précisé.',
+                        en: 'We are the data controllers: we decide what is collected and why. The companies listed further down act on our instructions, or on their own account where we say so.',
+                        fr: 'Nous sommes responsables du traitement : nous décidons de ce qui est collecté et pourquoi. Les sociétés listées plus bas agissent sur nos instructions, ou pour leur propre compte lorsque cela est précisé.',
+                    },
+                },
+                {
+                    /*
+                     * GDPR art. 26(2): where two people jointly decide the why
+                     * and the how, they are joint controllers, and the essence
+                     * of the arrangement between them has to be made available
+                     * to the people whose data it is. This paragraph is that.
+                     */
+                    p: {
+                        en: 'Two of us run SportMind together and we are joint controllers of your data. Between us we answer jointly for it, and either of us can act on a request from you. Whichever of us you write to, you will get one answer, and you can exercise every right in this policy against either of us.',
+                        fr: 'Nous sommes deux à exploiter SportMind et nous sommes responsables conjoints du traitement de vos données. Nous en répondons conjointement, et chacun de nous peut donner suite à votre demande. Quel que soit celui à qui vous écrivez, vous obtiendrez une seule réponse, et vous pouvez exercer chacun des droits prévus par la présente politique auprès de l’un ou de l’autre.',
                     },
                 },
             ],

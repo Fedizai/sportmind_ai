@@ -17,7 +17,14 @@
 export interface BusinessDetails {
     /** Trading name of the service. */
     serviceName: string;
-    /** The natural or legal person responsible. Required everywhere. */
+    /**
+     * The natural or legal person(s) responsible. Required everywhere.
+     *
+     * Two names here is not a formatting detail: under GDPR art. 26 two people
+     * who jointly decide why and how the data is processed are joint
+     * controllers, which carries its own obligations — see the privacy policy
+     * and RISKS.md.
+     */
     operator: string;
     /** Postal address. Required in the EU even for an individual. */
     address: string;
@@ -28,8 +35,10 @@ export interface BusinessDetails {
     /** Optional: only if one exists. Do not invent one. */
     phone: string | null;
     /**
-     * Tunisian trade register / tax id, once registered. Empty until then —
-     * see RISKS.md, which explains why trading unregistered is its own problem.
+     * Tunisian trade register / tax id, once registered. `null` until then, and
+     * the pages say "non immatriculé à ce jour" rather than leaving a blank a
+     * reader has to interpret. See RISKS.md on why trading unregistered is its
+     * own problem.
      */
     registration: string | null;
     /** VAT / tax identifier, if registered for it. */
@@ -52,14 +61,14 @@ const TODO = (what: string) => `[À COMPLÉTER : ${what}]`;
 
 export const BUSINESS: BusinessDetails = {
     serviceName: 'SportMind AI',
-    operator: TODO('nom et prénom de la personne responsable'),
+    operator: 'Fedy Zayen et Khaled Attia',
     address: TODO('adresse postale complète'),
     country: 'Tunisie',
-    email: TODO('adresse e-mail de contact'),
+    email: 'sportmindai@gmail.com',
     phone: null,
     registration: null,
     taxId: null,
-    publicationDirector: TODO('nom du directeur de la publication'),
+    publicationDirector: 'Fedy Zayen et Khaled Attia',
     host: {
         name: 'Google Ireland Limited (Firebase App Hosting)',
         address: 'Gordon House, Barrow Street, Dublin 4, D04 E5W5, Irlande',
