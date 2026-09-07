@@ -35,7 +35,34 @@ single largest exposure here, and it is larger than anything on the site itself:
 and complete its onboarding, then register for EU VAT (OSS) if you sell into the
 EU. Until then, I would not take card payments from EU users at all.
 
-### 1.2 Tunisia is not an "adequate" country for EU data — **BLOCKER**
+### 1.2 No postal address is published — **accepted risk, decided**
+
+The operators have decided not to publish a postal address, and that decision is
+recorded here rather than argued with again. What it means, so it is not a
+surprise later:
+
+- The EU e-commerce directive art. 5 and French LCEN art. 6-III both require a
+  site accessible to the public to give a **geographic address**, not only an
+  email. An email alone does not satisfy either. In France, failing the LCEN
+  identification duty is a criminal offence for the publisher.
+- The realistic exposure is not a raid: it is that the obligation is the
+  cheapest thing to be caught on if someone is already unhappy — a user in a
+  refund dispute, a competitor, a regulator following up on something else.
+- A **payment provider will require one anyway** during onboarding, and so will
+  business registration. This is deferred, not avoided.
+
+The pages state the position plainly — that SportMind is run by two private
+individuals who are not registered as a business and that no postal address is
+published, with the email given as the written-contact route — rather than
+leaving a blank. **No address has been invented**, which was the alternative and
+would have been a false statement about real people on the one page whose job is
+to identify them truthfully.
+
+If the position changes, a domiciliation service, a PO box, or the registered
+office once the company exists all resolve it; fill `address` in
+`studio/src/lib/legal/business.ts` and every page updates.
+
+### 1.3 Tunisia is not an "adequate" country for EU data — **BLOCKER**
 
 Your users' data is stored in the EU (`europe-west4`), which is good. But you are
 in Tunisia, and Tunisia is not on the European Commission's adequacy list. Your
@@ -47,14 +74,14 @@ The privacy policy I wrote says transfers rely on SCCs. **Right now that
 sentence is a promise, not a fact.** Either put the SCCs in place, or tell me and
 I will reword the page to describe what is actually true.
 
-### 1.3 Tunisian data-protection law — **BLOCKER**
+### 1.4 Tunisian data-protection law — **BLOCKER**
 
 Loi organique n° 2004-63 requires a **prior declaration** to the INPDP for
 processing personal data, and **prior authorisation** — a higher bar — for
 health data. SportMind processes health data as its core function. As far as I
 can tell from the repository, neither has been filed.
 
-### 1.4 You are two joint controllers, with nothing in writing between you
+### 1.5 You are two joint controllers, with nothing in writing between you
 
 Fedy Zayen and Khaled Attia both decide why and how this data is processed, which
 makes you **joint controllers** under GDPR art. 26. That article requires an
@@ -75,13 +102,13 @@ Two things follow from it:
   or a regulator can pursue either of you for the whole of it. This is another
   reason §1.1 matters.
 
-### 1.5 No data processing agreement on file
+### 1.6 No data processing agreement on file
 
 Google will act as your processor for Firebase, but only under the Cloud Data
 Processing Addendum, which has to be accepted in the console. Check it is, and
 keep a copy. Without it you have no art. 28 contract with your main processor.
 
-### 1.6 AI that gives training and nutrition advice
+### 1.7 AI that gives training and nutrition advice
 
 The AI can produce a dangerous plan — an extreme deficit, a load progression
 that injures someone, a nutrition target unsafe for a particular person. I have
@@ -180,6 +207,8 @@ Still open, in rough priority order:
 - **IP geolocation** goes to `ipwho.is` and `geojs.io`, neither of which you have
   a contract with. Disclosed in the policy. Consider using the region Firebase
   already knows instead.
-- **`[À COMPLÉTER]` placeholders.** The legal pages show a visible warning while
-  any required business detail is missing, and it is deliberately impossible to
-  miss. Fill in `studio/src/lib/legal/business.ts` before launch.
+- **Business details.** Names and contact email are filled in. The postal
+  address is deliberately absent (§1.2) and the matricule fiscal / VAT number
+  are `null` until registration, at which point the pages will print them
+  instead of "non immatriculé à ce jour". All of it lives in one file:
+  `studio/src/lib/legal/business.ts`.

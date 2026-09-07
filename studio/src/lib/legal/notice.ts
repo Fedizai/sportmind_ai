@@ -26,7 +26,15 @@ export const NOTICE: LegalDocument = {
                     rows: [
                         [{ en: 'Service', fr: 'Service' }, { en: BUSINESS.serviceName, fr: BUSINESS.serviceName }],
                         [{ en: 'Published by', fr: 'Édité par' }, { en: BUSINESS.operator, fr: BUSINESS.operator }],
-                        [{ en: 'Address', fr: 'Adresse' }, { en: BUSINESS.address, fr: BUSINESS.address }],
+                        [
+                            { en: 'Postal address', fr: 'Adresse postale' },
+                            BUSINESS.address
+                                ? { en: BUSINESS.address, fr: BUSINESS.address }
+                                : {
+                                    en: 'Not published. SportMind is run by two private individuals who are not registered as a business, and no postal address is published. Written contact is by email, which is monitored.',
+                                    fr: 'Non publiée. SportMind est exploité par deux particuliers non immatriculés, et aucune adresse postale n’est publiée. Le contact écrit se fait par e-mail, qui est relevé.',
+                                },
+                        ],
                         [{ en: 'Country of establishment', fr: 'Pays d’établissement' }, { en: BUSINESS.country, fr: BUSINESS.country }],
                         [{ en: 'Contact', fr: 'Contact' }, { en: BUSINESS.email, fr: BUSINESS.email }],
                         [{ en: 'Publication director', fr: 'Directeur de la publication' }, { en: BUSINESS.publicationDirector, fr: BUSINESS.publicationDirector }],

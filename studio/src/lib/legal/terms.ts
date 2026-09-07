@@ -1,4 +1,4 @@
-import { BUSINESS } from './business';
+import { BUSINESS, CONTACT_LINE } from './business';
 import type { LegalDocument } from './types';
 
 export const TERMS: LegalDocument = {
@@ -13,8 +13,8 @@ export const TERMS: LegalDocument = {
             heading: { en: 'Who you are contracting with', fr: 'Avec qui vous contractez' },
             blocks: [{
                 p: {
-                    en: `SportMind AI is operated by ${BUSINESS.operator}, ${BUSINESS.address}, ${BUSINESS.country} (“we”). Using the service means you accept these terms.`,
-                    fr: `SportMind AI est exploité par ${BUSINESS.operator}, ${BUSINESS.address}, ${BUSINESS.country} (« nous »). Utiliser le service vaut acceptation des présentes conditions.`,
+                    en: `SportMind AI is operated by ${CONTACT_LINE.en} (“we”). Using the service means you accept these terms.`,
+                    fr: `SportMind AI est exploité par ${CONTACT_LINE.fr} (« nous »). Utiliser le service vaut acceptation des présentes conditions.`,
                 },
             }],
         },

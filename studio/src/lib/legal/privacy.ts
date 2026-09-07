@@ -1,4 +1,4 @@
-import { BUSINESS } from './business';
+import { BUSINESS, CONTACT_LINE } from './business';
 import type { LegalDocument } from './types';
 
 /**
@@ -23,8 +23,8 @@ export const PRIVACY: LegalDocument = {
             blocks: [
                 {
                     p: {
-                        en: `${BUSINESS.serviceName} is operated by ${BUSINESS.operator}, ${BUSINESS.address}, ${BUSINESS.country}. For anything in this policy, write to ${BUSINESS.email}.`,
-                        fr: `${BUSINESS.serviceName} est exploité par ${BUSINESS.operator}, ${BUSINESS.address}, ${BUSINESS.country}. Pour toute question relative à cette politique, écrivez à ${BUSINESS.email}.`,
+                        en: `${BUSINESS.serviceName} is operated by ${CONTACT_LINE.en}. For anything in this policy, write to ${BUSINESS.email} — we read it.`,
+                        fr: `${BUSINESS.serviceName} est exploité par ${CONTACT_LINE.fr}. Pour toute question relative à cette politique, écrivez à ${BUSINESS.email} — nous le lisons.`,
                     },
                 },
                 {

@@ -486,7 +486,7 @@ export default function LandingPage() {
           </nav>
 
           <div className="space-y-1 text-sm text-white/70">
-            <p>{BUSINESS.operator} — {BUSINESS.address}, {BUSINESS.country}</p>
+            <p>{BUSINESS.operator} — {BUSINESS.country}</p>
             <p>
               <a href={`mailto:${BUSINESS.email}`} className="underline underline-offset-4 hover:text-white">
                 {BUSINESS.email}

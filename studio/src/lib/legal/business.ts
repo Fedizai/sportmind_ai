@@ -26,8 +26,19 @@ export interface BusinessDetails {
      * and RISKS.md.
      */
     operator: string;
-    /** Postal address. Required in the EU even for an individual. */
-    address: string;
+    /**
+     * Postal address, or `null` where the operators have chosen not to publish
+     * one.
+     *
+     * The EU e-commerce directive art. 5 and French LCEN art. 6-III both want a
+     * geographic address, and `null` does not satisfy that. It is nullable
+     * because the alternative — a plausible invented address — is a false
+     * statement about real people on a page whose entire purpose is to identify
+     * them truthfully. Where it is null the pages say so plainly and give the
+     * email as the contact route, rather than leaving a gap the reader has to
+     * interpret. The residual exposure is recorded in RISKS.md §1.2.
+     */
+    address: string | null;
     /** Country of establishment — decides the lead supervisory authority. */
     country: string;
     /** A contact address that a person actually reads. Required. */
@@ -62,7 +73,7 @@ const TODO = (what: string) => `[À COMPLÉTER : ${what}]`;
 export const BUSINESS: BusinessDetails = {
     serviceName: 'SportMind AI',
     operator: 'Fedy Zayen et Khaled Attia',
-    address: TODO('adresse postale complète'),
+    address: null,
     country: 'Tunisie',
     email: 'sportmindai@gmail.com',
     phone: null,
@@ -78,7 +89,24 @@ export const BUSINESS: BusinessDetails = {
     lastUpdated: '2026-09-07',
 };
 
-/** True while any legally required field is still a placeholder. */
+/**
+ * True while any field is still an unfilled `[À COMPLÉTER]` marker.
+ *
+ * A deliberate `null` is not a placeholder: the operators have decided not to
+ * publish a postal address, the pages state that in as many words, and a
+ * permanent warning banner on top of a settled decision would only teach people
+ * to ignore banners.
+ */
 export const BUSINESS_INCOMPLETE = [
-    BUSINESS.operator, BUSINESS.address, BUSINESS.email, BUSINESS.publicationDirector,
+    BUSINESS.operator, BUSINESS.email, BUSINESS.publicationDirector,
 ].some((value) => value.startsWith('['));
+
+/** How to reach the operators, for the pages that need one line of it. */
+export const CONTACT_LINE = {
+    en: BUSINESS.address
+        ? `${BUSINESS.operator}, ${BUSINESS.address}, ${BUSINESS.country}`
+        : `${BUSINESS.operator} (${BUSINESS.country}) — contactable by email at ${BUSINESS.email}`,
+    fr: BUSINESS.address
+        ? `${BUSINESS.operator}, ${BUSINESS.address}, ${BUSINESS.country}`
+        : `${BUSINESS.operator} (${BUSINESS.country}) — joignables par e-mail à ${BUSINESS.email}`,
+};
