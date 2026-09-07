@@ -44,7 +44,6 @@ const L = {
   start: { en: 'Start training', fr: 'Commencer' },
   menu: { en: 'Menu', fr: 'Menu' },
 
-  heroEyebrow: { en: 'SPORTMIND PERFORMANCE SYSTEM', fr: 'SPORTMIND PERFORMANCE SYSTEM' },
   heroTitleA: { en: 'Train.', fr: 'Train.' },
   heroTitleB: { en: 'Evolve.', fr: 'Evolve.' },
   heroSub: {
@@ -56,8 +55,6 @@ const L = {
   heroFeatureLiveBody: { en: 'Sets & loads', fr: 'Séries & charges' },
   heroFeatureCoachTitle: { en: 'AI coaching', fr: 'Coaching IA' },
   heroFeatureCoachBody: { en: 'Adaptive plan', fr: 'Plan adaptatif' },
-  heroLiveTitle: { en: 'SportMind Live', fr: 'SportMind Live' },
-  heroLiveBody: { en: 'Your performance, as it happens', fr: 'Votre performance en temps réel' },
   heroLoading: { en: 'INITIALISING SPORTMIND', fr: 'INITIALISATION SPORTMIND' },
   heroSceneFailed: {
     en: 'The 3D scene could not start.',
@@ -68,11 +65,9 @@ const L = {
     en: 'Check that WebGL is enabled in your browser.',
     fr: 'Vérifiez que WebGL est activé dans votre navigateur.',
   },
-  heroDragHint: { en: 'Drag to explore', fr: 'Glissez pour explorer' },
-  heroResetView: { en: 'Reset the 3D view', fr: 'Réinitialiser la vue 3D' },
   heroCanvasLabel: {
-    en: 'Interactive 3D scene: an olympic barbell and weight plates. Drag or use the arrow keys to turn the view. Press Home to reset.',
-    fr: 'Scène 3D interactive : barre olympique et disques de musculation. Faites glisser ou utilisez les flèches du clavier pour tourner la vue. Appuyez sur Origine pour réinitialiser.',
+    en: 'Interactive 3D scene: an olympic barbell and weight plates. It follows the pointer; use the arrow keys to turn it, or Home to recentre.',
+    fr: 'Scène 3D interactive : barre olympique et disques de musculation. Elle suit le pointeur ; utilisez les flèches du clavier pour la tourner, ou Origine pour la recentrer.',
   },
 
   manifesto: {
@@ -297,7 +292,6 @@ export default function LandingPage() {
         */}
         <SportMindHero
           copy={{
-            eyebrow: tr(L.heroEyebrow),
             titleA: tr(L.heroTitleA),
             titleB: tr(L.heroTitleB),
             description: tr(L.heroSub),
@@ -307,14 +301,10 @@ export default function LandingPage() {
             featureOneBody: tr(L.heroFeatureLiveBody),
             featureTwoTitle: tr(L.heroFeatureCoachTitle),
             featureTwoBody: tr(L.heroFeatureCoachBody),
-            liveTitle: tr(L.heroLiveTitle),
-            liveBody: tr(L.heroLiveBody),
             loading: tr(L.heroLoading),
             sceneFailed: tr(L.heroSceneFailed),
             sceneRetry: tr(L.heroSceneRetry),
             sceneHint: tr(L.heroSceneHint),
-            dragHint: tr(L.heroDragHint),
-            resetView: tr(L.heroResetView),
             canvasLabel: tr(L.heroCanvasLabel),
           }}
           onStartTraining={() => router.push('/signup')}

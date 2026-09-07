@@ -14,6 +14,34 @@
  */
 // A small, dependency-free WebGL2 studio renderer. All geometry is real 3D;
 // pointer and keyboard controls move a perspective camera around the equipment.
+//
+// The camera follows the mouse rather than waiting to be dragged: nothing tells
+// a visitor a picture is draggable, so on the landing page the scene was static
+// for anyone who did not happen to try. Moving the pointer anywhere over the
+// hero now turns it, and it settles back when the pointer leaves. Dragging is
+// still there for touch, where there is no hover to follow.
+//
+// REST is the orientation the barbell is composed at; SWING and TILT are how
+// far the pointer may take it from there — about 31 degrees of yaw, which is
+// enough to read as parallax without the model ever facing away.
+const REST_YAW = .42, REST_ELEVATION = .43;
+const SWING = .55, TILT = .2;
+const ELEVATION_MIN = .15, ELEVATION_MAX = 1.13;
+
+/**
+ * Where the pointer is inside a box, as -1..1 on each axis.
+ *
+ * Measured against the hero rather than the canvas so that moving across the
+ * headline turns the model too — the canvas is behind the copy, and the copy
+ * does not take pointer events.
+ */
+function pointerBias(event: PointerEvent, box: Element): [number, number] {
+  const rect = box.getBoundingClientRect();
+  if (!rect.width || !rect.height) return [0, 0];
+  const nx = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  const ny = ((event.clientY - rect.top) / rect.height) * 2 - 1;
+  return [Math.max(-1, Math.min(1, nx)), Math.max(-1, Math.min(1, ny))];
+}
 type V3 = [number, number, number];
 type Mat = Float32Array;
 type Material = { color: V3; roughness: number; metalness: number; surface?: number };
@@ -78,9 +106,18 @@ function createSoftwareGymRenderer(canvas: HTMLCanvasElement, onReady: () => voi
     for(let c=0;c<3;c++){const F=f0[c]+(1-f0[c])*(1-nv)**5;color[c]+=F*([2,2.15,2.6][c]*strip+[.28,.62,1.5][c]*accent)*(1-rough*.7);}
     return `rgb(${color.map(c=>Math.round(aces(c)*255)).join(' ')})`;
   }
-  let yaw=.42,elevation=.43,width=1,height=1,frame=0,disposed=false;
+  let yaw=REST_YAW,elevation=REST_ELEVATION,targetYaw=yaw,targetElevation=elevation;
+  let width=1,height=1,frame=0,disposed=false,lastTime=0;
+  const reduced=matchMedia("(prefers-reduced-motion: reduce)");
   function draw(){
     frame=0;if(disposed)return;
+    // The same easing the GPU path uses. Without it a camera driven by hover
+    // snaps to wherever the pointer happens to be, which reads as a glitch
+    // rather than as a moving camera.
+    const time=performance.now();
+    const dt=Math.min((time-lastTime)/1000||1/60,.05);lastTime=time;
+    const lerp=reduced.matches?1:1-Math.exp(-16*dt);
+    yaw+=(targetYaw-yaw)*lerp;elevation+=(targetElevation-elevation)*lerp;
     const mobile=width<=900,r=mobile?(width<=580?3.8:3.2):(width/height<1.45?4.5:4.25);
     const eye:V3=[r*Math.sin(yaw)*Math.cos(elevation),.26+r*Math.sin(elevation),r*Math.cos(yaw)*Math.cos(elevation)];
     const view=lookAt(eye,[0,.26,0]),f=1/Math.tan((mobile?37:32)*PI/360),offset=mobile?0:.4;
@@ -100,20 +137,31 @@ function createSoftwareGymRenderer(canvas: HTMLCanvasElement, onReady: () => voi
       ctx.beginPath();ctx.moveTo(...p[0]);for(let i=1;i<p.length;i++)ctx.lineTo(...p[i]);ctx.closePath();ctx.fillStyle=color;ctx.strokeStyle=color;ctx.fill();ctx.stroke();
     }
     canvas.dataset.view=`${yaw.toFixed(4)},${elevation.toFixed(4)}`;
+    if(Math.abs(yaw-targetYaw)+Math.abs(elevation-targetElevation)>.00008)frame=requestAnimationFrame(draw);
   }
-  const invalidate=()=>{if(!frame&&!disposed)frame=requestAnimationFrame(draw);};
+  const invalidate=()=>{if(!frame&&!disposed){lastTime=0;frame=requestAnimationFrame(draw);}};
   const resize=new ResizeObserver(()=>{const rect=canvas.getBoundingClientRect();width=rect.width;height=rect.height;const ratio=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);invalidate();});
   resize.observe(canvas);
-  let dragging=false,px=0,py=0,id=-1;
-  const down=(e:PointerEvent)=>{if(e.button!==0)return;dragging=true;id=e.pointerId;px=e.clientX;py=e.clientY;canvas.setPointerCapture(id);};
-  const move=(e:PointerEvent)=>{if(!dragging||id!==e.pointerId)return;yaw-=Math.max(-100,Math.min(100,e.clientX-px))*.006;elevation=Math.max(.15,Math.min(1.13,elevation+(e.clientY-py)*.004));px=e.clientX;py=e.clientY;invalidate();};
-  const up=()=>{dragging=false;id=-1;};
-  const reset=()=>{yaw=.42;elevation=.43;invalidate();};
-  const key=(e:KeyboardEvent)=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(e.key))return;e.preventDefault();if(e.key==='Home'){reset();return;}if(e.key==='ArrowLeft')yaw+=.1;if(e.key==='ArrowRight')yaw-=.1;if(e.key==='ArrowUp')elevation=Math.min(1.13,elevation+.06);if(e.key==='ArrowDown')elevation=Math.max(.15,elevation-.06);invalidate();};
   const section=canvas.closest('.sportmind-hero');
-  canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);canvas.addEventListener('lostpointercapture',up);canvas.addEventListener('keydown',key);section?.addEventListener('sportmind-reset-view',reset);
+  const stage=section??canvas;
+  let dragging=false,px=0,py=0,id=-1;
+  const reset=()=>{targetYaw=REST_YAW;targetElevation=REST_ELEVATION;invalidate();};
+  const hover=(e:PointerEvent)=>{
+    if(e.pointerType!=='mouse'||reduced.matches)return;
+    const [nx,ny]=pointerBias(e,stage);
+    targetYaw=REST_YAW-nx*SWING;
+    targetElevation=Math.max(ELEVATION_MIN,Math.min(ELEVATION_MAX,REST_ELEVATION+ny*TILT));
+    invalidate();
+  };
+  // Touch has no hover to follow, so it keeps the drag.
+  const down=(e:PointerEvent)=>{if(e.pointerType==='mouse'||e.button!==0)return;dragging=true;id=e.pointerId;px=e.clientX;py=e.clientY;canvas.setPointerCapture(id);};
+  const drag=(e:PointerEvent)=>{if(!dragging||id!==e.pointerId)return;targetYaw-=Math.max(-100,Math.min(100,e.clientX-px))*.006;targetElevation=Math.max(ELEVATION_MIN,Math.min(ELEVATION_MAX,targetElevation+(e.clientY-py)*.004));px=e.clientX;py=e.clientY;invalidate();};
+  const up=()=>{dragging=false;id=-1;};
+  const key=(e:KeyboardEvent)=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(e.key))return;e.preventDefault();if(e.key==='Home'){reset();return;}if(e.key==='ArrowLeft')targetYaw+=.1;if(e.key==='ArrowRight')targetYaw-=.1;if(e.key==='ArrowUp')targetElevation=Math.min(ELEVATION_MAX,targetElevation+.06);if(e.key==='ArrowDown')targetElevation=Math.max(ELEVATION_MIN,targetElevation-.06);invalidate();};
+  stage.addEventListener('pointermove',hover as EventListener);stage.addEventListener('pointerleave',reset);
+  canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',drag);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);canvas.addEventListener('lostpointercapture',up);canvas.addEventListener('keydown',key);
   const rect=canvas.getBoundingClientRect();width=rect.width;height=rect.height;const ratio=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);draw();canvas.dataset.ready='true';canvas.dataset.renderer='software-3d';onReady();
-  return()=>{disposed=true;cancelAnimationFrame(frame);resize.disconnect();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);canvas.removeEventListener('lostpointercapture',up);canvas.removeEventListener('keydown',key);section?.removeEventListener('sportmind-reset-view',reset);};
+  return()=>{disposed=true;cancelAnimationFrame(frame);resize.disconnect();stage.removeEventListener('pointermove',hover as EventListener);stage.removeEventListener('pointerleave',reset);canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',drag);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);canvas.removeEventListener('lostpointercapture',up);canvas.removeEventListener('keydown',key);};
 }
 function translation(x: number, y: number, z: number): Mat { const m = identity(); m[12] = x; m[13] = y; m[14] = z; return m; }
 function rotateY(a: number): Mat { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1]); }
@@ -325,7 +373,7 @@ export function createGymRenderer(canvas: HTMLCanvasElement, onReady: () => void
   gl.uniformMatrix4fv(uniforms.uShadowMatrix,false,shadowMatrix);gl.uniform1i(uniforms.uShadow,0);
   gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shadowTexture);
 
-  let yaw=.42, elevation=.43, targetYaw=yaw, targetElevation=elevation;
+  let yaw=REST_YAW, elevation=REST_ELEVATION, targetYaw=yaw, targetElevation=elevation;
   let frame=0, disposed=false, visible=true, width=1, height=1, lastTime=0, motion=false;
   const reduced=matchMedia("(prefers-reduced-motion: reduce)");
   let distance=4.25;
@@ -366,30 +414,41 @@ export function createGymRenderer(canvas: HTMLCanvasElement, onReady: () => void
   resize.observe(canvas);
   const intersection=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;if(visible)invalidate();else{cancelAnimationFrame(frame);frame=0;}});
   intersection.observe(canvas);
+  const section=canvas.closest(".sportmind-hero");
+  const stage=section??canvas;
   let dragging=false,pointerId=-1,px=0,py=0;
-  const down=(e:PointerEvent)=>{if(e.button!==0)return;dragging=true;pointerId=e.pointerId;px=e.clientX;py=e.clientY;canvas.setPointerCapture(e.pointerId);};
-  const move=(e:PointerEvent)=>{if(!dragging||e.pointerId!==pointerId)return;targetYaw-=Math.max(-100,Math.min(100,e.clientX-px))*.006;targetElevation=Math.max(.15,Math.min(1.13,targetElevation+(e.clientY-py)*.004));px=e.clientX;py=e.clientY;invalidate();};
+  const reset=()=>{targetYaw=REST_YAW;targetElevation=REST_ELEVATION;invalidate();};
+  const hover=(e:PointerEvent)=>{
+    if(e.pointerType!=="mouse"||reduced.matches)return;
+    const [nx,ny]=pointerBias(e,stage);
+    targetYaw=REST_YAW-nx*SWING;
+    targetElevation=Math.max(ELEVATION_MIN,Math.min(ELEVATION_MAX,REST_ELEVATION+ny*TILT));
+    invalidate();
+  };
+  // Touch has no hover to follow, so it keeps the drag.
+  const down=(e:PointerEvent)=>{if(e.pointerType==="mouse"||e.button!==0)return;dragging=true;pointerId=e.pointerId;px=e.clientX;py=e.clientY;canvas.setPointerCapture(e.pointerId);};
+  const drag=(e:PointerEvent)=>{if(!dragging||e.pointerId!==pointerId)return;targetYaw-=Math.max(-100,Math.min(100,e.clientX-px))*.006;targetElevation=Math.max(ELEVATION_MIN,Math.min(ELEVATION_MAX,targetElevation+(e.clientY-py)*.004));px=e.clientX;py=e.clientY;invalidate();};
   const up=()=>{dragging=false;pointerId=-1;};
-  const reset=()=>{targetYaw=.42;targetElevation=.43;invalidate();};
   const key=(e:KeyboardEvent)=>{
     if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home"].includes(e.key))return;
     e.preventDefault();if(e.key==="Home"){reset();return;}
     if(e.key==="ArrowLeft")targetYaw+=.1;if(e.key==="ArrowRight")targetYaw-=.1;
-    if(e.key==="ArrowUp")targetElevation=Math.min(1.13,targetElevation+.06);if(e.key==="ArrowDown")targetElevation=Math.max(.15,targetElevation-.06);invalidate();
+    if(e.key==="ArrowUp")targetElevation=Math.min(ELEVATION_MAX,targetElevation+.06);if(e.key==="ArrowDown")targetElevation=Math.max(ELEVATION_MIN,targetElevation-.06);invalidate();
   };
   const visibility=()=>{if(document.hidden){cancelAnimationFrame(frame);frame=0;}else invalidate();};
   const lost=(e:Event)=>{e.preventDefault();cancelAnimationFrame(frame);frame=0;onError();};
-  const section=canvas.closest(".sportmind-hero");
-  canvas.addEventListener("pointerdown",down);canvas.addEventListener("pointermove",move);canvas.addEventListener("pointerup",up);canvas.addEventListener("pointercancel",up);canvas.addEventListener("lostpointercapture",up);canvas.addEventListener("keydown",key);canvas.addEventListener("webglcontextlost",lost);
-  section?.addEventListener("sportmind-reset-view",reset);document.addEventListener("visibilitychange",visibility);
+  stage.addEventListener("pointermove",hover as EventListener);stage.addEventListener("pointerleave",reset);
+  canvas.addEventListener("pointerdown",down);canvas.addEventListener("pointermove",drag);canvas.addEventListener("pointerup",up);canvas.addEventListener("pointercancel",up);canvas.addEventListener("lostpointercapture",up);canvas.addEventListener("keydown",key);canvas.addEventListener("webglcontextlost",lost);
+  document.addEventListener("visibilitychange",visibility);
   const rect=canvas.getBoundingClientRect();width=rect.width;height=rect.height;
   const ratio=Math.min(devicePixelRatio||1,1.75);canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);
   distance=width/height<1.45?4.5:4.25;
   draw();canvas.dataset.ready="true";onReady();
   return()=>{
     disposed=true;cancelAnimationFrame(frame);resize.disconnect();intersection.disconnect();
-    canvas.removeEventListener("pointerdown",down);canvas.removeEventListener("pointermove",move);canvas.removeEventListener("pointerup",up);canvas.removeEventListener("pointercancel",up);canvas.removeEventListener("lostpointercapture",up);canvas.removeEventListener("keydown",key);canvas.removeEventListener("webglcontextlost",lost);
-    section?.removeEventListener("sportmind-reset-view",reset);document.removeEventListener("visibilitychange",visibility);
+    stage.removeEventListener("pointermove",hover as EventListener);stage.removeEventListener("pointerleave",reset);
+    canvas.removeEventListener("pointerdown",down);canvas.removeEventListener("pointermove",drag);canvas.removeEventListener("pointerup",up);canvas.removeEventListener("pointercancel",up);canvas.removeEventListener("lostpointercapture",up);canvas.removeEventListener("keydown",key);canvas.removeEventListener("webglcontextlost",lost);
+    document.removeEventListener("visibilitychange",visibility);
     for(const mesh of meshes){gl.deleteVertexArray(mesh.vao);gl.deleteBuffer(mesh.buffer);}for(const p of programs)gl.deleteProgram(p);gl.deleteTexture(shadowTexture);gl.deleteFramebuffer(framebuffer);
   };
 }

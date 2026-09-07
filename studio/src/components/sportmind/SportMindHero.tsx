@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, RotateCcw } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { GymScene } from "./GymScene";
@@ -20,10 +20,15 @@ import "./sportmind-hero.css";
  *
  * The copy is passed in. The rest of the page switches language from the header
  * and a hero that only speaks French would be the one section that ignores it.
+ *
+ * Three overlays the pack shipped are gone: the eyebrow pill, the "SportMind
+ * Live" badge, and the reset control with its drag hint. The hint went with the
+ * control because the scene follows the mouse now — there is nothing left to
+ * hint at, and nothing left to reset to that moving the pointer away does not
+ * already do.
  */
 
 export interface SportMindHeroCopy {
-    eyebrow: string;
     titleA: string;
     titleB: string;
     description: string;
@@ -33,14 +38,10 @@ export interface SportMindHeroCopy {
     featureOneBody: string;
     featureTwoTitle: string;
     featureTwoBody: string;
-    liveTitle: string;
-    liveBody: string;
     loading: string;
     sceneFailed: string;
     sceneRetry: string;
     sceneHint: string;
-    dragHint: string;
-    resetView: string;
     canvasLabel: string;
 }
 
@@ -99,7 +100,6 @@ export function SportMindHero({ className = "", copy, onStartTraining, onDiscove
     return (
         <section ref={hero} className={`sportmind-hero ${className}`} aria-labelledby="sportmind-title">
             <div className="hero-content">
-                <div className="hero-eyebrow"><span aria-hidden="true" />{copy.eyebrow}</div>
                 <h1 id="sportmind-title"><span>{copy.titleA}</span><span className="hero-evolve">{copy.titleB}</span></h1>
                 <p className="hero-description">{copy.description}</p>
                 <div className="hero-actions">
@@ -135,24 +135,6 @@ export function SportMindHero({ className = "", copy, onStartTraining, onDiscove
                         )}
                     </div>
                 )}
-
-                {ready && (
-                    <div className="scene-tools">
-                        <span aria-hidden="true" className="scene-drag-hint">{copy.dragHint}</span>
-                        <button
-                            aria-label={copy.resetView}
-                            title={copy.resetView}
-                            onClick={() => hero.current?.dispatchEvent(new CustomEvent("sportmind-reset-view", { bubbles: true }))}
-                        >
-                            <RotateCcw size={14} aria-hidden="true" />
-                        </button>
-                    </div>
-                )}
-
-                <div className="sportmind-live">
-                    <div className="live-icon" aria-hidden="true"><span /></div>
-                    <div><strong>{copy.liveTitle}</strong><span>{copy.liveBody}</span></div>
-                </div>
             </div>
 
             <div className="hero-cursor-light" ref={light} aria-hidden="true" />
