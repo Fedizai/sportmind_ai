@@ -2,6 +2,7 @@
 
 "use client";
 
+import { HealthConsentCard } from '@/components/settings/health-consent';
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, FormProvider } from "react-hook-form";
@@ -378,6 +379,18 @@ export default function SettingsPage() {
                         </CardContent>
                     </Card>
                     
+                    {/*
+                      Consent has to be as easy to withdraw as it was to give
+                      (GDPR art. 7(3)), which means a control here rather than
+                      an address to write to. The privacy policy points at it.
+                    */}
+                    {user?.uid && (
+                        <HealthConsentCard
+                            uid={user.uid}
+                            initial={(user as { consent?: { healthData?: boolean } })?.consent?.healthData ?? true}
+                        />
+                    )}
+
                     {/* Data Management */}
                     <Card>
                         <CardHeader>

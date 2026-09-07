@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/theme-provider';
 import { UserProvider } from '@/hooks/use-user';
 import { Public_Sans, Big_Shoulders_Display } from 'next/font/google';
+import { HtmlLang } from '@/components/html-lang';
+import { SkipToContent } from '@/components/skip-to-content';
 import { cn } from '@/lib/utils';
 
 const publicSans = Public_Sans({
@@ -48,7 +50,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    /* lang starts French because that is what the app serves by default;
+       <HtmlLang /> corrects it the moment the reader's choice is known. */
+    <html lang="fr" suppressHydrationWarning>
       <head />
       <body className={cn("antialiased font-sans", publicSans.variable, bigShoulders.variable)}>
         <UserProvider>
@@ -58,6 +62,8 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <HtmlLang />
+            <SkipToContent />
             {children}
             <Toaster />
           </ThemeProvider>

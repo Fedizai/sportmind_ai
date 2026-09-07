@@ -29,7 +29,17 @@ export const signupSchema = z.object({
   role: z.enum(["player", "coach"]),
   
   // General Info
-  age: z.coerce.number().min(13, { message: "You must be at least 13 years old." }).max(100),
+  /**
+   * Sixteen, not thirteen.
+   *
+   * Sixteen is the GDPR default age of consent; member states may lower it to
+   * 13 and several have, so accepting 13 means checking every country a user
+   * might sign up from and building verifiable parental consent for the ones
+   * below the line. Sixteen is covered everywhere in the EU with no such
+   * machinery, and this service collects health data, which is the last thing
+   * to be casual about with minors.
+   */
+  age: z.coerce.number().min(16, { message: "You must be at least 16 years old to use SportMind." }).max(100),
   trainingFrequency: z.enum(["1-2_per_week", "3-4_per_week", "5+_per_week"]),
   mainGoal: z.enum(["improve_fitness", "lose_weight", "gain_muscle", "improve_performance"]),
   sports: z.array(z.string()).min(1, { message: "Please select at least one sport."}),
@@ -49,6 +59,22 @@ export const signupSchema = z.object({
   gymHeight: z.coerce.number().optional(),
   gymWeight: z.coerce.number().optional(),
   gymGoal: z.enum(["fat_loss", "muscle_gain", "strength", "endurance"]).optional(),
+
+  /**
+   * Two consents, deliberately separate and both un-ticked by default.
+   *
+   * The terms are a contract you accept. Health data is a special category
+   * under GDPR art. 9 and needs *explicit* consent, which cannot be bundled
+   * into "I accept the terms" and cannot be pre-ticked — a pre-ticked box is
+   * not consent at all (Planet49, C-673/17). Keeping them apart is also the
+   * only way the athlete can later withdraw one without losing their account.
+   */
+  acceptTerms: z
+    .boolean()
+    .refine((v) => v === true, { message: "Please accept the terms and the privacy policy to continue." }),
+  consentHealthData: z
+    .boolean()
+    .refine((v) => v === true, { message: "We cannot build training or nutrition plans without this consent." }),
 });
 
 

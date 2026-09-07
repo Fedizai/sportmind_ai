@@ -43,6 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { VideoPlayer } from '@/components/video/video-player';
 import { useTranslation } from "@/hooks/use-translation";
 import { useResources, useResourceComments, type Resource } from "@/hooks/use-resources";
 import { cn } from "@/lib/utils";
@@ -56,45 +57,12 @@ const videoFormSchema = z.object({
 
 type VideoFormValues = z.infer<typeof videoFormSchema>;
 
-function getYouTubeId(url: string): string | null {
-  const patterns = [/youtube\.com\/watch\?v=([^&]+)/, /youtu\.be\/([^?&]+)/, /youtube\.com\/embed\/([^?&]+)/];
-  for (const re of patterns) {
-    const match = url.match(re);
-    if (match) return match[1];
-  }
-  return null;
-}
-
-function getVimeoId(url: string): string | null {
-  const match = url.match(/vimeo\.com\/(\d+)/);
-  return match ? match[1] : null;
-}
-
-function VideoEmbed({ url }: { url: string }) {
-  const youtubeId = getYouTubeId(url);
-  const vimeoId = getVimeoId(url);
-  if (youtubeId) {
-    return (
-      <iframe
-        src={`https://www.youtube.com/embed/${youtubeId}`}
-        className="w-full h-full"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      />
-    );
-  }
-  if (vimeoId) {
-    return (
-      <iframe
-        src={`https://player.vimeo.com/video/${vimeoId}`}
-        className="w-full h-full"
-        allow="autoplay; fullscreen; picture-in-picture"
-        allowFullScreen
-      />
-    );
-  }
-  return <video src={url} controls className="w-full h-full bg-black" />;
-}
+/**
+ * The embed used to be duplicated here, without the consent gate and without a
+ * title on the iframe. One player, one gate: a second copy is a second thing to
+ * forget when the rules change.
+ */
+const VideoEmbed = ({ url }: { url: string }) => <VideoPlayer url={url} className="w-full h-full" />;
 
 export default function VideoReviewPage() {
   const { t } = useTranslation();

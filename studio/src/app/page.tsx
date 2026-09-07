@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/use-translation';
 import { useLanguageStore } from '@/stores/language-store';
 import { SportMindHero } from '@/components/sportmind/SportMindHero';
+import { BUSINESS } from '@/lib/legal/business';
 
 /* -------------------------------------------------------------------------- */
 /*  Imagery — Unsplash IDs, each verified to resolve 200 at the CDN            */
@@ -129,9 +130,17 @@ const L = {
     fr: 'Entraînement d’équipe sous les projecteurs, de nuit',
   },
 
-  perMonth: { en: '/month', fr: '/mois' },
-  choose: { en: 'Choose', fr: 'Choisir' },
-  popular: { en: 'Most chosen', fr: 'Le plus choisi' },
+  footerNav: { en: 'Site sections', fr: 'Sections du site' },
+  footerLegal: { en: 'Legal', fr: 'Mentions et politiques' },
+  legalPrivacy: { en: 'Privacy', fr: 'Confidentialité' },
+  legalTerms: { en: 'Terms', fr: 'Conditions' },
+  legalCookies: { en: 'Cookies', fr: 'Cookies' },
+  legalRefunds: { en: 'Refunds', fr: 'Remboursements' },
+  legalNotice: { en: 'Legal notice', fr: 'Mentions légales' },
+  notMedical: {
+    en: 'SportMind is a training tool, not a medical device, and gives no medical advice.',
+    fr: 'SportMind est un outil d’entraînement, pas un dispositif médical, et ne délivre aucun avis médical.',
+  },
 
   closingTitle: {
     en: 'Your next season starts with a number.',
@@ -282,7 +291,7 @@ export default function LandingPage() {
         )}
       </header>
 
-      <main>
+      <main id="main">
         {/* ─────────────────────────── Hero ─────────────────────────── */}
         {/*
           A real 3D barbell rather than a stock photograph. It is a client
@@ -443,24 +452,50 @@ export default function LandingPage() {
       </main>
 
       {/* ─────────────────────────── Footer ─────────────────────────── */}
-      <footer className="border-t border-white/10 py-10">
-        <div className="mx-auto flex max-w-[1400px] flex-col items-start justify-between gap-6 px-5 md:flex-row md:items-center md:px-10">
-          <Link href="/" className="font-display text-xl font-extrabold uppercase tracking-[0.08em]">
-            Sport<span className="text-primary">Mind</span>
-          </Link>
-          <nav className="flex flex-wrap gap-x-7 gap-y-2 text-sm text-white/55">
-            {navLinks.map((l) => (
-              <a key={l.href} href={l.href} className="transition-colors hover:text-white">
-                {tr(l.label)}
-              </a>
-            ))}
-            <Link href="/login" className="transition-colors hover:text-white">
-              {tr(L.login)}
+      <footer className="border-t border-white/10 py-12">
+        <div className="mx-auto flex max-w-[1400px] flex-col gap-8 px-5 md:px-10">
+          <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+            <Link href="/" className="font-display text-xl font-extrabold uppercase tracking-[0.08em]">
+              Sport<span className="text-primary">Mind</span>
             </Link>
+            <nav aria-label={tr(L.footerNav)} className="flex flex-wrap gap-x-7 gap-y-2 text-sm text-white/70">
+              {navLinks.map((l) => (
+                <a key={l.href} href={l.href} className="transition-colors hover:text-white">
+                  {tr(l.label)}
+                </a>
+              ))}
+              <Link href="/login" className="transition-colors hover:text-white">
+                {tr(L.login)}
+              </Link>
+            </nav>
+          </div>
+
+          {/*
+            The legal links live in the footer of every page because that is
+            where a regulator, a payment provider and an unhappy user all look
+            first — and because in France and across the EU a site that cannot
+            be linked to an identifiable publisher is the cheapest thing to be
+            caught on.
+          */}
+          <nav aria-label={tr(L.footerLegal)} className="flex flex-wrap gap-x-6 gap-y-2 border-t border-white/10 pt-6 text-sm text-white/70">
+            <Link href="/privacy" className="underline underline-offset-4 transition-colors hover:text-white">{tr(L.legalPrivacy)}</Link>
+            <Link href="/terms" className="underline underline-offset-4 transition-colors hover:text-white">{tr(L.legalTerms)}</Link>
+            <Link href="/cookies" className="underline underline-offset-4 transition-colors hover:text-white">{tr(L.legalCookies)}</Link>
+            <Link href="/refunds" className="underline underline-offset-4 transition-colors hover:text-white">{tr(L.legalRefunds)}</Link>
+            <Link href="/legal-notice" className="underline underline-offset-4 transition-colors hover:text-white">{tr(L.legalNotice)}</Link>
           </nav>
-          <p className="text-sm text-white/60">
-            © {new Date().getFullYear()} SportMind AI. {tr(L.rights)}
-          </p>
+
+          <div className="space-y-1 text-sm text-white/70">
+            <p>{BUSINESS.operator} — {BUSINESS.address}, {BUSINESS.country}</p>
+            <p>
+              <a href={`mailto:${BUSINESS.email}`} className="underline underline-offset-4 hover:text-white">
+                {BUSINESS.email}
+              </a>
+            </p>
+            <p className="pt-2 text-white/60">
+              © {new Date().getFullYear()} SportMind AI. {tr(L.rights)} {tr(L.notMedical)}
+            </p>
+          </div>
         </div>
       </footer>
     </div>

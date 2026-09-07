@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Logo } from "@/components/logo";
 import { signupSchema } from "@/lib/schemas";
+import { BUSINESS } from "@/lib/legal/business";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Loader2, Languages, Sun, Moon, ArrowRight, ArrowLeft } from "lucide-react";
@@ -48,6 +49,8 @@ const ADMIN_EMAILS = ['fedizayen12@gmail.com', 'khaled05062006@gmail.com', 'khal
  * Resting burn plus an activity factor, used to seed the athlete's calorie
  * target. Mifflin-St Jeor, as it was on the old post-checkout page.
  */
+const LEGAL_VERSION = BUSINESS.lastUpdated;
+
 const calculateTDEE = (age: number, height: number, weight: number, trainingFrequency: string) => {
     const bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
     let activityMultiplier = 1.375;
@@ -74,6 +77,8 @@ export default function SignupPage() {
       password: "",
       role: "player",
       age: 18,
+      acceptTerms: false,
+      consentHealthData: false,
       trainingFrequency: "1-2_per_week",
       mainGoal: "improve_fitness",
       sports: ["gym"],
@@ -158,6 +163,20 @@ export default function SignupPage() {
           // Everyone starts on the free tier; Pro is arranged directly now.
           plan: role === 'coach' ? 'pro' : 'athlete',
           createdAt: serverTimestamp(),
+          /**
+           * The consents, recorded with the version they were given against.
+           *
+           * GDPR art. 7(1) puts the burden of proof on us: a consent we cannot
+           * evidence is a consent we did not obtain. Storing the date and the
+           * policy version is also what lets us tell, later, who needs asking
+           * again after the policy changes.
+           */
+          consent: {
+            terms: true,
+            healthData: true,
+            givenAt: serverTimestamp(),
+            policyVersion: LEGAL_VERSION,
+          },
           onboardingComplete: true,
           age,
           trainingFrequency,
@@ -322,6 +341,56 @@ export default function SignupPage() {
             <div className="flex justify-between items-center pt-4">
                 <Button type="button" variant="ghost" onClick={goToPrevStep} disabled={currentStep === 0}>
                     <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            {currentStep === steps.length - 1 && (
+                /*
+                 * Two boxes, not one, and neither pre-ticked. Accepting the
+                 * terms is a contract; letting us process health data is a
+                 * separate explicit consent under GDPR art. 9 that has to be
+                 * givable — and withdrawable — on its own.
+                 */
+                <div className="mb-6 space-y-4 rounded-xl border border-border/60 p-4">
+                    <FormField
+                        control={form.control}
+                        name="acceptTerms"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-start gap-3 space-y-0">
+                                <FormControl>
+                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} aria-describedby="accept-terms-text" />
+                                </FormControl>
+                                <div className="space-y-1 leading-snug">
+                                    <FormLabel id="accept-terms-text" className="text-sm font-normal">
+                                        I accept the{" "}
+                                        <Link href="/terms" target="_blank" className="underline text-primary">terms of service</Link>{" "}
+                                        and the{" "}
+                                        <Link href="/privacy" target="_blank" className="underline text-primary">privacy policy</Link>, and I am at least 16 years old.
+                                    </FormLabel>
+                                    <FormMessage />
+                                </div>
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="consentHealthData"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-start gap-3 space-y-0">
+                                <FormControl>
+                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} aria-describedby="health-consent-text" />
+                                </FormControl>
+                                <div className="space-y-1 leading-snug">
+                                    <FormLabel id="health-consent-text" className="text-sm font-normal">
+                                        I explicitly consent to SportMind processing my health data — height, weight, body
+                                        measurements, nutrition and training — to build my plans. I can withdraw this at any
+                                        time in Settings. SportMind is not a medical device and gives no medical advice.
+                                    </FormLabel>
+                                    <FormMessage />
+                                </div>
+                            </FormItem>
+                        )}
+                    />
+                </div>
+            )}
+
                 </Button>
                 {currentStep < steps.length - 1 ? (
                     <Button type="button" onClick={goToNextStep}>
@@ -330,7 +399,7 @@ export default function SignupPage() {
                 ) : (
                     <Button type="submit" disabled={isSubmitting}>
                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Proceed to Payment
+                        Create my account
                     </Button>
                 )}
             </div>

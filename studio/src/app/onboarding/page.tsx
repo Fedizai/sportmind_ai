@@ -110,7 +110,7 @@ export default function OnboardingPage() {
     }
     if (pid === "gym") {
       const g = answers.gym ?? {};
-      if (g.age === undefined || g.age < 13 || g.age > 90) errs.age = "Please enter an age between 13 and 90.";
+      if (g.age === undefined || g.age < 16 || g.age > 90) errs.age = "Please enter an age between 16 and 90.";
       if (g.height === undefined || g.height < 80 || g.height > 250) errs.height = "Please enter a height between 80 and 250 cm.";
       if (g.weight === undefined || g.weight < 25 || g.weight > 300) errs.weight = "Please enter a weight between 25 and 300 kg.";
       if (!g.goal) errs.goal = "Please set a personal goal.";

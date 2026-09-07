@@ -336,11 +336,15 @@ function CoachLayoutContent({ children }: { children: React.ReactNode }) {
                 >
                   <item.icon className={cn(
                     "h-5 w-5 transition-colors duration-200",
-                    isActive ? "text-primary dark:text-white" : "text-foreground/35 dark:text-white/35"
+                    isActive ? "text-primary dark:text-white" : "text-foreground/65 dark:text-white/65"
                   )} />
                   <span className={cn(
+                    /* 65-70%, not 30-35%. Measured against the glass bar,
+                       white at 30% is 2.68:1 and at 35% is 3.21:1, where 9px
+                       text needs 4.5:1. The active item is still plainly the
+                       active one — it is white, these are not. */
                     "text-[9px] leading-none font-medium tracking-wide transition-colors duration-200",
-                    isActive ? "text-foreground dark:text-white/90" : "text-foreground/30 dark:text-white/30"
+                    isActive ? "text-foreground dark:text-white/90" : "text-foreground/70 dark:text-white/70"
                   )}>
                     {item.label}
                   </span>

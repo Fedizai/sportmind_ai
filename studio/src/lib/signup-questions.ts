@@ -58,6 +58,8 @@ export const QUESTION_LABELS: Record<SignupField, QuestionLabel> = {
     email: { en: 'Email', fr: 'E-mail' },
     password: { en: 'Password', fr: 'Mot de passe' },
     role: { en: 'I am a…', fr: 'Je suis…' },
+    acceptTerms: { en: 'Accepted the terms and privacy policy', fr: 'A accepté les conditions et la politique de confidentialité' },
+    consentHealthData: { en: 'Explicit consent to process health data', fr: 'Consentement explicite au traitement des données de santé' },
     age: { en: 'Age', fr: 'Âge' },
     trainingFrequency: { en: 'How often do you train?', fr: 'À quelle fréquence t\'entraînes-tu ?' },
     mainGoal: { en: 'What is your main athletic goal?', fr: 'Quel est ton objectif sportif principal ?' },
@@ -129,6 +131,10 @@ export const STORED_AT: Record<SignupField, string | null> = {
     email: 'email',
     password: null,
     role: 'role',
+    // Recorded on the profile, because a consent you cannot prove you obtained
+    // is a consent you did not obtain — GDPR art. 7(1) puts the burden on us.
+    acceptTerms: 'consent.terms',
+    consentHealthData: 'consent.healthData',
     age: 'age',
     trainingFrequency: 'trainingFrequency',
     mainGoal: 'mainGoal',

@@ -302,6 +302,14 @@ export default function MatchesPage() {
                         <PopoverTrigger asChild>
                           <button
                             type="button"
+                            /* The visible text is a pair of initials or a
+                               position code, which a screen reader reads as
+                               "MD, button" with no idea what it is on. */
+                            aria-label={
+                              assignedPlayer
+                                ? `${slot.label} — ${assignedPlayer.displayName}`
+                                : slot.label
+                            }
                             style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
                             className={cn(
                               "absolute -translate-x-1/2 -translate-y-1/2 h-11 w-11 rounded-full border-2 flex items-center justify-center text-xs font-bold shadow-sm transition-colors",
