@@ -55,6 +55,13 @@ export interface StreakState {
   pendingLevelUp: StreakTierId | null;
   isLoading: boolean;
   lastCalculated: string | null;
+  /**
+   * When a calculation last read *every* source, as a timestamp.
+   *
+   * `null` means nothing trustworthy has ever been computed, which is the only
+   * situation in which a partial read is allowed to publish.
+   */
+  lastCompleteAt: number | null;
   /** Recalculate from Firestore. Throttled; pass `force` to bypass. */
   calculateStreak: (userId: string, force?: boolean) => Promise<void>;
   /** Bring a broken streak back. Returns false when no credit is available. */
@@ -65,9 +72,38 @@ export interface StreakState {
   previewLevelUp: (tierId: StreakTierId) => void;
 }
 
-/** Module-level so it is never persisted and never survives a reload. */
+/** Module-level so they are never persisted and never survive a reload. */
 let lastRunAt = 0;
+/**
+ * One calculation at a time.
+ *
+ * The throttle only stops a *burst*; two calls a second apart both passed it
+ * and then interleaved their awaits, so the slower one could finish last and
+ * overwrite the newer answer with an older one.
+ */
+let inFlight: Promise<void> | null = null;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+/**
+ * Consecutive partial reads that have been retried.
+ *
+ * Capped, because a source can be missing *permanently* — an undeployed
+ * security rule, an index that was never built — and an uncapped retry would
+ * then re-query seven collections every two seconds for as long as the tab is
+ * open. Three attempts covers the transient cases this exists for (a store
+ * hydrating, a token arriving); beyond that the read is not going to get
+ * better on its own, and the next navigation or focus can try again.
+ */
+let retriesLeft = 3;
 const MIN_INTERVAL_MS = 20_000;
+/** How soon to try again after a read that was missing a source. */
+const RETRY_MS = 2_000;
+
+/** Ask for another go, unless we have already asked enough times. */
+function scheduleRetry(run: () => void) {
+  if (retryTimer !== null || retriesLeft <= 0) return;
+  retriesLeft -= 1;
+  retryTimer = setTimeout(() => { retryTimer = null; run(); }, RETRY_MS);
+}
 
 const dayKey = (d: Date) => format(d, 'yyyy-MM-dd');
 const todayKey = () => dayKey(new Date());
@@ -102,9 +138,17 @@ const SPORT_SOURCES: {
  * silently, which meant a week of training the athlete had ticked off counted
  * for nothing.
  */
-async function serverSideActivity(): Promise<Date[]> {
+async function serverSideActivity(): Promise<{ dates: Date[]; ok: boolean }> {
+  // `useUser` has already resolved by the time a caller has a uid, but the
+  // Firebase SDK restores its own session asynchronously and `currentUser` is
+  // null for the first moments after a reload. Reading it too early returned
+  // no sessions and no workouts at all, which is most of an athlete's streak.
+  try {
+    await auth?.authStateReady?.();
+  } catch { /* older SDK without the helper; fall through to the null check */ }
+
   const current = auth?.currentUser;
-  if (!current) return [];
+  if (!current) return { dates: [], ok: false };
 
   const dates: Date[] = [];
   try {
@@ -127,8 +171,9 @@ async function serverSideActivity(): Promise<Date[]> {
     });
   } catch (err) {
     console.warn('Streak: skipped server-side activity', err);
+    return { dates, ok: false };
   }
-  return dates;
+  return { dates, ok: true };
 }
 
 function toDate(value: unknown): Date | null {
@@ -156,26 +201,50 @@ export const useStreakStore = create<StreakState>()(
       pendingLevelUp: null,
       isLoading: true,
       lastCalculated: null,
+      lastCompleteAt: null,
 
       calculateStreak: async (userId: string, force = false) => {
         if (!userId) return;
         // Callers fire this on mount, focus and navigation; throttle so a burst
         // of route changes doesn't re-query seven collections each time.
         if (!force && Date.now() - lastRunAt < MIN_INTERVAL_MS) return;
+        // Join the run already happening rather than starting a second one that
+        // would race it to the last write.
+        if (inFlight) return inFlight;
         lastRunAt = Date.now();
         set({ isLoading: true });
 
+        inFlight = (async () => {
+
         try {
           const dates: Date[] = [];
+          /**
+           * Whether every source answered.
+           *
+           * A streak assembled from six independent reads is only as true as
+           * the least reliable of them, and each one here has a quiet failure
+           * path: the plan store may not have hydrated, the auth token may not
+           * be ready, a collection query may be refused. Each used to log a
+           * warning and carry on, and the number computed from whatever
+           * survived was written to state as the answer — which is why the
+           * same athlete on the same day could be shown 14, 12, 3 or 1.
+           * See scripts/streak/reproduce.mjs.
+           */
+          const missing: string[] = [];
 
-          // Completed days from the locally-held gym plan.
-          const { plan } = usePlanStore.getState();
-          (plan?.days || []).forEach((d) => {
+          // Completed days from the locally-held gym plan. `isHydrated` is the
+          // point: before it, `plan` is null and every completed gym day is
+          // silently absent.
+          const planState = usePlanStore.getState();
+          if (!planState.isHydrated) missing.push('gym plan (not hydrated yet)');
+          (planState.plan?.days || []).forEach((d) => {
             const parsed = toDate(d.completed_at);
             if (parsed) dates.push(startOfDay(parsed));
           });
 
-          dates.push(...await serverSideActivity());
+          const server = await serverSideActivity();
+          if (!server.ok) missing.push('sessions and workout days');
+          dates.push(...server.dates);
 
           // One failing collection (missing index, rules) must not zero the streak.
           const results = await Promise.allSettled(
@@ -187,6 +256,7 @@ export const useStreakStore = create<StreakState>()(
           results.forEach((res, i) => {
             if (res.status !== 'fulfilled') {
               console.warn(`Streak: skipped ${SPORT_SOURCES[i].path}`, res.reason);
+              missing.push(SPORT_SOURCES[i].path);
               return;
             }
             const source = SPORT_SOURCES[i];
@@ -211,6 +281,7 @@ export const useStreakStore = create<StreakState>()(
             });
           } catch (err) {
             console.warn('Streak: skipped bodyweightLogs', err);
+            missing.push('bodyweightLogs');
           }
 
           // Restores and admin adjustments live on the user document so they
@@ -270,6 +341,25 @@ export const useStreakStore = create<StreakState>()(
           }
 
           const current = summary.current + Math.max(0, bonusDays);
+
+          /**
+           * A partial read is not an answer.
+           *
+           * If anything failed and we already have a figure from a run that did
+           * read everything, keep it. Publishing the lower number is what made
+           * the streak flicker — it would drop on a cold load, climb back when
+           * the plan hydrated, drop again on the next navigation. The throttle
+           * is cleared too, so the very next trigger retries instead of waiting
+           * out the interval, and a retry is scheduled in case nothing else
+           * happens to fire.
+           */
+          if (missing.length > 0 && get().lastCompleteAt !== null) {
+            console.warn(`Streak: partial read, keeping the last complete value. Missing: ${missing.join(', ')}`);
+            lastRunAt = 0;
+            scheduleRetry(() => void get().calculateStreak(userId, true));
+            set({ isLoading: false });
+            return;
+          }
           // Did this calculation move the athlete up the ladder?
           const reachedId = tierForStreak(current).id;
           const seenId = get().celebratedTierId;
@@ -299,11 +389,27 @@ export const useStreakStore = create<StreakState>()(
             pendingLevelUp,
             isLoading: false,
             lastCalculated: todayKey(),
+            // Only a run that read every source may claim to be complete. The
+            // first-ever calculation still publishes whatever it managed, since
+            // a partial number beats an empty dial, but it does not get to
+            // block the better answer that follows.
+            lastCompleteAt: missing.length === 0 ? Date.now() : get().lastCompleteAt,
           });
+
+          if (missing.length > 0) {
+            lastRunAt = 0;
+            scheduleRetry(() => void get().calculateStreak(userId, true));
+          } else {
+            // A clean read earns the next run its full allowance back.
+            retriesLeft = 3;
+          }
         } catch (error) {
           console.error('Error calculating streak:', error);
           set({ isLoading: false });
         }
+        })().finally(() => { inFlight = null; });
+
+        return inFlight;
       },
 
       restoreStreak: async (userId, method, days) => {
@@ -377,6 +483,9 @@ export const useStreakStore = create<StreakState>()(
         // `pendingLevelUp` stays out on purpose: a celebration that was never
         // dismissed should not reappear on every reload for ever after.
         lastCalculated: state.lastCalculated,
+        // Persisted, so a reload knows the stored figure was trustworthy and a
+        // partial read on the next cold start does not get to replace it.
+        lastCompleteAt: state.lastCompleteAt,
       }),
     }
   )
