@@ -141,26 +141,40 @@ causes harm. Two things worth doing:
 | Sign-up button | "Proceed to Payment" | "Create my account" — there is no payment step |
 | Footer | logo and links | publisher, address, contact, five legal links, medical disclaimer |
 
-## 3. Cookie consent: why there is no banner
+## 3. Cookie consent
 
-I checked rather than assumed. `document.cookie` appears nowhere in the source;
-there is no analytics, advertising or tracking SDK in `package.json`; and
-everything kept in the browser is either the Firebase sign-in session or a
-setting the user chose (language, current sport, meal plan, shopping list,
-streak, chat history, daily-reset date).
+**This section changed when analytics was added.** The earlier version said
+there was no measurement and therefore no banner; both halves of that are now
+false, and the cookie policy was rewritten with them.
 
-The ePrivacy directive exempts storage strictly necessary for a service the user
-asked for, so none of that needs consent. A banner asking permission for things
-that need none is worse than no banner: it trains people to dismiss the ones
-that matter.
+Google Analytics is now loaded, and it is the only non-essential thing on the
+site. The banner exists because of it, and it satisfies the three rules that
+actually get enforced:
 
-The one genuine case is the YouTube and Vimeo embeds, which set third-party
-cookies and see the viewer's IP. Those now load only when the viewer presses a
-button that says so.
+- **Refusing is exactly as easy as accepting** — same row, same size, same
+  weight, one click each. A prominent "accept" beside a muted "manage
+  preferences" is the pattern regulators fine.
+- **Nothing loads before a choice.** Verified rather than assumed: with no
+  choice recorded there is no `gtag`, no `dataLayer` and no request to
+  googletagmanager; both appear only after "Accept" is pressed. A script that
+  loads and then waits has already stored its identifier.
+- **Withdrawal is one click**, on `/cookies`, and it switches collection off in
+  place rather than only on the next visit.
 
-**If you ever add analytics, this changes.** Any measurement tool needs a real
-consent banner with a reject option as prominent as accept, and nothing may load
-before a choice is made.
+Everything else in browser storage is the sign-in session or a preference the
+user set, which is exempt as strictly necessary and deliberately gets no
+checkbox. The YouTube and Vimeo embeds keep their own click-to-load gate.
+
+Two things worth knowing:
+
+- **Google Analytics and EU data transfers.** GA sends data to Google, and
+  several EU regulators have found GA deployments unlawful on transfer grounds.
+  Turn on IP anonymisation and shorten data retention in the GA console, and
+  consider whether a cookieless analytics tool (Plausible, Umami, Fathom) would
+  serve you better — those need no banner at all, which would let you remove it.
+- **The measurement ID `G-PZ1VMK9D1K`** ships in the client bundle. That is
+  normal and not a secret; it identifies the property, it does not grant access
+  to it.
 
 ## 4. Accessibility
 

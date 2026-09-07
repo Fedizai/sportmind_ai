@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Logo } from "@/components/logo";
 import { signupSchema } from "@/lib/schemas";
+import { useSpamGuard } from "@/hooks/use-spam-guard";
 import { BUSINESS } from "@/lib/legal/business";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -65,6 +66,7 @@ export default function SignupPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { looksHuman, HoneypotField } = useSpamGuard();
   const { theme, setTheme } = useTheme();
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -127,6 +129,11 @@ export default function SignupPage() {
    * has to finish where it starts — otherwise the form leads nowhere.
    */
   async function onSubmit(values: z.infer<typeof signupSchema>) {
+    /*
+     * Fails silently, on purpose. Telling a script why it was rejected is
+     * telling it what to change; a real person can never reach this branch.
+     */
+    if (!looksHuman()) return;
     setIsSubmitting(true);
 
     if (!isFirebaseConfigured()) {
@@ -272,6 +279,7 @@ export default function SignupPage() {
       
       <FormProvider {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-lg space-y-6 relative z-10 bg-card/60 dark:bg-card/70 backdrop-blur-2xl p-8 rounded-3xl border border-white/[0.12] dark:border-white/[0.08] shadow-float overflow-hidden">
+            <HoneypotField />
             {/* top edge shine */}
             <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
             {/* inner corner glow */}

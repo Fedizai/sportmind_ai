@@ -22,6 +22,38 @@ const nextConfig = {
       '/**': ['./data/**'],
     },
   },
+
+  /**
+   * Security headers.
+   *
+   * App Hosting already redirects http to https, but a redirect only helps
+   * after the first insecure request has left the device. HSTS tells the
+   * browser never to make that request again — a year, subdomains included,
+   * which is the value the preload list requires if we ever submit it.
+   *
+   * The rest close the cheap holes: MIME sniffing, clickjacking, and the
+   * referrer leaking a full URL to third parties. `frame-ancestors 'none'`
+   * is the modern spelling of X-Frame-Options and is what actually stops the
+   * app being embedded in someone else's page.
+   */
+  async headers() {
+    return [{
+      source: '/:path*',
+      headers: [
+        { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+        {
+          key: 'Permissions-Policy',
+          // The app asks for the camera itself (body scan, video upload);
+          // everything else is denied so an embedded third party cannot.
+          value: 'camera=(self), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+        },
+      ],
+    }];
+  },
 };
 
 module.exports = nextConfig;

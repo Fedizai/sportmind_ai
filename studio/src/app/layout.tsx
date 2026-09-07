@@ -4,8 +4,10 @@ import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/theme-provider';
 import { UserProvider } from '@/hooks/use-user';
 import { Public_Sans, Big_Shoulders_Display } from 'next/font/google';
+import { CookieBanner } from '@/components/cookie-banner';
 import { HtmlLang } from '@/components/html-lang';
 import { SkipToContent } from '@/components/skip-to-content';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
 import { cn } from '@/lib/utils';
 
 const publicSans = Public_Sans({
@@ -22,17 +24,57 @@ const bigShoulders = Big_Shoulders_Display({
   variable: '--font-display',
 })
 
+/**
+ * Site-wide metadata.
+ *
+ * `metadataBase` is what makes every relative Open Graph and canonical URL
+ * resolve to an absolute one — without it Next emits relative OG images, which
+ * no social platform will fetch, and the preview silently falls back to nothing.
+ *
+ * The title template means a page only has to name itself: "Privacy Policy"
+ * becomes "Privacy Policy · SportMind AI", and the home page keeps its own
+ * full title through `default`.
+ */
 export const metadata: Metadata = {
-  title: 'SportMind AI',
-  description: 'AI-Powered Sports Coaching and Player Development',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'SportMind AI — Train. Evolve.',
+    template: '%s · SportMind AI',
+  },
+  description: SITE_DESCRIPTION.en,
+  applicationName: SITE_NAME,
   manifest: '/manifest.json',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    title: 'SportMind AI — Train. Evolve.',
+    description: SITE_DESCRIPTION.en,
+    url: '/',
+    locale: 'fr_FR',
+    alternateLocale: ['en_GB'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SportMind AI — Train. Evolve.',
+    description: SITE_DESCRIPTION.en,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'SportMind AI',
+    title: SITE_NAME,
   },
-  other: {
-    "apple-touch-icon": "/logo_v2.png"
+  icons: {
+    // 1024x1024 at 1.2 MB was being served as a 180px touch icon.
+    apple: '/apple-touch-icon.png',
+    icon: '/favicon.ico',
   }
 };
 
@@ -64,6 +106,7 @@ export default function RootLayout({
           >
             <HtmlLang />
             <SkipToContent />
+            <CookieBanner />
             {children}
             <Toaster />
           </ThemeProvider>
