@@ -12,6 +12,7 @@ import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/use-translation';
 import { useLanguageStore } from '@/stores/language-store';
+import { SportMindHero } from '@/components/sportmind/SportMindHero';
 
 /* -------------------------------------------------------------------------- */
 /*  Imagery — Unsplash IDs, each verified to resolve 200 at the CDN            */
@@ -21,7 +22,6 @@ const img = (id: string, w = 1600) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
 
 const PHOTO = {
-  hero: 'photo-1613845205719-8c87760ab728',
   manifesto: 'photo-1676655079738-af54dfd6318e',
   measure: 'photo-1696536823512-79d724454616',
   adapt: 'photo-1637430308606-86576d8fef3c',
@@ -44,16 +44,36 @@ const L = {
   start: { en: 'Start training', fr: 'Commencer' },
   menu: { en: 'Menu', fr: 'Menu' },
 
-  heroTitleA: { en: 'Built for athletes', fr: 'Conçu pour les athlètes' },
-  heroTitleB: { en: 'who measure everything', fr: 'qui mesurent tout' },
+  heroEyebrow: { en: 'SPORTMIND PERFORMANCE SYSTEM', fr: 'SPORTMIND PERFORMANCE SYSTEM' },
+  heroTitleA: { en: 'Train.', fr: 'Train.' },
+  heroTitleB: { en: 'Evolve.', fr: 'Evolve.' },
   heroSub: {
-    en: 'SportMind turns your training, nutrition and match data into one clear plan — and rewrites it every week as you change.',
-    fr: 'SportMind transforme vos données d’entraînement, de nutrition et de match en un plan clair — réécrit chaque semaine à mesure que vous évoluez.',
+    en: 'Every set counts. SportMind turns your training, your loads and your progress into one intelligent plan that changes as you do.',
+    fr: 'Chaque série compte. SportMind transforme vos entraînements, vos charges et votre progression en un plan intelligent qui évolue avec vous.',
   },
-  heroSignUp: { en: 'Create an account', fr: 'Créer un compte' },
-  railSports: { en: 'Six sport modules', fr: 'Six modules sportifs' },
-  railPlans: { en: 'Plans that adapt weekly', fr: 'Des plans réajustés chaque semaine' },
-  railCoach: { en: 'Coach-ready from day one', fr: 'Prêt pour le coach dès le premier jour' },
+  heroDiscover: { en: 'Discover SportMind', fr: 'Découvrir SportMind' },
+  heroFeatureLiveTitle: { en: 'Live tracking', fr: 'Suivi live' },
+  heroFeatureLiveBody: { en: 'Sets & loads', fr: 'Séries & charges' },
+  heroFeatureCoachTitle: { en: 'AI coaching', fr: 'Coaching IA' },
+  heroFeatureCoachBody: { en: 'Adaptive plan', fr: 'Plan adaptatif' },
+  heroLiveTitle: { en: 'SportMind Live', fr: 'SportMind Live' },
+  heroLiveBody: { en: 'Your performance, as it happens', fr: 'Votre performance en temps réel' },
+  heroLoading: { en: 'INITIALISING SPORTMIND', fr: 'INITIALISATION SPORTMIND' },
+  heroSceneFailed: {
+    en: 'The 3D scene could not start.',
+    fr: 'La scène 3D n’a pas pu démarrer.',
+  },
+  heroSceneRetry: { en: 'Try again', fr: 'Réessayer' },
+  heroSceneHint: {
+    en: 'Check that WebGL is enabled in your browser.',
+    fr: 'Vérifiez que WebGL est activé dans votre navigateur.',
+  },
+  heroDragHint: { en: 'Drag to explore', fr: 'Glissez pour explorer' },
+  heroResetView: { en: 'Reset the 3D view', fr: 'Réinitialiser la vue 3D' },
+  heroCanvasLabel: {
+    en: 'Interactive 3D scene: an olympic barbell and weight plates. Drag or use the arrow keys to turn the view. Press Home to reset.',
+    fr: 'Scène 3D interactive : barre olympique et disques de musculation. Faites glisser ou utilisez les flèches du clavier pour tourner la vue. Appuyez sur Origine pour réinitialiser.',
+  },
 
   manifesto: {
     en: 'Progress is not a feeling. It is a measurement.',
@@ -131,10 +151,6 @@ const L = {
     fr: 'Vue aérienne des lignes de marquage peintes sur un terrain vert',
   },
 
-  heroAlt: {
-    en: 'Athlete carrying a loaded weight plate across a dark training floor',
-    fr: 'Athlète portant un disque de fonte dans une salle sombre',
-  },
   manifestoAlt: {
     en: 'Rim-lit torso of an athlete emerging from near-total darkness',
     fr: 'Torse d’athlète éclairé en contre-jour, émergeant de l’obscurité',
@@ -181,10 +197,6 @@ export default function LandingPage() {
     { href: '#audience', label: L.navAudience },
   ];
 
-  const rise = {
-    hidden: { opacity: 0, y: reduce ? 0 : 22 },
-    show: { opacity: 1, y: 0 },
-  };
   const ease = [0.22, 1, 0.36, 1] as const;
 
   return (
@@ -277,67 +289,41 @@ export default function LandingPage() {
 
       <main>
         {/* ─────────────────────────── Hero ─────────────────────────── */}
-        <section className="relative min-h-[92vh] w-full overflow-hidden md:min-h-screen">
-          <img
-            src={img(PHOTO.hero, 2000)}
-            alt={tr(L.heroAlt)}
-            className="absolute inset-0 h-full w-full object-cover object-[62%_center]"
-          />
-          {/* scrims keep white type at AA contrast over any part of the photo */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0C] via-[#0A0A0C]/85 to-[#0A0A0C]/35" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0C] via-transparent to-[#0A0A0C]/70" />
-
-          <div className="relative mx-auto flex min-h-[92vh] max-w-[1400px] flex-col justify-end px-5 pb-14 pt-32 md:min-h-screen md:px-10 md:pb-20">
-            <motion.div
-              initial="hidden"
-              animate="show"
-              transition={{ staggerChildren: reduce ? 0 : 0.09 }}
-            >
-              <motion.h1
-                variants={rise}
-                transition={{ duration: 0.7, ease }}
-                className="max-w-[17ch] text-balance font-display text-[clamp(3.1rem,10.5vw,8rem)] font-extrabold uppercase leading-[0.88] tracking-[-0.02em]"
-              >
-                {tr(L.heroTitleA)} <span className="text-primary">{tr(L.heroTitleB)}</span>
-              </motion.h1>
-
-              <motion.p
-                variants={rise}
-                transition={{ duration: 0.7, ease }}
-                className="mt-7 max-w-[54ch] text-lg leading-relaxed text-white/75 md:text-xl"
-              >
-                {tr(L.heroSub)}
-              </motion.p>
-
-              <motion.div
-                variants={rise}
-                transition={{ duration: 0.7, ease }}
-                className="mt-9 flex flex-wrap gap-3"
-              >
-                <Button asChild size="lg" className="px-8 text-base">
-                  <Link href="/signup">
-                    {tr(L.start)} <ArrowRight className="ml-1 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="px-8 text-base">
-                  <a href="/signup">{tr(L.heroSignUp)}</a>
-                </Button>
-              </motion.div>
-            </motion.div>
-
-            {/* understated rail — plain sentences, not a stat-card template */}
-            <motion.ul
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: reduce ? 0 : 0.5, duration: 0.6 }}
-              className="mt-14 flex flex-col gap-3 border-t border-white/15 pt-6 text-sm text-white/60 sm:flex-row sm:gap-10"
-            >
-              <li>{tr(L.railSports)}</li>
-              <li>{tr(L.railPlans)}</li>
-              <li>{tr(L.railCoach)}</li>
-            </motion.ul>
-          </div>
-        </section>
+        {/*
+          A real 3D barbell rather than a stock photograph. It is a client
+          component that loads its renderer after mount, so nothing here runs
+          during server rendering; until the scene reports ready it shows its own
+          loader over the same background the page uses.
+        */}
+        <SportMindHero
+          copy={{
+            eyebrow: tr(L.heroEyebrow),
+            titleA: tr(L.heroTitleA),
+            titleB: tr(L.heroTitleB),
+            description: tr(L.heroSub),
+            primary: tr(L.start),
+            secondary: tr(L.heroDiscover),
+            featureOneTitle: tr(L.heroFeatureLiveTitle),
+            featureOneBody: tr(L.heroFeatureLiveBody),
+            featureTwoTitle: tr(L.heroFeatureCoachTitle),
+            featureTwoBody: tr(L.heroFeatureCoachBody),
+            liveTitle: tr(L.heroLiveTitle),
+            liveBody: tr(L.heroLiveBody),
+            loading: tr(L.heroLoading),
+            sceneFailed: tr(L.heroSceneFailed),
+            sceneRetry: tr(L.heroSceneRetry),
+            sceneHint: tr(L.heroSceneHint),
+            dragHint: tr(L.heroDragHint),
+            resetView: tr(L.heroResetView),
+            canvasLabel: tr(L.heroCanvasLabel),
+          }}
+          onStartTraining={() => router.push('/signup')}
+          onDiscover={() => {
+            // The page already explains the product below the fold; the button
+            // takes you there rather than opening a dialog that repeats it.
+            document.getElementById('product')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+        />
 
         {/* ───────────────────────── Manifesto ───────────────────────── */}
         <section className="relative w-full overflow-hidden">
