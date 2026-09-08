@@ -75,6 +75,24 @@ export interface BodyScanInput {
   analysis: ScanAnalysis | null;
 }
 
+/**
+ * Newest first, with a scan that has not been acknowledged yet at the top.
+ *
+ * `serverTimestamp()` is resolved by the server, so the local echo of a scan
+ * the athlete has just saved arrives with `createdAt: null`. Reading that as
+ * second zero sorted the freshest scan to the *bottom*, and until the round
+ * trip finished the page showed the previous analysis — which reads exactly
+ * like pressing Analyse a second time and having nothing happen.
+ */
+function byNewestFirst(a: BodyScan, b: BodyScan): number {
+  const at = a.createdAt?.seconds;
+  const bt = b.createdAt?.seconds;
+  if (at === undefined && bt === undefined) return 0;
+  if (at === undefined) return -1;
+  if (bt === undefined) return 1;
+  return bt - at;
+}
+
 export function useBodyScans(userId: string | undefined) {
   const [scans, setScans] = useState<BodyScan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,7 +114,7 @@ export function useBodyScans(userId: string | undefined) {
         snapshot.forEach((docSnap) => {
           data.push({ id: docSnap.id, ...docSnap.data() } as BodyScan);
         });
-        data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        data.sort(byNewestFirst);
         setScans(data);
         setIsLoading(false);
       },

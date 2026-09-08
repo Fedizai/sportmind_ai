@@ -151,6 +151,32 @@ const analyzeBodyFlow = ai.defineFlow(
   }
 );
 
-export async function analyzeBody(input: BodyAnalysisInput): Promise<BodyAnalysisOutput> {
-  return analyzeBodyFlow(input);
+/**
+ * Why an analysis did not happen, in a form that survives the network.
+ *
+ * A server action that throws reaches the browser as an opaque digest — the
+ * message is stripped in production on purpose. So every failure here looked
+ * identical from the page, and the athlete was told "the AI could not complete
+ * the analysis" whether the AI had refused, the account was not Pro, or the
+ * flow had never run at all. Returning the reason instead of throwing it keeps
+ * the cause visible where the person can act on it.
+ */
+export type BodyAnalysisResult =
+  | { ok: true; analysis: BodyAnalysisOutput }
+  | { ok: false; reason: 'not-pro' | 'ai' | 'server'; detail: string };
+
+export async function analyzeBody(input: BodyAnalysisInput): Promise<BodyAnalysisResult> {
+  try {
+    return { ok: true, analysis: await analyzeBodyFlow(input) };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error('Body analysis failed:', err);
+    const reason = /access denied/i.test(detail)
+      ? 'not-pro'
+      : /\bAI\b|model|prompt|candidate|generat/i.test(detail)
+        ? 'ai'
+        : 'server';
+    // Trimmed: this is shown to the athlete, not logged by them.
+    return { ok: false, reason, detail: detail.slice(0, 200) };
+  }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { format } from 'date-fns';
 
 import { BodyScan3D, type BodyScan3DLabels } from './body-scan-3d';
@@ -18,6 +18,9 @@ const FIELD_FOR: Record<FitRegion, MeasurementId> = {
 
 interface Props {
     scans: BodyScan[];
+    /** The scan the whole page is reading, or null for the most recent one. */
+    selectedId: string | null;
+    onSelect: (id: string) => void;
     labels: BodyScan3DLabels;
     unitLabel: (kind: 'length' | 'mass', system: MeasurementUnitSystem) => string;
     t: (key: any, vars?: Record<string, string | number>) => string;
@@ -32,13 +35,24 @@ interface Props {
  * between two unrelated pictures. Nothing is overwritten: each scan is its own
  * document and this only ever reads them.
  */
-export function ScanProgressViewer({ scans, labels, unitLabel, t }: Props) {
+export function ScanProgressViewer({ scans, selectedId, onSelect, labels, unitLabel, t }: Props) {
+    // Oldest first here, so "the previous scan" is the one to the left and the
+    // deltas below read as change over time.
     const ordered = useMemo(
-        () => scans.slice().sort((a, b) => (a.createdAt?.seconds ?? 0) - (b.createdAt?.seconds ?? 0)),
+        () => scans.slice().reverse(),
         [scans],
     );
-    const [index, setIndex] = useState(ordered.length - 1);
-    const scan = ordered[Math.min(index, ordered.length - 1)];
+    /**
+     * Which scan is on screen, decided by the page rather than kept here.
+     *
+     * This used to hold its own index, seeded once from the number of scans it
+     * happened to be handed. A scan saved afterwards did not move it, so a
+     * fresh analysis left the viewer sitting on the previous body — and the
+     * Results tab and this one could disagree about which scan was "current".
+     */
+    const fromSelection = selectedId ? ordered.findIndex((s) => s.id === selectedId) : -1;
+    const index = fromSelection >= 0 ? fromSelection : ordered.length - 1;
+    const scan = ordered[index];
 
     const fit = useMemo(() => {
         if (!scan) return null;
@@ -136,7 +150,7 @@ export function ScanProgressViewer({ scans, labels, unitLabel, t }: Props) {
                     </p>
                 )}
 
-                {ordered.length > 1 && (
+                {ordered.length > 0 && (
                     <div>
                         <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                             {t('bodyScanHistory')}
@@ -146,7 +160,7 @@ export function ScanProgressViewer({ scans, labels, unitLabel, t }: Props) {
                                 <button
                                     key={s.id}
                                     type="button"
-                                    onClick={() => setIndex(i)}
+                                    onClick={() => onSelect(s.id)}
                                     className={cn(
                                         'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
                                         i === index

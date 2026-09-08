@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { fr, enUS } from "date-fns/locale";
+import { fr, enUS, type Locale } from "date-fns/locale";
 import {
   ArrowLeft,
   ScanLine,
@@ -36,7 +36,7 @@ import { UpgradeProModal } from "@/components/upgrade-pro-modal";
 import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
-import { useBodyScans } from "@/hooks/use-body-scans";
+import { useBodyScans, type BodyScan } from "@/hooks/use-body-scans";
 import { analyzeBody } from "@/ai/flows/body-analysis-flow";
 import { cn } from "@/lib/utils";
 import type { TranslationKey } from "@/lib/i18n";
@@ -49,13 +49,14 @@ import { PhotoScanFlow } from "@/components/body-scan/photo-scan-flow";
 import { FitReport } from "@/components/body-scan/fit-report";
 import type { ReviewedMeasurements } from "@/components/body-scan/measurement-review";
 import { PhysiqueReport } from "@/components/body-scan/physique-report";
+import { ScanHistoryBar } from "@/components/body-scan/scan-history-bar";
 
 
 
 import { fitBodyMeasurements, impliedCircumferences } from "@/lib/body-fit";
 import { toBodyMeasurements, modelSexFor } from "@/lib/body-fit/from-scan";
 
-type TFn = (k: TranslationKey) => string;
+type TFn = (k: TranslationKey, vars?: Record<string, string | number>) => string;
 
 
 /** Builds the holographic measuring bands from whatever measurements exist. */
@@ -98,9 +99,17 @@ export function BodyScanClient() {
   const isPro = user?.plan === "pro";
   const unitSystem: MeasurementUnitSystem = user?.preferences?.units === "imperial" ? "imperial" : "metric";
 
-  const { scans, latest, addScan } = useBodyScans(user?.uid);
+  const { scans, addScan } = useBodyScans(user?.uid);
 
   const [tab, setTab] = useState<Tab>("scan");
+  /**
+   * Which saved scan the Results and Progress tabs are showing.
+   *
+   * `null` means "the newest", so a fresh analysis takes over on its own
+   * without the athlete having to reselect anything. Every scan stays its own
+   * document; nothing here overwrites or hides an earlier one.
+   */
+  const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
   const [inputMode, setInputMode] = useState<"measurements" | "photos">("measurements");
   const [form, setForm] = useState<Record<MeasurementId, string>>(emptyForm);
   const [sport, setSport] = useState("general");
@@ -120,6 +129,13 @@ export function BodyScanClient() {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const setField = (id: MeasurementId, value: string) => setForm((f) => ({ ...f, [id]: value }));
+
+  /** Every scan that carries a finished analysis, newest first. */
+  const analysedScans = useMemo(() => scans.filter((s) => s.analysis), [scans]);
+  const selectedScan = useMemo(
+    () => analysedScans.find((s) => s.id === selectedScanId) ?? analysedScans[0] ?? null,
+    [analysedScans, selectedScanId],
+  );
 
 
   const handleAnalyze = async () => {
@@ -141,12 +157,25 @@ export function BodyScanClient() {
 
     setIsAnalyzing(true);
     try {
-      const analysis = await analyzeBody({
+      const result = await analyzeBody({
         userId: user.uid,
         unitSystem,
         sport,
         measurements: parsed,
       });
+      // The flow reports why it stopped rather than throwing, because a server
+      // action that throws reaches the browser as an opaque digest.
+      if (!result.ok) {
+        toast({
+          variant: "destructive",
+          title: t(result.reason === "not-pro" ? "bodyScanErrorNotPro"
+            : result.reason === "ai" ? "bodyScanError"
+            : "bodyScanErrorServer"),
+          description: result.detail,
+        });
+        return;
+      }
+      const analysis = result.analysis;
       // Only data. The body is rebuilt from the shared GLB client-side.
       const saveFit = fitBodyMeasurements({
         modelSex: modelSexFor(sex),
@@ -168,6 +197,9 @@ export function BodyScanClient() {
       // and switching to a Results tab that reads from Firestore left the
       // athlete looking at an empty page they had just been told was full.
       if (!savedId) return;
+      // Show the scan that was just taken, not whichever one was being read
+      // before. Nothing is replaced — this only moves the selection.
+      setSelectedScanId(savedId);
       toast({ title: t("bodyScanSaved") });
       setTab("results");
     } catch (err) {
@@ -179,23 +211,53 @@ export function BodyScanClient() {
   };
 
   const leaders = useMemo<LeaderEntry[]>(() => {
-    if (!latest) return [];
+    if (!selectedScan) return [];
     const out: LeaderEntry[] = [];
     for (const field of MEASUREMENT_FIELDS) {
       if (!field.onBody) continue;
       const anchor = MEASUREMENT_ANCHORS[field.id];
       if (!anchor) continue;
-      const value = latest.measurements[field.id];
+      const value = selectedScan.measurements[field.id];
       if (value === undefined) continue;
       out.push({
         key: field.id,
         partLabel: t(field.labelKey),
-        valueText: `${value} ${unitLabel(field.kind, latest.unitSystem)}`,
+        valueText: `${value} ${unitLabel(field.kind, selectedScan.unitSystem)}`,
         anchor,
       });
     }
     return out;
-  }, [latest, t]);
+  }, [selectedScan, t]);
+
+  /**
+   * Load a past scan's numbers back into the form.
+   *
+   * A second analysis usually starts from the last one — a couple of values
+   * change and the rest stay put. Retyping seven fields to find that out is
+   * how a repeatable feature comes to feel like a one-off.
+   */
+  const reuseMeasurements = (scan: BodyScan) => {
+    const next = { ...emptyForm };
+    for (const field of MEASUREMENT_FIELDS) {
+      const value = scan.measurements[field.id];
+      if (value === undefined) continue;
+      // Stored in the units of the day; the form speaks today's units.
+      const converted =
+        scan.unitSystem === unitSystem
+          ? value
+          : field.kind === "mass"
+            ? (unitSystem === "imperial" ? value / 0.453592 : value * 0.453592)
+            : (unitSystem === "imperial" ? value / 2.54 : value * 2.54);
+      next[field.id] = String(Math.round(converted * 10) / 10);
+    }
+    setForm(next);
+    if (scan.sex) setSex(scan.sex);
+    if (scan.sport) setSport(scan.sport);
+    // These numbers were typed, not measured from photographs.
+    setPhotoProvenance(null);
+    setInputMode("measurements");
+    setTab("scan");
+  };
 
   const parsedForm = useMemo<Partial<Record<MeasurementId, number>>>(() => {
     const out: Partial<Record<MeasurementId, number>> = {};
@@ -495,22 +557,42 @@ export function BodyScanClient() {
       )}
 
       {tab === "results" &&
-        (latest && latest.analysis ? (
-          <ResultsView
-            t={t}
-            latest={latest}
-            leaders={leaders}
-            view={view}
-            setView={setView}
-            scanDate={latest.createdAt ? format(latest.createdAt.toDate(), "PP", { locale }) : "—"}
-          />
+        (selectedScan ? (
+          <div className="space-y-6">
+            <ScanHistoryBar
+              t={t}
+              locale={locale}
+              scans={analysedScans}
+              selectedId={selectedScan.id}
+              onSelect={setSelectedScanId}
+              onReuse={() => reuseMeasurements(selectedScan)}
+              onNewScan={() => setTab("scan")}
+            />
+            <ResultsView
+              t={t}
+              scan={selectedScan}
+              leaders={leaders}
+              view={view}
+              setView={setView}
+              scanDate={selectedScan.createdAt ? format(selectedScan.createdAt.toDate(), "PP", { locale }) : "—"}
+            />
+          </div>
         ) : (
           <EmptyState text={t("bodyScanNoResults")} onCta={() => setTab("scan")} ctaLabel={t("bodyScanTabScan")} />
         ))}
 
       {tab === "progress" && scans.length > 0 && (
         <div className="mb-6">
-          <ScanProgressViewer scans={scans} labels={scan3dLabels(t)} unitLabel={unitLabel} t={t as any} />
+          {/* The same selection as the Results tab, so a date picked in one
+              place is the body shown in the other. */}
+          <ScanProgressViewer
+            scans={scans}
+            selectedId={selectedScan?.id ?? null}
+            onSelect={setSelectedScanId}
+            labels={scan3dLabels(t)}
+            unitLabel={unitLabel}
+            t={t as any}
+          />
         </div>
       )}
 
@@ -600,32 +682,32 @@ function EmptyState({ text, onCta, ctaLabel }: { text: string; onCta: () => void
 
 function ResultsView({
   t,
-  latest,
+  scan,
   leaders,
   view,
   setView,
   scanDate,
 }: {
   t: (k: TranslationKey) => string;
-  latest: NonNullable<ReturnType<typeof useBodyScans>["latest"]>;
+  scan: BodyScan;
   leaders: LeaderEntry[];
   view: ScanView;
   setView: (v: ScanView) => void;
   scanDate: string;
 }) {
-  const analysis = latest.analysis!;
+  const analysis = scan.analysis!;
   // Rebuilt from the stored measurements against the shared GLB — no per-user
   // model file is ever written.
   const fit = fitBodyMeasurements({
-    modelSex: modelSexFor(latest.sex),
-    ...toBodyMeasurements(latest.measurements, latest.unitSystem),
+    modelSex: modelSexFor(scan.sex),
+    ...toBodyMeasurements(scan.measurements, scan.unitSystem),
   });
   const scanLabels = scan3dLabels(t);
   return (
     <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
       <div className="space-y-4">
         <BodyScan3D
-          modelSex={modelSexFor(latest.sex)}
+          modelSex={modelSexFor(scan.sex)}
           weights={fit.weights}
           bodyHeightCm={fit.predicted.heightCm}
           circumferences={fit.predicted}
@@ -683,8 +765,8 @@ function ResultsView({
         )}
 
         <PhysiqueReport
-          measurements={latest.measurements}
-          unitSystem={latest.unitSystem}
+          measurements={scan.measurements}
+          unitSystem={scan.unitSystem}
           bodyFat={analysis.bodyFatEstimate}
           bodyFatRange={analysis.bodyFatRange}
         />
