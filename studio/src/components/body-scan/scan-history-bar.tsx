@@ -1,10 +1,21 @@
 'use client';
 
+import { useState } from 'react';
 import { format } from 'date-fns';
 import type { Locale } from 'date-fns';
-import { ScanLine } from 'lucide-react';
+import { ScanLine, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import type { BodyScan } from '@/hooks/use-body-scans';
 import type { TranslationKey } from '@/lib/i18n';
@@ -26,6 +37,7 @@ export function ScanHistoryBar({
   selectedId,
   onSelect,
   onReuse,
+  onDelete,
   onNewScan,
 }: {
   t: TFn;
@@ -34,8 +46,35 @@ export function ScanHistoryBar({
   selectedId: string;
   onSelect: (id: string) => void;
   onReuse: () => void;
+  /** Removes the selected scan for good. Confirmed here first. */
+  onDelete: () => void;
   onNewScan: () => void;
 }) {
+  const [confirming, setConfirming] = useState(false);
+
+  /**
+   * A date, and the time too when another scan shares that day.
+   *
+   * Two analyses run the same afternoon both read "8 sept. 2026", which is no
+   * help at all on the button that deletes one of them for good. The time only
+   * appears where it is needed to tell them apart.
+   */
+  const perDay = new Map<string, number>();
+  for (const s of scans) {
+    if (!s.createdAt) continue;
+    const day = format(s.createdAt.toDate(), 'yyyy-MM-dd');
+    perDay.set(day, (perDay.get(day) ?? 0) + 1);
+  }
+  const labelFor = (s: BodyScan) => {
+    if (!s.createdAt) return t('bodyScanLatestScan');
+    const when = s.createdAt.toDate();
+    const shared = (perDay.get(format(when, 'yyyy-MM-dd')) ?? 0) > 1;
+    return format(when, shared ? "d MMM yyyy, HH'h'mm" : 'd MMM yyyy', { locale });
+  };
+
+  const selected = scans.find((s) => s.id === selectedId);
+  const selectedWhen = selected ? labelFor(selected) : t('bodyScanLatestScan');
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -50,6 +89,15 @@ export function ScanHistoryBar({
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setConfirming(true)}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {t("delete")}
+          </Button>
           <Button variant="outline" size="sm" onClick={onReuse}>
             {t("bodyScanReuseMeasurements")}
           </Button>
@@ -65,9 +113,7 @@ export function ScanHistoryBar({
         <div className="flex w-max gap-2">
           {scans.map((scan, i) => {
             const isSelected = scan.id === selectedId;
-            const when = scan.createdAt
-              ? format(scan.createdAt.toDate(), "d MMM yyyy", { locale })
-              : t("bodyScanLatestScan");
+            const when = labelFor(scan);
             return (
               <button
                 key={scan.id}
@@ -91,6 +137,28 @@ export function ScanHistoryBar({
           })}
         </div>
       </div>
+
+      {/* Deleting a scan cannot be undone, so it is asked for once, plainly,
+          and the date says which one is about to go. */}
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("bodyScanDeleteScan")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("bodyScanConfirmDelete", { date: selectedWhen })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t("delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

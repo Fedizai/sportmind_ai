@@ -14,7 +14,6 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { stripUndefined } from '@/lib/utils';
-import { useToast } from './use-toast';
 import type { BodyZoneId, Measurements, MeasurementUnitSystem } from '@/lib/body-zones';
 
 export interface ScanAnalysis {
@@ -135,7 +134,6 @@ export function useBodyScans(userId: string | undefined) {
   const [scans, setScans] = useState<BodyScan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     if (!userId) {
@@ -185,18 +183,25 @@ export function useBodyScans(userId: string | undefined) {
       return ref.id;
     } catch (err) {
       console.error('Error saving body scan:', err);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not save the scan.' });
+      // Reported by the caller, in the athlete's own language.
       return null;
     }
   };
 
-  const deleteScan = async (id: string) => {
+  /**
+   * Deletes one scan, and says whether it worked.
+   *
+   * The outcome is reported by the caller rather than here: this hook has no
+   * translation function, and an athlete reading the app in French should not
+   * be told "Scan removed" in English.
+   */
+  const deleteScan = async (id: string): Promise<boolean> => {
     try {
       await deleteDoc(doc(db, 'bodyScans', id));
-      toast({ title: 'Scan removed' });
+      return true;
     } catch (err) {
       console.error('Error deleting body scan:', err);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not delete the scan.' });
+      return false;
     }
   };
 

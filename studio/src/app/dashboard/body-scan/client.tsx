@@ -99,7 +99,7 @@ export function BodyScanClient() {
   const isPro = user?.plan === "pro";
   const unitSystem: MeasurementUnitSystem = user?.preferences?.units === "imperial" ? "imperial" : "metric";
 
-  const { scans, addScan } = useBodyScans(user?.uid);
+  const { scans, addScan, deleteScan } = useBodyScans(user?.uid);
 
   const [tab, setTab] = useState<Tab>("scan");
   /**
@@ -195,11 +195,14 @@ export function BodyScanClient() {
         measurementConfidence: photoProvenance?.confidence,
         analysis,
       });
-      // A refused write is not a saved scan. `addScan` reports the failure
-      // itself and returns null; announcing "scan enregistre" on top of that
-      // and switching to a Results tab that reads from Firestore left the
-      // athlete looking at an empty page they had just been told was full.
-      if (!savedId) return;
+      // A refused write is not a saved scan. Announcing "scan enregistre" on
+      // top of one and switching to a Results tab that reads from Firestore
+      // left the athlete looking at an empty page they had just been told was
+      // full.
+      if (!savedId) {
+        toast({ variant: "destructive", title: t("bodyScanSaveFailed") });
+        return;
+      }
       // Show the scan that was just taken, not whichever one was being read
       // before. Nothing is replaced — this only moves the selection.
       setSelectedScanId(savedId);
@@ -231,6 +234,23 @@ export function BodyScanClient() {
     }
     return out;
   }, [selectedScan, t]);
+
+  /**
+   * Removes one scan for good. The bar asks before this runs.
+   *
+   * The selection falls back to "the newest", which is what `null` means here
+   * — deleting the scan you are reading should leave you on the next one, not
+   * on a blank panel pointing at a document that no longer exists.
+   */
+  const handleDelete = async (scan: BodyScan) => {
+    const removed = await deleteScan(scan.id);
+    if (!removed) {
+      toast({ variant: "destructive", title: t("bodyScanDeleteFailed") });
+      return;
+    }
+    setSelectedScanId(null);
+    toast({ title: t("bodyScanDeleted") });
+  };
 
   /**
    * Load a past scan's numbers back into the form.
@@ -569,6 +589,7 @@ export function BodyScanClient() {
               selectedId={selectedScan.id}
               onSelect={setSelectedScanId}
               onReuse={() => reuseMeasurements(selectedScan)}
+              onDelete={() => void handleDelete(selectedScan)}
               onNewScan={() => setTab("scan")}
             />
             <ResultsView
