@@ -171,7 +171,10 @@ export function BodyScanClient() {
           title: t(result.reason === "not-pro" ? "bodyScanErrorNotPro"
             : result.reason === "ai" ? "bodyScanError"
             : "bodyScanErrorServer"),
-          description: result.detail,
+          // The Pro refusal is already said in full, in the athlete's own
+          // language, by the title. The server's own wording only helps for
+          // the failures nobody has written a sentence for.
+          description: result.reason === "not-pro" ? undefined : result.detail,
         });
         return;
       }
