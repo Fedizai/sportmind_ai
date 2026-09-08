@@ -76,6 +76,44 @@ export interface BodyScanInput {
 }
 
 /**
+ * Reads a stored analysis back into the one shape the rest of the page expects.
+ *
+ * `analyzeBody` used to return the analysis itself and now returns
+ * `{ ok, analysis }`. A browser tab loaded before that deploy went on calling
+ * the new server action with the old expectations, and stored the wrapper as
+ * though it were the analysis: the scan looked saved, the chart plotted it at
+ * zero, and Results crashed reading `zoneScores` off an object that had none.
+ *
+ * Unwrapping on the way in repairs those documents wherever they are read —
+ * nothing is rewritten, so nothing can be lost — and the same call on the way
+ * out means a stale tab cannot write another one.
+ */
+export function normaliseAnalysis(raw: unknown): ScanAnalysis | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const value = raw as Record<string, unknown>;
+  if ('ok' in value && 'analysis' in value) return normaliseAnalysis(value.analysis);
+
+  // A document from a shape nobody recognises is not an analysis. Saying so is
+  // better than a report made entirely of blanks.
+  const recognisable =
+    typeof value.bodyFatEstimate === 'number' ||
+    Array.isArray(value.zoneScores) ||
+    typeof value.summary === 'string';
+  if (!recognisable) return null;
+
+  const strings = (v: unknown) => (Array.isArray(v) ? (v as string[]) : []);
+  return {
+    bodyFatEstimate: typeof value.bodyFatEstimate === 'number' ? value.bodyFatEstimate : 0,
+    bodyFatRange: typeof value.bodyFatRange === 'string' ? value.bodyFatRange : '',
+    zoneScores: Array.isArray(value.zoneScores) ? (value.zoneScores as ScanAnalysis['zoneScores']) : [],
+    strongPoints: strings(value.strongPoints),
+    weakPoints: strings(value.weakPoints),
+    recommendations: strings(value.recommendations),
+    summary: typeof value.summary === 'string' ? value.summary : '',
+  };
+}
+
+/**
  * Newest first, with a scan that has not been acknowledged yet at the top.
  *
  * `serverTimestamp()` is resolved by the server, so the local echo of a scan
@@ -112,7 +150,12 @@ export function useBodyScans(userId: string | undefined) {
       (snapshot) => {
         const data: BodyScan[] = [];
         snapshot.forEach((docSnap) => {
-          data.push({ id: docSnap.id, ...docSnap.data() } as BodyScan);
+          const raw = docSnap.data();
+          data.push({
+            ...raw,
+            id: docSnap.id,
+            analysis: normaliseAnalysis(raw.analysis),
+          } as BodyScan);
         });
         data.sort(byNewestFirst);
         setScans(data);
@@ -133,6 +176,9 @@ export function useBodyScans(userId: string | undefined) {
     try {
       const ref = await addDoc(collection(db, 'bodyScans'), {
         ...stripUndefined(input),
+        // Written through the same normaliser as the read, so a tab that is a
+        // deploy behind cannot store a shape this app will not understand.
+        analysis: normaliseAnalysis(input.analysis),
         userId: uid,
         createdAt: serverTimestamp(),
       });
