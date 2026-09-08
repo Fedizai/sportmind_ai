@@ -22,9 +22,22 @@ import { z } from 'zod';
 import { adminDb } from '@/lib/firebase-admin';
 import { assertProAccess } from '@/lib/server-access';
 
+/**
+ * The schemas stay local to this file on purpose.
+ *
+ * A `'use server'` module may only export async functions. The check runs when
+ * the module is first loaded on the server, not at build time, so exporting a
+ * Zod object here still compiled and still deployed — and then threw
+ * `A "use server" file can only export async functions, found object` on the
+ * very first call, before a single line of the flow ran. Every export of the
+ * module failed the same way, which is why the analysis always came back as
+ * "the AI could not complete the analysis" no matter what was typed in.
+ *
+ * The inferred `type` exports below are erased at compile time and are fine.
+ */
 const ZONE_ENUM = z.enum(['shoulders', 'chest', 'arms', 'core', 'back', 'legs']);
 
-export const BodyAnalysisInputSchema = z.object({
+const BodyAnalysisInputSchema = z.object({
   userId: z.string().describe('The ID of the user requesting the analysis.'),
   unitSystem: z.enum(['metric', 'imperial']).describe('Unit system the measurements are expressed in.'),
   sport: z.string().optional().describe("The user's primary sport, for tailoring recommendations."),
@@ -52,7 +65,7 @@ export const BodyAnalysisInputSchema = z.object({
 });
 export type BodyAnalysisInput = z.infer<typeof BodyAnalysisInputSchema>;
 
-export const BodyAnalysisOutputSchema = z.object({
+const BodyAnalysisOutputSchema = z.object({
   bodyFatEstimate: z.number().describe('Estimated body fat percentage (single best estimate).'),
   bodyFatRange: z.string().describe('A short plausible range, e.g. "12–15%".'),
   zoneScores: z

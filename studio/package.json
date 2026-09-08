@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/stage-mediapipe.mjs && next dev",
-    "build": "node scripts/stage-mediapipe.mjs && next build",
+    "build": "node scripts/check-server-exports.mjs && node scripts/stage-mediapipe.mjs && next build",
     "deploy": "npm run build && gh-pages -d out",
-    "stage:mediapipe": "node scripts/stage-mediapipe.mjs"
+    "stage:mediapipe": "node scripts/stage-mediapipe.mjs",
+    "check:server-exports": "node scripts/check-server-exports.mjs"
   },
   "dependencies": {
     "@genkit-ai/googleai": "latest",

@@ -13,15 +13,17 @@ import { ai, VISION_MODEL } from '@/ai/genkit-instance';
 import { z } from 'zod';
 import { assertProAccess } from '@/lib/server-access';
 
-// Define Zod schemas for the flow's input and output
-export const GymVideoAnalysisInputSchema = z.object({
+// Kept unexported: a `'use server'` module may only export async functions, and
+// that is checked when the module loads on the server rather than at build
+// time — an exported schema deploys fine and then fails every call.
+const GymVideoAnalysisInputSchema = z.object({
   userId: z.string().describe("The ID of the user requesting the analysis."),
   videoDataUri: z.string().describe("A video file of a gym exercise, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
   prompt: z.string().describe("The user's question or area of focus for the analysis (e.g., 'Check my squat depth and back angle')."),
 });
 export type GymVideoAnalysisInput = z.infer<typeof GymVideoAnalysisInputSchema>;
 
-export const GymVideoAnalysisOutputSchema = z.object({
+const GymVideoAnalysisOutputSchema = z.object({
   feedback: z.string().describe("The AI's detailed, point-by-point feedback on the exercise form in the video clip."),
 });
 export type GymVideoAnalysisOutput = z.infer<typeof GymVideoAnalysisOutputSchema>;

@@ -14,12 +14,15 @@ import { type MediaPart } from 'genkit';
 import * as fs from 'fs';
 import { Readable } from 'stream';
 
-export const GenerateVideoInputSchema = z.object({
+// Kept unexported: a `'use server'` module may only export async functions, and
+// that is checked when the module loads on the server rather than at build
+// time — an exported schema deploys fine and then fails every call.
+const GenerateVideoInputSchema = z.object({
   prompt: z.string().describe("A detailed text description of the video to be generated."),
 });
 export type GenerateVideoInput = z.infer<typeof GenerateVideoInputSchema>;
 
-export const GenerateVideoOutputSchema = z.object({
+const GenerateVideoOutputSchema = z.object({
   videoUrl: z.string().describe("The data URI of the generated video file."),
 });
 export type GenerateVideoOutput = z.infer<typeof GenerateVideoOutputSchema>;

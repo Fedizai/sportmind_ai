@@ -152,7 +152,7 @@ export function BodyScanClient() {
         modelSex: modelSexFor(sex),
         ...toBodyMeasurements(parsed, unitSystem),
       });
-      await addScan({
+      const savedId = await addScan({
         unitSystem, sport, sex,
         measurements: parsed,
         morphWeights: saveFit.weights as Record<string, number>,
@@ -163,6 +163,11 @@ export function BodyScanClient() {
         measurementConfidence: photoProvenance?.confidence,
         analysis,
       });
+      // A refused write is not a saved scan. `addScan` reports the failure
+      // itself and returns null; announcing "scan enregistre" on top of that
+      // and switching to a Results tab that reads from Firestore left the
+      // athlete looking at an empty page they had just been told was full.
+      if (!savedId) return;
       toast({ title: t("bodyScanSaved") });
       setTab("results");
     } catch (err) {
