@@ -1332,8 +1332,8 @@ export function DashboardClient({ initialView }: { initialView?: 'sports' | 'ins
                                             <tool.icon className="h-4 w-4" />
                                         </span>
                                         {/* Two lines rather than truncating: at
-                                            two columns on a phone "Coach Mental"
-                                            was cut to "Coach Me...". */}
+                                            two columns on a phone a label like
+                                            "Mes Objectifs" was cut mid-word. */}
                                         <span className="min-w-0 flex-grow text-sm font-semibold leading-tight line-clamp-2">
                                             {t(tool.titleKey)}
                                         </span>

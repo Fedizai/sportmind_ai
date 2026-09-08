@@ -237,16 +237,3 @@ export const NutritionPlanOutputSchema = z.object({
   })).describe("A list of meals for one day.")
 });
 export type NutritionPlanOutput = z.infer<typeof NutritionPlanOutputSchema>;
-
-// --- Mental Coach ---
-export const MentalCoachInputSchema = z.object({
-    scenario: z.string().describe("The user's situation or challenge, e.g., 'big match tomorrow', 'in a slump'"),
-});
-export type MentalCoachInput = z.infer<typeof MentalCoachInputSchema>;
-
-export const MentalCoachOutputSchema = z.object({
-    focus: z.string().describe("A key point of focus for the user."),
-    confidenceBooster: z.string().describe("A short, actionable confidence-boosting message."),
-    visualization: z.string().describe("A brief visualization exercise."),
-});
-export type MentalCoachOutput = z.infer<typeof MentalCoachOutputSchema>;

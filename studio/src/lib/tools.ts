@@ -1,4 +1,4 @@
-import { BarChart2, BrainCircuit, CalendarClock, ClipboardList, ScanLine, Target, type LucideIcon } from 'lucide-react';
+import { BarChart2, CalendarClock, ClipboardList, ScanLine, Target, type LucideIcon } from 'lucide-react';
 
 import type { TranslationKey } from '@/lib/i18n';
 
@@ -9,6 +9,11 @@ import type { TranslationKey } from '@/lib/i18n';
  * favourite is a shortcut to the same route rather than a second copy of the
  * feature. Adding a tool here makes it appear in both, and nowhere else needs
  * to know about it.
+ *
+ * Removing one is equally self-contained: `useFavorites` builds its list with
+ * `TOOLS.filter(t => ids.includes(t.id))`, so an id still sitting in somebody's
+ * saved favourites simply stops matching and drops out. No migration, and
+ * nothing to crash on an id that no longer exists.
  */
 export interface Tool {
   /** Stable key. This is what gets stored in the user's favourites. */
@@ -41,13 +46,6 @@ export const TOOLS: Tool[] = [
     subtitleKey: 'myReportsCardSubtitle',
     icon: BarChart2,
     path: '/dashboard/progress',
-  },
-  {
-    id: 'mental-coach',
-    titleKey: 'mentalCoachCardTitle',
-    subtitleKey: 'mentalCoachCardSubtitle',
-    icon: BrainCircuit,
-    path: '/dashboard/mental-coach',
   },
   {
     id: 'goals',
