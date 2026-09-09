@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { format } from 'date-fns';
 
 import { useNutritionStore } from '@/stores/nutrition-store';
@@ -11,68 +11,120 @@ import { useStreakStore } from '@/stores/streak-store';
 import { useUser } from './use-user';
 
 const dayKey = () => format(new Date(), 'yyyy-MM-dd');
-const STORAGE_KEY = 'sportmind:lastDailyReset';
 
 /**
- * A new day clears what was done, never what was planned.
+ * What was last rolled over, and when.
  *
- * The plan is the athlete's — a generated meal plan or gym programme stays
+ * Two stamps, not one. The plan side needs nobody signed in; the calorie ring
+ * reads one athlete's logs and cannot be re-pointed until we know which
+ * athlete. With a single stamp the first load of a new day claimed the whole
+ * day's rollover before auth had resolved, so the ring was skipped and then
+ * blocked from retrying — it kept yesterday's window until something else
+ * happened to restart it.
+ */
+const PLAN_KEY = 'sportmind:lastDailyReset';
+const NUTRITION_KEY = 'sportmind:lastNutritionReset';
+
+function readDay(key: string): string | null {
+    try {
+        return window.localStorage.getItem(key);
+    } catch {
+        // Private browsing with storage blocked. Rolling over once per mount is
+        // the safer of the two mistakes: a stale tick is worse than an extra
+        // clear of something that was already clear.
+        return null;
+    }
+}
+
+function writeDay(key: string, day: string) {
+    try {
+        window.localStorage.setItem(key, day);
+    } catch { /* nothing to do */ }
+}
+
+/** Milliseconds from now to the next 00:00 on this device's own clock. */
+function untilLocalMidnight(now = new Date()): number {
+    const midnight = new Date(now);
+    // setHours(24, …) is the next day's 00:00 in local time, month ends and
+    // daylight-saving shifts included.
+    midnight.setHours(24, 0, 0, 0);
+    return Math.max(1_000, midnight.getTime() - now.getTime());
+}
+
+/**
+ * A new day clears what was done, never what was planned — once, at midnight.
+ *
+ * The plan is the athlete's: a generated meal plan or gym programme stays
  * exactly as it is until they change it. What resets is the record of having
- * done it: meals untick, shopping lines uncheck, the current workout's sets
+ * done it — meals untick, shopping lines uncheck, the current workout's sets
  * clear. Nothing is ever marked done on the athlete's behalf.
  *
- * The day was previously tracked in a ref, which is null on every page load, so
- * the hook's own first-load branch returned before resetting anything. Opening
- * the app fresh the next morning — the normal case — therefore never triggered
- * a reset at all, and yesterday's ticks carried over: breakfast showed as
- * already eaten. The day is persisted now, so a reload the next day resets and
- * a reload the same day does not.
+ * The rollover used to be opportunistic: it ran when the app mounted and when
+ * a window regained focus, and only a stamp in storage kept it from running
+ * again. That made the moment the day turned over depend on when the app
+ * happened to be looked at rather than on the clock — a tab left open through
+ * the night carried yesterday over until someone clicked on it. It is now
+ * scheduled for the next local midnight and re-armed after each one, with the
+ * focus check kept only to catch a machine that was asleep when the timer
+ * should have fired.
  */
 export function useDailyReset() {
     const { user } = useUser();
+    const userId = user?.uid;
     const resetNutrition = useNutritionStore(state => state.resetDailyData);
     const startNewGymDay = usePlanStore(state => state.startNewDay);
     const resetShoppingList = useShoppingListStore(state => state.resetDailyData);
     const resetMealPlan = useNutritionPlanStore(state => state.resetDailyData);
     const calculateStreak = useStreakStore(state => state.calculateStreak);
 
-    // Guards against running twice within one mount; the durable record of
-    // which day was last reset lives in storage.
-    const ranFor = useRef<string | null>(null);
-
     useEffect(() => {
-        const check = () => {
-            const today = dayKey();
-            if (ranFor.current === today) return;
+        let timer: ReturnType<typeof setTimeout> | null = null;
 
-            let last: string | null = null;
-            try {
-                last = window.localStorage.getItem(STORAGE_KEY);
-            } catch {
-                // Private browsing with storage blocked: fall back to resetting
-                // once per mount, which is the safer of the two mistakes.
+        /** Idempotent: each half runs at most once per calendar day. */
+        const rollOver = () => {
+            const today = dayKey();
+
+            if (readDay(PLAN_KEY) !== today) {
+                writeDay(PLAN_KEY, today);
+                // The plans survive; only what was ticked off goes.
+                resetMealPlan();
+                resetShoppingList();
+                startNewGymDay();
             }
 
-            ranFor.current = today;
-            if (last === today) return;
-
-            try {
-                window.localStorage.setItem(STORAGE_KEY, today);
-            } catch { /* nothing to do */ }
-
-            // The plans survive; only what was ticked off goes.
-            resetMealPlan();
-            resetShoppingList();
-            startNewGymDay();
-            if (user?.uid) {
-                resetNutrition(user.uid);
-                calculateStreak(user.uid);
+            if (userId && readDay(NUTRITION_KEY) !== today) {
+                writeDay(NUTRITION_KEY, today);
+                resetNutrition(userId);
+                calculateStreak(userId);
             }
         };
 
-        check();
-        // A tab left open across midnight resets when it comes back to focus.
-        window.addEventListener('focus', check);
-        return () => window.removeEventListener('focus', check);
-    }, [user, resetNutrition, startNewGymDay, resetShoppingList, resetMealPlan, calculateStreak]);
+        const arm = () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                rollOver();
+                arm();
+            }, untilLocalMidnight());
+        };
+
+        rollOver();
+        arm();
+
+        // A laptop asleep at midnight wakes with a timer that never fired, and
+        // a phone may have frozen the tab for hours. Coming back into view is
+        // the moment to check the date and re-aim at the next midnight.
+        const onWake = () => {
+            if (document.visibilityState !== 'visible') return;
+            rollOver();
+            arm();
+        };
+        window.addEventListener('focus', onWake);
+        document.addEventListener('visibilitychange', onWake);
+
+        return () => {
+            if (timer) clearTimeout(timer);
+            window.removeEventListener('focus', onWake);
+            document.removeEventListener('visibilitychange', onWake);
+        };
+    }, [userId, resetNutrition, startNewGymDay, resetShoppingList, resetMealPlan, calculateStreak]);
 }

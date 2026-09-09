@@ -2,10 +2,22 @@
 import { create } from 'zustand';
 import { collection, query, where, onSnapshot, Unsubscribe, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { startOfDay, endOfDay } from 'date-fns';
+import { startOfDay, endOfDay, format } from 'date-fns';
 import type { NutritionLog } from '@/lib/schemas';
 
 let listener: Unsubscribe | null = null;
+/**
+ * Who the live query is for, and which local day it covers.
+ *
+ * The query window is fixed when the listener is built, and the listener was
+ * only ever built once. A tab open past midnight therefore kept yesterday's
+ * window: the ring went on showing yesterday's calories, and every later
+ * `startListener` call saw a listener already running and left it alone.
+ * Recording the day means a call for a different one rebuilds instead.
+ */
+let listeningFor: { userId: string; day: string } | null = null;
+
+const localDay = () => format(new Date(), 'yyyy-MM-dd');
 
 export interface DailyLog {
     breakfast: (NutritionLog & {id: string})[];
@@ -39,9 +51,18 @@ const initialState = {
 export const useNutritionStore = create<NutritionState>((set, get) => ({
   ...initialState,
   startListener: (userId) => {
-    if (listener) {
-      return; // Listener already active
+    const day = localDay();
+    if (listener && listeningFor?.userId === userId && listeningFor.day === day) {
+      return; // Already watching this athlete's today
     }
+
+    if (listener) {
+      // A different athlete, or a day that has since turned over.
+      listener();
+      listener = null;
+      set(initialState);
+    }
+    listeningFor = { userId, day };
 
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
@@ -83,6 +104,7 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
     });
   },
   stopListener: () => {
+    listeningFor = null;
     if (listener) {
       listener();
       listener = null;
