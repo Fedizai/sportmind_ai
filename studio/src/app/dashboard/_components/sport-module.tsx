@@ -200,7 +200,7 @@ const Stopwatch = ({ startLabel, stopLabel, resetLabel }: { startLabel: string; 
     };
 
     return (
-        <div className={cn("text-center rounded-xl p-5 bg-muted/60 border border-white/[0.05]", isActive && "glow-primary-sm border-primary/30")}>
+        <div className={cn("text-center rounded-xl p-5 bg-muted/60 border border-white/[0.05]", isActive && "border-primary/30")}>
             <p className="font-mono text-5xl font-bold tracking-tighter mb-4 tabular-nums">{formatTime(time)}</p>
             <div className="flex justify-center gap-3">
                 <Button size="lg" onClick={() => setIsActive(!isActive)} className={cn(!isActive && "btn-primary-3d")}>
@@ -962,7 +962,7 @@ export default function SportModuleClient({ config }: { config: SportConfig }) {
                                             className={cn(
                                                 "rounded-md px-4 py-1.5 text-sm font-medium transition-colors border",
                                                 active
-                                                    ? "bg-primary text-primary-foreground border-primary glow-primary-sm"
+                                                    ? "bg-primary text-primary-foreground border-primary"
                                                     : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted hover:text-foreground",
                                             )}
                                             aria-pressed={active}

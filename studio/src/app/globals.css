@@ -73,53 +73,31 @@
     --duration-press: 110ms;
     --duration-ui: 300ms;
 
-    /* 3D shadow system */
+    /**
+     * Elevation, the way Apple builds it.
+     *
+     * What was here read as moulded plastic: a lit bevel along every top edge,
+     * a solid dark edge under each button to give it thickness, and a blue
+     * glow around the primary one. That is a set of lighting effects standing
+     * in for hierarchy. Apple gets hierarchy from surface, spacing and type,
+     * and uses shadow only to say how far a thing floats above what is behind
+     * it — one soft fall, downward, no rim, no colour.
+     */
     --shadow-card:
-      inset 0 1px 0 rgba(255,255,255,0.95),
-      0 1px 2px rgba(0,0,0,0.04),
-      0 4px 8px rgba(0,0,0,0.05),
-      0 12px 24px rgba(0,0,0,0.04);
+      0 1px 2px rgba(16,24,40,0.04),
+      0 4px 12px rgba(16,24,40,0.05);
 
     --shadow-float:
-      inset 0 1px 0 rgba(255,255,255,0.95),
-      0 2px 8px rgba(0,0,0,0.06),
-      0 8px 24px rgba(0,0,0,0.08),
-      0 24px 48px rgba(0,0,0,0.06);
+      0 8px 24px rgba(16,24,40,0.10),
+      0 24px 64px rgba(16,24,40,0.10);
 
-    /* Buttons read as physical keys: a lit top bevel, a solid bottom edge that
-       gives real thickness, a tight contact shadow, then soft ambient spread. */
-    --shadow-btn:
-      inset 0 1px 0 rgba(255,255,255,0.40),
-      inset 0 -2px 0 rgba(0,0,0,0.20),
-      0 1px 2px rgba(15,23,42,0.20),
-      0 2px 5px rgba(59,130,246,0.22),
-      0 8px 18px rgba(59,130,246,0.20);
-
-    --shadow-btn-hover:
-      inset 0 1px 0 rgba(255,255,255,0.48),
-      inset 0 -2px 0 rgba(0,0,0,0.18),
-      0 2px 4px rgba(15,23,42,0.22),
-      0 6px 14px rgba(59,130,246,0.32),
-      0 16px 34px rgba(59,130,246,0.24);
-
-    /* Pressed: the edge collapses and the face sinks into its own socket. */
-    --shadow-btn-active:
-      inset 0 2px 5px rgba(0,0,0,0.28),
-      inset 0 -1px 0 rgba(255,255,255,0.10),
-      0 1px 1px rgba(15,23,42,0.16);
-
-    /* Neutral (secondary / outline) — same physics, no brand glow. */
-    --shadow-btn-neutral:
-      inset 0 1px 0 rgba(255,255,255,0.90),
-      inset 0 -2px 0 rgba(0,0,0,0.09),
-      0 1px 2px rgba(15,23,42,0.10),
-      0 3px 8px rgba(15,23,42,0.08);
-
-    --shadow-btn-neutral-hover:
-      inset 0 1px 0 rgba(255,255,255,0.95),
-      inset 0 -2px 0 rgba(0,0,0,0.10),
-      0 2px 4px rgba(15,23,42,0.12),
-      0 8px 18px rgba(15,23,42,0.12);
+    /* Controls are filled shapes, not keys. They sit on the surface and
+       respond by moving, not by lighting up. */
+    --shadow-btn: 0 1px 2px rgba(16,24,40,0.06);
+    --shadow-btn-hover: 0 2px 6px rgba(16,24,40,0.09);
+    --shadow-btn-active: 0 1px 1px rgba(16,24,40,0.05);
+    --shadow-btn-neutral: 0 1px 2px rgba(16,24,40,0.05);
+    --shadow-btn-neutral-hover: 0 2px 6px rgba(16,24,40,0.08);
   }
 
   .dark {
@@ -170,49 +148,21 @@
     --chart-4: 173 70% 55%;
     --chart-5: 340 82% 66%;
 
-    /* 3D shadow system – dark */
+    /* Elevation — dark. Separation comes from the surface being lighter than
+       the ground behind it, so the shadow only has to place the layer. */
     --shadow-card:
-      inset 0 1px 0 rgba(255,255,255,0.055),
-      0 1px 2px rgba(0,0,0,0.4),
-      0 4px 12px rgba(0,0,0,0.35),
-      0 16px 40px rgba(0,0,0,0.22);
+      0 1px 2px rgba(0,0,0,0.40),
+      0 4px 12px rgba(0,0,0,0.28);
 
     --shadow-float:
-      inset 0 1px 0 rgba(255,255,255,0.055),
-      0 2px 8px rgba(0,0,0,0.5),
-      0 12px 32px rgba(0,0,0,0.4),
-      0 32px 64px rgba(0,0,0,0.25);
+      0 8px 24px rgba(0,0,0,0.50),
+      0 24px 64px rgba(0,0,0,0.36);
 
-    --shadow-btn:
-      inset 0 1px 0 rgba(255,255,255,0.30),
-      inset 0 -2px 0 rgba(0,0,0,0.38),
-      0 1px 2px rgba(0,0,0,0.45),
-      0 2px 6px rgba(59,130,246,0.26),
-      0 8px 20px rgba(59,130,246,0.24);
-
-    --shadow-btn-hover:
-      inset 0 1px 0 rgba(255,255,255,0.38),
-      inset 0 -2px 0 rgba(0,0,0,0.34),
-      0 2px 4px rgba(0,0,0,0.5),
-      0 6px 16px rgba(59,130,246,0.38),
-      0 18px 40px rgba(59,130,246,0.26);
-
-    --shadow-btn-active:
-      inset 0 2px 6px rgba(0,0,0,0.55),
-      inset 0 -1px 0 rgba(255,255,255,0.07),
-      0 1px 1px rgba(0,0,0,0.4);
-
-    --shadow-btn-neutral:
-      inset 0 1px 0 rgba(255,255,255,0.09),
-      inset 0 -2px 0 rgba(0,0,0,0.40),
-      0 1px 2px rgba(0,0,0,0.45),
-      0 4px 12px rgba(0,0,0,0.35);
-
-    --shadow-btn-neutral-hover:
-      inset 0 1px 0 rgba(255,255,255,0.14),
-      inset 0 -2px 0 rgba(0,0,0,0.36),
-      0 2px 5px rgba(0,0,0,0.5),
-      0 10px 24px rgba(0,0,0,0.4);
+    --shadow-btn: 0 1px 2px rgba(0,0,0,0.42);
+    --shadow-btn-hover: 0 2px 6px rgba(0,0,0,0.50);
+    --shadow-btn-active: 0 1px 1px rgba(0,0,0,0.40);
+    --shadow-btn-neutral: 0 1px 2px rgba(0,0,0,0.38);
+    --shadow-btn-neutral-hover: 0 2px 6px rgba(0,0,0,0.46);
   }
 }
 
@@ -379,14 +329,6 @@
   .shadow-btn   { box-shadow: var(--shadow-btn); }
   .shadow-btn-hover { box-shadow: var(--shadow-btn-hover); }
 
-  /* Glow utilities */
-  .glow-primary {
-    box-shadow: 0 0 16px rgba(59,130,246,0.35), 0 0 48px rgba(59,130,246,0.12);
-  }
-  .glow-primary-sm {
-    box-shadow: 0 0 8px rgba(59,130,246,0.28), 0 0 24px rgba(59,130,246,0.1);
-  }
-
   /* Hide scrollbar on horizontally-scrolling tab bars while keeping scroll */
   .no-scrollbar {
     scrollbar-width: none;
@@ -394,14 +336,6 @@
   }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
-  }
-
-  /* Cockpit telemetry grid — faint readout texture, used sparingly */
-  .hud-grid {
-    background-image:
-      linear-gradient(to right, hsl(var(--border) / 0.7) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--border) / 0.7) 1px, transparent 1px);
-    background-size: 28px 28px;
   }
 
   /* Glass morphism */
@@ -418,37 +352,6 @@
     border: 1px solid rgba(255,255,255,0.5);
   }
 
-  /* Gradient border using pseudo-element */
-  .border-gradient {
-    position: relative;
-    background-clip: padding-box;
-  }
-  .border-gradient::before {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    background: linear-gradient(135deg,
-      rgba(59,130,246,0.45) 0%,
-      rgba(139,92,246,0.3) 40%,
-      rgba(255,255,255,0.04) 60%,
-      rgba(59,130,246,0.2) 100%
-    );
-    z-index: -1;
-  }
-
-  /* Top shine line for 3D card effect */
-  .shine-top::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 10%;
-    right: 10%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
-    border-radius: 50%;
-    pointer-events: none;
-  }
 }
 
 @layer components {
@@ -490,7 +393,6 @@
   }
   .btn-primary-3d:hover:not(:disabled) {
     box-shadow: var(--shadow-btn-hover);
-    transform: translateY(-1px);
   }
   .btn-primary-3d:active:not(:disabled) {
     box-shadow: var(--shadow-btn-active);
@@ -501,22 +403,14 @@
   }
   .btn-3d:hover:not(:disabled) {
     box-shadow: var(--shadow-btn-neutral-hover);
-    transform: translateY(-1px);
   }
   .btn-3d:active:not(:disabled) {
     box-shadow: var(--shadow-btn-active);
   }
 
-  /* Ghost and link are flat by choice and must not gain depth.
-     The reduced-motion answer for these lives in the global block below,
-     which removes travel from every transition in the app rather than from
-     these two classes only. */
-  @media (prefers-reduced-motion: reduce) {
-    .btn-primary-3d:hover:not(:disabled),
-    .btn-3d:hover:not(:disabled) {
-      transform: none;
-    }
-  }
+  /* Nothing lifts on hover any more, so there is no travel here for the
+     reduced-motion block below to take away. Ghost and link stay flat by
+     choice and gain no depth at all. */
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

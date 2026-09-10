@@ -8,7 +8,10 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "relative rounded-xl border bg-card text-card-foreground overflow-hidden",
+      // A larger corner than a control's: on Apple's surfaces the radius grows
+      // with the thing it belongs to, so a card reads as a bigger object than
+      // the buttons inside it rather than the same shape scaled up.
+      "relative rounded-2xl border bg-card text-card-foreground overflow-hidden",
       "dark:border-white/[0.07] border-black/[0.06]",
       "shadow-card",
       // Only what changes, and on the shared curve — `transition-all`
@@ -18,16 +21,10 @@ const Card = React.forwardRef<
     )}
     {...props}
   >
-    {/* Top edge shine — simulates 3D light from above */}
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent"
-    />
-    {/* Inner gradient overlay — light hitting top-left corner */}
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.04] via-transparent to-transparent rounded-xl"
-    />
+    {/* The lit top edge and the corner gradient that used to sit here were
+        stage lighting standing in for depth. A card is a surface: it is told
+        apart from the ground by its own colour and a hairline, which is what
+        the border and `--shadow-card` now do on their own. */}
     {children}
   </div>
 ))

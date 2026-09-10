@@ -514,7 +514,7 @@ const ShoppingListCard = () => {
                 <CardContent className="flex-grow">
                     {allItemsComplete ? (
                         <div className="flex flex-col items-center justify-center h-full text-center text-primary p-4 border-2 border-dashed border-primary/40 rounded-lg">
-                            <CheckCircle className="h-12 w-12 mb-2 glow-primary-sm rounded-full" />
+                            <CheckCircle className="h-12 w-12 mb-2 rounded-full" />
                             <p className="text-sm font-semibold">{t('shoppingComplete')}</p>
                         </div>
                     ) : items.length > 0 ? (
@@ -594,7 +594,7 @@ const GymPlanInsightCard = ({ onUpgrade }: { onUpgrade: () => void }) => {
                 <CardContent className="flex-grow flex flex-col justify-center items-center text-center space-y-4">
                     {allExercisesCompleted ? (
                         <div className="flex flex-col items-center gap-2">
-                            <CheckCircle className="h-16 w-16 text-primary glow-primary-sm rounded-full" />
+                            <CheckCircle className="h-16 w-16 text-primary rounded-full" />
                             <p className="font-bold text-xl">{t('workoutCompleted')}</p>
                         </div>
                     ) : (
@@ -1406,7 +1406,7 @@ export function DashboardClient({ initialView }: { initialView?: 'sports' | 'ins
                                         "flex h-12 w-12 lg:h-14 lg:w-14 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
                                         sport.comingSoon
                                             ? "bg-muted text-muted-foreground"
-                                            : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground group-hover:glow-primary-sm"
+                                            : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
                                     )}>
                                         <sport.icon className="h-6 w-6 lg:h-7 lg:w-7 transition-colors duration-200" />
                                     </div>
