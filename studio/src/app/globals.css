@@ -63,6 +63,16 @@
        height) without ever reaching a pill. One lever drives the whole scale. */
     --radius: 0.75rem;
 
+    /* The CSS half of the motion vocabulary in lib/motion.ts.
+       The two curves are inverses — control points mirrored through the
+       diagonal — so a surface returns along the path it arrived on instead of
+       easing out one way and in another. */
+    --ease-out-apple: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-in-apple: cubic-bezier(1, 0, 0.68, 0.28);
+    /* Press feedback has to land inside the press, not after it. */
+    --duration-press: 110ms;
+    --duration-ui: 300ms;
+
     /* 3D shadow system */
     --shadow-card:
       inset 0 1px 0 rgba(255,255,255,0.95),
@@ -217,6 +227,18 @@
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Public Sans', sans-serif;
   }
+
+  /* Let the face use its own optical sizing where it has any, and stop the
+     browser inventing tracking of its own on top of the size scale. */
+  html {
+    font-optical-sizing: auto;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings get even line lengths; prose stops leaving one word on a line.
+     Both degrade to nothing where unsupported. */
+  h1, h2, h3, h4 { text-wrap: balance; }
+  p, li, dd, figcaption { text-wrap: pretty; }
 
   /* Subtle mesh gradient on dark background */
   .dark body {
@@ -382,20 +404,6 @@
     background-size: 28px 28px;
   }
 
-  /* Gradient text */
-  .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(270 80% 65%) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .text-gradient-blue {
-    background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
   /* Glass morphism */
   .glass {
     background: rgba(255,255,255,0.04);
@@ -448,16 +456,37 @@
     @apply flex h-full w-full cursor-pointer items-center justify-center rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary;
   }
 
+  /**
+   * Press response, on every control in the product.
+   *
+   * `transition-all` at one duration made the press take as long as the
+   * colour change — a fifth of a second to acknowledge a finger that is
+   * already down. Transform gets its own, much shorter time so the control
+   * has visibly moved inside the press; everything else keeps the longer
+   * curve, because a background settling quickly reads as a flicker.
+   *
+   * One declaration rather than two, because Tailwind's `transition-*`
+   * utilities sit in a later layer and would otherwise win outright and take
+   * the transform timing with them.
+   */
+  .press-response {
+    transition:
+      transform var(--duration-press) var(--ease-out-apple),
+      box-shadow 220ms var(--ease-out-apple),
+      background-color 200ms var(--ease-out-apple),
+      border-color 200ms var(--ease-out-apple),
+      color 200ms var(--ease-out-apple),
+      opacity 200ms var(--ease-out-apple);
+  }
+
   /* ── Physical button depth ──────────────────────────────────────────
      Resting: lit top bevel + solid bottom edge + contact shadow.
      Hover:   lifts 1px, ambient spread grows.
      Active:  edge collapses, face sinks into its socket.
      Both variants share the same physics so every control in the product
-     depresses identically. */
+     depresses identically. Timing comes from .press-response above. */
   .btn-primary-3d {
     box-shadow: var(--shadow-btn);
-    transition: box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-                transform 0.12s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .btn-primary-3d:hover:not(:disabled) {
     box-shadow: var(--shadow-btn-hover);
@@ -469,8 +498,6 @@
 
   .btn-3d {
     box-shadow: var(--shadow-btn-neutral);
-    transition: box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-                transform 0.12s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .btn-3d:hover:not(:disabled) {
     box-shadow: var(--shadow-btn-neutral-hover);
@@ -480,17 +507,172 @@
     box-shadow: var(--shadow-btn-active);
   }
 
-  /* Flat by choice — ghost and link must not gain depth. */
+  /* Ghost and link are flat by choice and must not gain depth.
+     The reduced-motion answer for these lives in the global block below,
+     which removes travel from every transition in the app rather than from
+     these two classes only. */
   @media (prefers-reduced-motion: reduce) {
-    .btn-primary-3d,
-    .btn-3d {
-      transition: box-shadow 0.22s ease;
-    }
     .btn-primary-3d:hover:not(:disabled),
-    .btn-3d:hover:not(:disabled),
-    .btn-primary-3d:active:not(:disabled),
-    .btn-3d:active:not(:disabled) {
+    .btn-3d:hover:not(:disabled) {
       transform: none;
     }
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Floating chrome
+   ───────────────────────────────────────────────────────────────────────── */
+@layer components {
+  /**
+   * A translucent bar meets content with a fade, not a rule.
+   *
+   * A 1px divider under a sticky header draws a hard line across a surface
+   * that is meant to read as a sheet of glass floating over the page — it
+   * says "two panels" where the material says "one layer above another".
+   * The gradient does the same job of separating chrome from content by
+   * letting the content dissolve into it instead.
+   */
+  .chrome-edge {
+    position: relative;
+  }
+  .chrome-edge::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    height: 14px;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      hsl(var(--background) / 0.5),
+      hsl(var(--background) / 0)
+    );
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Accessibility preferences
+
+   Three independent signals, each with its own answer. Reduced motion is not
+   "no feedback" — it is the same information without the part that moves the
+   viewer's world. Reduced transparency is not "no material" — it is the same
+   layering, opaque. Neither is a reason to take meaning away.
+   ───────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  /**
+   * Every enter and exit in the app becomes a cross-fade.
+   *
+   * These are the variables tailwindcss-animate composes its enter/exit
+   * keyframes from, so zeroing them turns `slide-in-from-bottom`,
+   * `zoom-in-95` and the rest into opacity alone — at the source, keeping the
+   * timing intact. Cutting the animation short instead would have made every
+   * overlay appear as a hard cut, which is not what this setting asks for:
+   * reduced motion means the same information without the part that moves the
+   * viewer's world, not the same information without feedback.
+   */
+  *,
+  *::before,
+  *::after {
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
+    --tw-enter-scale: 1 !important;
+    --tw-exit-scale: 1 !important;
+    --tw-enter-rotate: 0 !important;
+    --tw-exit-rotate: 0 !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    /* Colour, opacity and shadow still transition — they carry state, and
+       nothing about them is vestibular. Travel, scale and rotation stop.
+       Looping indicators (spinners, progress) are left alone: they report
+       that something is happening, and a frozen spinner reports the
+       opposite. */
+    transition-property: opacity, color, background-color, border-color, fill,
+      stroke, box-shadow, text-decoration-color !important;
+    transition-duration: 160ms !important;
+  }
+}
+
+/**
+ * A scrim that materialises rather than fading in.
+ *
+ * The background frosting over as the sheet arrives reads as a real material
+ * coming between the viewer and the page; an opacity fade reads as a grey
+ * rectangle being switched on. Only opacity and blur move here — no
+ * transform — so this survives reduced motion untouched, which is right: the
+ * dimming is what tells you the task behind is no longer reachable.
+ */
+@keyframes scrim-in {
+  from { opacity: 0; backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
+  to   { opacity: 1; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+}
+@keyframes scrim-out {
+  from { opacity: 1; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+  to   { opacity: 0; backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  /* Frostier, to the point of solid: the layer stays, the see-through goes. */
+  [class*='backdrop-blur'],
+  [class*='scrim-in'],
+  [class*='scrim-out'],
+  .glass,
+  .glass-light,
+  .liquid-glass-pill,
+  .liquid-glass-rim,
+  .liquid-glass-bubble {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .liquid-glass-rim,
+  .liquid-glass-surface,
+  .liquid-glass-shine {
+    display: none !important;
+  }
+  .liquid-glass-pill {
+    background: hsl(var(--card)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+  .glass,
+  .glass-light {
+    background: hsl(var(--card)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+  /* The translucent surfaces the app builds with Tailwind opacity utilities.
+     Without their blur these read as washed-out paper, so they go solid. */
+  [class*='bg-background/'] { background-color: hsl(var(--background)) !important; }
+  [class*='bg-card/'] { background-color: hsl(var(--card)) !important; }
+  [class*='bg-popover/'] { background-color: hsl(var(--popover)) !important; }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: 215 25% 55%;
+    --muted-foreground: 215 30% 28%;
+  }
+  .dark {
+    --border: 220 16% 48%;
+    --muted-foreground: 220 22% 82%;
+  }
+  /* Near-solid, with an edge that is actually drawn. */
+  [class*='backdrop-blur'],
+  .glass,
+  .glass-light,
+  .liquid-glass-pill {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid hsl(var(--foreground) / 0.45) !important;
+  }
+  .liquid-glass-pill { background: hsl(var(--card)) !important; }
+  /* The header fade is a separation cue; at this setting it needs to be a
+     line again, because a gradient is exactly what low vision cannot see. */
+  .chrome-edge::after { display: none; }
+  .chrome-edge { border-bottom: 1px solid hsl(var(--foreground) / 0.45); }
 }

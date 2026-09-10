@@ -72,7 +72,7 @@ export function Header() {
         </Button>
       </div>
     )}
-    <header className="sticky top-0 z-50 flex h-16 items-center justify-between px-4 md:px-8 border-b border-border/60 dark:border-white/[0.07] bg-background/80 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/60">
+    <header className="chrome-edge sticky top-0 z-50 flex h-16 items-center justify-between px-4 md:px-8 bg-background/80 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-4">
             <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                 <Logo className="h-10 w-auto" />

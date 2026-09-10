@@ -9,6 +9,7 @@ import { HtmlLang } from '@/components/html-lang';
 import { SkipToContent } from '@/components/skip-to-content';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
 import { cn } from '@/lib/utils';
+import { MotionProvider } from '@/components/motion-provider';
 
 const publicSans = Public_Sans({
   subsets: ['latin'],
@@ -104,11 +105,13 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <HtmlLang />
-            <SkipToContent />
-            <CookieBanner />
-            {children}
-            <Toaster />
+            <MotionProvider>
+              <HtmlLang />
+              <SkipToContent />
+              <CookieBanner />
+              {children}
+              <Toaster />
+            </MotionProvider>
           </ThemeProvider>
         </UserProvider>
       </body>

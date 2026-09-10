@@ -11,7 +11,9 @@ const Card = React.forwardRef<
       "relative rounded-xl border bg-card text-card-foreground overflow-hidden",
       "dark:border-white/[0.07] border-black/[0.06]",
       "shadow-card",
-      "transition-all duration-300",
+      // Only what changes, and on the shared curve — `transition-all`
+      // animated properties nothing here touches.
+      "transition-[box-shadow,border-color,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
       className
     )}
     {...props}

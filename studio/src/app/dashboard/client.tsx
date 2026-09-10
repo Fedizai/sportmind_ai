@@ -69,6 +69,7 @@ import { useAthleteSessions } from '@/hooks/use-athlete-sessions';
 import { visibleSports, hasSportRestriction } from '@/lib/sports';
 import { useTogglePlannedMeal } from '@/hooks/use-planned-meal';
 import { useFavorites } from '@/hooks/use-favorites';
+import { SPRING } from '@/lib/motion';
 import { FavoriteStar } from '@/components/favorite-star';
 import { tierForStreak, nextTier, daysToNextTier } from '@/lib/streak-tiers';
 import { StreakFlame } from '@/components/streak-flame';
@@ -115,7 +116,11 @@ const sectionVariants = {
 
 const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+    // A spring rather than a fixed-duration tween: a card that is still
+    // arriving can be re-targeted mid-flight without the jump a duration-based
+    // animation makes when it is interrupted. Critically damped, because
+    // nothing here was thrown — the overshoot would be decoration.
+    visible: { opacity: 1, y: 0, transition: SPRING }
 };
 
 
@@ -1333,8 +1338,13 @@ export function DashboardClient({ initialView }: { initialView?: 'sports' | 'ins
                                         </span>
                                         {/* Two lines rather than truncating: at
                                             two columns on a phone a label like
-                                            "Mes Objectifs" was cut mid-word. */}
-                                        <span className="min-w-0 flex-grow text-sm font-semibold leading-tight line-clamp-2">
+                                            "Mes Objectifs" was cut mid-word.
+                                            Two lines are not enough on their
+                                            own for a single long word —
+                                            "Programme" has nowhere to wrap and
+                                            was being clipped to "Programm", so
+                                            it is allowed to hyphenate. */}
+                                        <span className="min-w-0 flex-grow hyphens-auto break-words text-sm font-semibold leading-tight line-clamp-2">
                                             {t(tool.titleKey)}
                                         </span>
                                         <FavoriteStar toolId={tool.id} className="-mr-1 h-7 w-7" />

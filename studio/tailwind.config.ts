@@ -26,6 +26,35 @@ export default {
         sans: ['var(--font-sans)', 'sans-serif'],
         display: ['var(--font-display)', 'var(--font-sans)', 'sans-serif'],
       },
+      /**
+       * Tracking is a function of size, never one value for every size.
+       *
+       * Letters read further apart the larger they are set, and closer
+       * together the smaller — so a single `letter-spacing` is wrong at one
+       * end of the scale or the other, and until now the app had none at all
+       * on most sizes and a fixed one on a few. Attaching it to the size
+       * scale means every `text-3xl` in the product tightens by the same
+       * amount without anybody remembering to ask for it.
+       *
+       * Line heights are Tailwind's own: they already fall as size rises,
+       * which is the relationship we want, and changing them would move type
+       * on every screen for no gain.
+       */
+      fontSize: {
+        xs:   ['0.75rem',  { lineHeight: '1rem',    letterSpacing: '0.01em' }],
+        sm:   ['0.875rem', { lineHeight: '1.25rem', letterSpacing: '0.005em' }],
+        base: ['1rem',     { lineHeight: '1.5rem',  letterSpacing: '0em' }],
+        lg:   ['1.125rem', { lineHeight: '1.75rem', letterSpacing: '-0.006em' }],
+        xl:   ['1.25rem',  { lineHeight: '1.75rem', letterSpacing: '-0.01em' }],
+        '2xl': ['1.5rem',  { lineHeight: '2rem',    letterSpacing: '-0.014em' }],
+        '3xl': ['1.875rem',{ lineHeight: '2.25rem', letterSpacing: '-0.018em' }],
+        '4xl': ['2.25rem', { lineHeight: '2.5rem',  letterSpacing: '-0.021em' }],
+        '5xl': ['3rem',    { lineHeight: '1',       letterSpacing: '-0.024em' }],
+        '6xl': ['3.75rem', { lineHeight: '1',       letterSpacing: '-0.026em' }],
+        '7xl': ['4.5rem',  { lineHeight: '1',       letterSpacing: '-0.028em' }],
+        '8xl': ['6rem',    { lineHeight: '1',       letterSpacing: '-0.03em' }],
+        '9xl': ['8rem',    { lineHeight: '1',       letterSpacing: '-0.032em' }],
+      },
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

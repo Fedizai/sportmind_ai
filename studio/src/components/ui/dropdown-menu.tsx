@@ -47,7 +47,7 @@ const DropdownMenuSubContent = React.forwardRef<
   <DropdownMenuPrimitive.SubContent
     ref={ref}
     className={cn(
-      "z-50 min-w-[8rem] overflow-hidden rounded-2xl border border-border/60 dark:border-white/[0.09] bg-popover/90 backdrop-blur-2xl p-1.5 text-popover-foreground shadow-float data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+      "z-50 min-w-[8rem] overflow-hidden rounded-2xl border border-border/60 dark:border-white/[0.09] bg-popover/90 backdrop-blur-2xl p-1.5 text-popover-foreground shadow-float origin-[var(--radix-dropdown-menu-content-transform-origin)] data-[state=open]:[animation-duration:240ms] data-[state=closed]:[animation-duration:180ms] data-[state=open]:[animation-timing-function:var(--ease-out-apple)] data-[state=closed]:[animation-timing-function:var(--ease-in-apple)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
       className
     )}
     {...props}
@@ -66,6 +66,12 @@ const DropdownMenuContent = React.forwardRef<
       sideOffset={sideOffset}
       className={cn(
         "z-50 min-w-[10rem] overflow-hidden rounded-2xl border border-border/60 dark:border-white/[0.09] bg-popover/90 backdrop-blur-2xl backdrop-saturate-150 p-1.5 text-popover-foreground shadow-float",
+        // Grows from the control that opened it, not from its own middle, so
+        // the relationship between button and panel is visible rather than
+        // inferred. Radix publishes the trigger's corner as this variable.
+        "origin-[var(--radix-dropdown-menu-content-transform-origin)]",
+        "data-[state=open]:[animation-duration:220ms] data-[state=closed]:[animation-duration:160ms]",
+        "data-[state=open]:[animation-timing-function:var(--ease-out-apple)] data-[state=closed]:[animation-timing-function:var(--ease-in-apple)]",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         className
       )}
